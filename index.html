@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SURSTRÖMMING - Zombies</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/hUrgrQg.jpeg">
+<title>SURSTRÖMMING FACTORY - Zombies</title>
+<link rel="icon" href="https://i.imgur.com/hUrgrQg.jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
@@ -122,7 +122,7 @@
 </div>
 
 <div id="countdown" class="hidden">
-  <div class="map">MAP: SURSTRÖMMING</div>
+  <div class="map">MAP: SURSTRÖMMING FACTORY</div>
   <div class="txt">GAME STARTS IN</div>
   <div class="num" id="cdNum">5</div>
 </div>
@@ -594,7 +594,7 @@ function addCottage(cx, cz, w, d, h) {
   ch.position.set(cx + (w >= d ? w * 0.25 : 0), h + (rh + 1.2) / 2 - 0.1, cz + (w >= d ? 0 : d * 0.25)); ch.castShadow = true; scene.add(ch);
 }
 
-const house = { cx: -24, cz: -22, w: 16, d: 10, h: 5, doorX: -19.5, dw: 2.8, dh: 3.0, open: false, t: 0, hold: 0 };
+const house = { cx: -24, cz: -22, w: 16, d: 10, h: 5, doorX: -19.5, dw: 4.0, dh: 3.0, open: false, t: 0, hold: 0 };
 const inHouse = (x, z, pad = 0) => x > house.cx - house.w / 2 - pad && x < house.cx + house.w / 2 + pad && z > house.cz - house.d / 2 - pad && z < house.cz + house.d / 2 + pad;
 let doorMesh, doorObs;
 function texDoor() {
@@ -616,7 +616,7 @@ function addWarehouse(cx, cz, w, d, h) {
   addSolid(dx, fz, dw, h - dh, T, MAT.warehouse, { y0: dh, den: 2.5, collide: false });
   addRoof(cx, cz, w, d, h, MAT.roofMetal, 0.5, 0.18);
   const fl = new THREE.Mesh(planeGeo(w - 2 * T, d - 2 * T, 4), MAT.concreteDark); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0.03, cz); fl.receiveShadow = true; scene.add(fl);
-  addDecal(cx - 4.2, h - 1.3, cz + d / 2 + 0.04, 7, 2.2, new THREE.MeshStandardMaterial({ map: texSign(['SURSTRÖMMING', 'FABRIK  EST. 1912']), roughness: 0.8 }));
+  addDecal(cx - 4.2, h - 1.3, cz + d / 2 + 0.04, 7, 2.2, new THREE.MeshStandardMaterial({ map: texSign(['SURSTRÖMMING', 'FACTORY  EST. 1912']), roughness: 0.8 }));
   for (let i = 0; i < 3; i++) addDecal(cx - 6 + i * 3, 1.9, cz + d / 2 + 0.04, 1.6, 1.0, MAT.windowDim);
   for (let i = -2; i <= 2; i++) addDecal(cx + i * 3, 2.6, cz - d / 2 - 0.04, 1.6, 1.0, MAT.windowDim, Math.PI);
   for (let i = -7; i <= 7; i++) { const x = cx + i; if (Math.abs(x - dx) > dw / 2 + 0.3) dv(BX(0.1, h - 0.2, 0.07), '#566066', x, h / 2, cz + d / 2 + 0.03); dv(BX(0.1, h - 0.2, 0.07), '#566066', x, h / 2, cz - d / 2 - 0.03); }
@@ -734,6 +734,11 @@ function addPine(x, z, s) {
   scene.add(inst);
 }
 
+/* ---------- surströmming can material (uses your icon once loaded) ---------- */
+const CAN_MAT = new THREE.MeshStandardMaterial({ map: texCanLabel(), roughness: 0.5, metalness: 0.4 });
+const CAN_METAL = new THREE.MeshStandardMaterial({ color: 0xb8bcc0, roughness: 0.3, metalness: 0.9 });
+new THREE.TextureLoader().setCrossOrigin('anonymous').load('https://i.imgur.com/hUrgrQg.jpeg', t => { t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; CAN_MAT.map = t; CAN_MAT.needsUpdate = true; }, undefined, () => {});
+
 /* ---------- merged decor (one draw call) ---------- */
 const DG = [], BX = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 function dv(g, hex, x, y, z, ry = 0) {
@@ -833,7 +838,7 @@ const can = { pos: new THREE.Vector3(-20, 0, 22), used: false, group: new THREE.
 {
   addSolid(can.pos.x, can.pos.z, 1.1, 0.6, 1.1, MAT.crate, { den: 1.2 });
   const g = can.group; g.position.set(can.pos.x, 0.62, can.pos.z);
-  const labelMat = new THREE.MeshStandardMaterial({ map: texCanLabel(), roughness: 0.5, metalness: 0.4 });
+  const labelMat = CAN_MAT;
   const metal = new THREE.MeshStandardMaterial({ color: 0xb8bcc0, roughness: 0.3, metalness: 0.9 });
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.14, 24), [labelMat, metal, metal]);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.015, 6, 24), metal); rim.rotation.x = Math.PI / 2; rim.position.y = 0.07;
@@ -906,6 +911,31 @@ function addPerk(px, pz, ry, o) {
   for (let i = 0; i < 26; i++) { const x = rnd(-ARENA + 2, ARENA - 2), z = rnd(-ARENA + 9, ARENA - 2); if (inHouse(x, z, 2)) continue; const r = rnd(0.25, 0.6); dv(new THREE.IcosahedronGeometry(r, 0).scale(1.2, 0.7, 1), pick(['#6d6f6c', '#5b5e5c', '#7a7c78']), x, r * 0.3, z, rnd(0, 6)); }
   for (let i = 0; i < 12; i++) { const x = rnd(-ARENA + 4, ARENA - 4), z = rnd(-ARENA + 10, ARENA - 4); if (insideObstacle(x, z, 1.5)) continue; const r = rnd(0, 3); for (let k = 0; k < 3; k++) dv(BX(1.2, 0.04, 0.28).translate(0, 0, (k - 1) * 0.4), '#7a6040', x, 0.14, z, r); for (let k = 0; k < 3; k++) dv(BX(0.12, 0.1, 1.1).translate((k - 1) * 0.5, 0, 0), '#6a5236', x, 0.07, z, r); }
   const dm = new THREE.Mesh(mergeGeometries(DG), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })); dm.castShadow = dm.receiveShadow = true; scene.add(dm);
+}
+
+/* ---------- factory remake: silos, giant can, can pyramids & pallets ---------- */
+{
+  for (const x of [-12, -7]) {
+    addCylinder(x, -30, 2.0, 8, MAT.tankWhite);
+    const c = new THREE.Mesh(new THREE.ConeGeometry(2.1, 1.6, 16), MAT.roofMetal); c.position.set(x, 8.8, -30); c.castShadow = true; scene.add(c);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(2.03, 2.03, 1.2, 16), CAN_MAT); band.position.set(x, 4, -30); scene.add(band);
+  }
+  const gc = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 4, 24), [CAN_MAT, CAN_METAL, CAN_METAL]);
+  gc.rotation.z = Math.PI / 2; gc.position.set(house.cx - 3, house.h + 3.2, house.cz); gc.castShadow = true; scene.add(gc);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.07, 6, 24), CAN_METAL); rim.rotation.y = Math.PI / 2; rim.position.set(house.cx - 1, house.h + 3.2, house.cz); scene.add(rim);
+  const spots = [];   // [x, z, kind]
+  for (const [x, z] of [[-30, -4], [30, -8], [8, 31], [-4, -22]]) spots.push([x, z, 'pyr']);
+  for (const [x, z] of [[3, -22], [30, -18], [-31, 24], [-36, 38 - 8], [24, 30]]) spots.push([x, z, 'pal']);
+  const items = [];
+  for (const [x, z, k] of spots) {
+    if (k === 'pyr') { for (let l = 0; l < 4; l++) { const n = 4 - l, o = (n - 1) * 0.4; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) items.push([x - o + i * 0.8, 0.12 + l * 0.235, z - o + j * 0.8]); } obstacles.push({ minX: x - 1.7, maxX: x + 1.7, minZ: z - 1.7, maxZ: z + 1.7 }); }
+    else { const base = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.14, 2.6), MAT.fence); base.position.set(x, 0.07, z); base.castShadow = base.receiveShadow = true; scene.add(base);
+      for (let l = 0; l < 3; l++) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) items.push([x - 0.8 + i * 0.8, 0.26 + l * 0.235, z - 0.8 + j * 0.8]);
+      obstacles.push({ minX: x - 1.3, maxX: x + 1.3, minZ: z - 1.3, maxZ: z + 1.3 }); }
+  }
+  const canGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.22, 16), im = new THREE.InstancedMesh(canGeo, [CAN_MAT, CAN_METAL, CAN_METAL], items.length), d = new THREE.Object3D();
+  items.forEach((p, i) => { d.position.set(p[0], p[1], p[2]); d.rotation.y = Math.random() * 6; d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
+  im.castShadow = im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
 }
 
 // scatter crates & barrels (seeded, avoiding everything placed so far)
@@ -1586,8 +1616,8 @@ function btn(a, text, sub = '', cls = '') { return `<button class="btn ${cls}" d
 function renderMenu(view) {
   let h = '';
   if (view === 'main') h = btn('new', 'START NEW GAME') + btn('controls', 'CONTROLS');
-  else if (view === 'maps') h = '<div class="label">SELECT MAP</div>' + btn('map', 'SURSTRÖMMING', 'CANNERY HARBOUR &middot; 1 MAP') + btn('main', '&lt; BACK', '', 'back');
-  else if (view === 'start') h = '<div class="label">MAP: SURSTRÖMMING</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
+  else if (view === 'maps') h = '<div class="label">SELECT MAP</div>' + btn('map', 'SURSTRÖMMING FACTORY', 'CANNERY HARBOUR &middot; 1 MAP') + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'start') h = '<div class="label">MAP: SURSTRÖMMING FACTORY</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   menuButtons.innerHTML = h;
 }
@@ -1760,7 +1790,7 @@ function updateCombat(dt) {
   }
   // out of ammo on a box weapon -> back to the pistol
   if (player.cur !== 'pistol') { const a = player.ammo[player.cur]; if (a.mag <= 0 && a.res <= 0 && !state.reloading) { notice('OUT OF AMMO'); switchWeapon('pistol'); } }
-  if (state.health < state.maxHealth && state.time - state.lastHurt > 6) state.health = Math.min(state.maxHealth, state.health + dt * 14 * state.maxHealth / 100);
+  if (state.health < state.maxHealth && state.time - state.lastHurt > 4) state.health = Math.min(state.maxHealth, state.health + dt * 6 * state.maxHealth / 100);
 }
 
 function updateRounds(dt) {
