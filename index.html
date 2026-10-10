@@ -1540,7 +1540,7 @@ function explode(point, ray = false, wt = null) {
 
   for (const z of [...zombies]) {
     const c = new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), dist = c.distanceTo(point);
-    if (dist < R) damageZombie(z, dmgOf(ray ? (wt || 'raygun') : 'crossbow') * (1 - 0.6 * dist / R), c, false);
+    if (dist < R) damageZombie(z, (wt === 'pistol' ? dmgOf('pistol') * 2.5 : dmgOf(ray ? (wt || 'raygun') : 'crossbow')) * (1 - 0.6 * dist / R), c, false);
   }
 }
 
@@ -1722,7 +1722,7 @@ function hurtPlayer(dmg) {
 /* ===================================================================
    WEAPONS
 =================================================================== */
-const dmgOf = t => WEAPONS[t].dmg * (player.pap[t] ? 2 : 1) * (boughtExtraPerks.has('double') ? 1.5 : 1);
+const dmgOf = t => WEAPONS[t].dmg * (player.pap[t] ? 4 : 1) * (boughtExtraPerks.has('double') ? 1.5 : 1);
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
@@ -1749,7 +1749,7 @@ function switchWeapon(type) {
 function startReload() {
   const w = WEAPONS[player.cur], a = player.ammo[player.cur];
   if (state.reloading || a.mag >= w.mag || a.res <= 0) return;
-  state.reloading = true; state.reloadT = w.reload * (boughtExtraPerks.has('speed') ? 0.65 : 1); sfx.reload();
+  state.reloading = true; state.reloadT = w.reload * (boughtExtraPerks.has('speed') ? 0.65 : 1) * (player.pap[player.cur] ? 0.7 : 1); sfx.reload();
 }
 function giveWeapon(type) {
   const w = WEAPONS[type], a = player.ammo[type], had = player.slot1 === type || player.slot2 === type;
@@ -1776,7 +1776,7 @@ function shoot() {
   player.pitch = Math.min(Math.PI / 2 - 0.01, player.pitch + (player.cur === 'ak' ? 0.004 : 0.006));
   player.yaw += (Math.random() - 0.5) * 0.003;
 
-  if (w.kind !== 'hitscan') {
+  if (w.kind !== 'hitscan' || (player.cur === 'pistol' && player.pap.pistol)) {
     camera.getWorldDirection(_v);
     const start = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(_v, 0.7); start.y -= 0.06;
     fireProj(w);
@@ -2310,7 +2310,7 @@ function buyPap() {
   if (player.pap[t]) { notice('ALREADY PACKED'); sfx.deny(); return; }
   if (state.score < PAP_COST) { notice(`NEED ${PAP_COST} POINTS`); sfx.deny(); return; }
   state.score -= PAP_COST; player.pap[t] = true; const w = WEAPONS[t], a = player.ammo[t]; a.mag = w.mag; a.res = w.reserve; state.reloading = false;
-  sfx.buy(); sfx.chime(); setViewmodels(); notice(`${w.name} PACK-A-PUNCHED! DAMAGE x2`, 3000);
+  sfx.buy(); sfx.chime(); setViewmodels(); notice(`${w.name} PACK-A-PUNCHED! DAMAGE x4`, 3000);
 }
 function updatePerks(dt) {
   if (doorNear() && keys['KeyE']) {
