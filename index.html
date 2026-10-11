@@ -221,6 +221,8 @@ const EXPLOSION_RADIUS = 5.5;
 const SHOTGUN_WALL_COST = 1500;
 const DOOR_COST = 500, JUG_COST = 2500, PAP_COST = 5000;   // prices
 WEAPONS.pistol.ads = [0, -0.075, -0.32]; WEAPONS.ak.ads = [0, -0.105, -0.32]; WEAPONS.crossbow.ads = [0, -0.1, -0.34];
+WEAPONS.smg = { name: 'MP5 SMG', dmg: 30, delay: 0.065, auto: true, mag: 32, reserve: 160, reload: 1.8, kind: 'hitscan', spread: 0.012, kick: 0.025, rot: 0.04, vm: [0.2, -0.2, -0.46], ads: [0, -0.1, -0.32] };
+WEAPONS.galil = { name: 'GALIL', dmg: 58, delay: 0.1, auto: true, mag: 35, reserve: 140, reload: 2.3, kind: 'hitscan', spread: 0.01, kick: 0.06, rot: 0.05, vm: [0.23, -0.23, -0.5], ads: [0, -0.105, -0.34] };
 WEAPONS.shotgun = { name: 'REMINGTON 870 MCS', dmg: 45, pellets: 8, delay: 0.85, auto: false, mag: 6, reserve: 36, reload: 2.6, kind: 'hitscan', spread: 0.05, kick: 0.16, rot: 0.2, vm: [0.22, -0.24, -0.5], ads: [0, -0.095, -0.3] };
 WEAPONS.raygun2 = { name: 'RAY GUN MARK II', dmg: 200, delay: 0.55, auto: false, mag: 24, reserve: 120, reload: 3.0, kind: 'ray', burst: 2, spread: 0, kick: 0.07, rot: 0.1, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
 WEAPONS.raygun = { name: 'RAY GUN', dmg: 250, delay: 0.32, auto: false, mag: 20, reserve: 160, reload: 2.8, kind: 'ray', spread: 0, kick: 0.06, rot: 0.08, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
@@ -957,7 +959,7 @@ function addPerk(px, pz, ry, o) {
   addPerk(jug.pos.x, jug.pos.z, 0, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
   // Additional purchasable factory perks (kept away from the main door and machinery).
   const extraPerkMachines = [
-    { id: 'quick', pos: new THREE.Vector3(-30, 0, 8.5), rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 1500 },
+    { id: 'quick', pos: new THREE.Vector3(-30, 0, 8.5), rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500 },
     { id: 'speed', pos: new THREE.Vector3(28, 0, 6.4), rot: 0, title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
     { id: 'double', pos: new THREE.Vector3(-30, 0, -10), rot: 0, title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
     { id: 'mule', pos: new THREE.Vector3(30, 0, -3.5), rot: Math.PI, title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
@@ -1192,6 +1194,34 @@ function buildTeddy() {
   part(g, B(0.16, 0.05, 0.04), re, 0, 0.14, 0.13);
   return g;
 }
+function buildSMG() {   // MP5-style
+  const g = new THREE.Group();
+  part(g, B(0.05, 0.07, 0.36), WM.blued, 0, 0, -0.1); part(g, B(0.04, 0.026, 0.3), WM.blued, 0, 0.05, -0.1); cz(g, 0.028, 0.34, WM.blued, 0, 0.0, -0.46, 12);
+  cz(g, 0.012, 0.1, WM.chrome, 0, 0.0, -0.68, 10); part(g, B(0.014, 0.034, 0.014), WM.blued, 0, 0.075, -0.64); part(g, B(0.03, 0.02, 0.03), WM.blued, 0, 0.08, -0.04);
+  part(g, B(0.054, 0.052, 0.22), WM.poly, 0, -0.03, -0.42); for (let i = 0; i < 5; i++) part(g, B(0.056, 0.004, 0.012), WM.dark, 0, -0.03, -0.34 - i * 0.04);
+  part(g, B(0.036, 0.13, 0.05), WM.poly, 0, -0.1, -0.0, 0.12); part(g, B(0.03, 0.17, 0.05), WM.blued, 0, -0.14, -0.2, 0.18); part(g, B(0.04, 0.016, 0.06), WM.poly, 0, -0.23, -0.22, 0.18);
+  part(g, B(0.006, 0.026, 0.01), WM.chrome, 0, -0.045, -0.12); part(g, B(0.005, 0.006, 0.06), WM.blued, 0, -0.06, -0.1);
+  for (const s of [-1, 1]) part(g, B(0.012, 0.012, 0.26), WM.blued, s * 0.022, 0.0, 0.26); part(g, B(0.05, 0.1, 0.02), WM.poly, 0, -0.01, 0.4);
+  part(g, B(0.012, 0.012, 0.05), WM.chrome, 0.03, 0.03, -0.02);
+  hand(g, 0.0, -0.11, 0.03, 0.1); hand(g, 0.0, -0.065, -0.4, -0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0.0, -0.72);
+  return g;
+}
+function buildGalil() {   // assault rifle: polymer furniture, folding stock look
+  const g = new THREE.Group();
+  part(g, B(0.056, 0.08, 0.38), WM.blued, 0, 0, -0.05); part(g, B(0.05, 0.03, 0.34), WM.blued, 0, 0.055, -0.06);
+  part(g, B(0.06, 0.056, 0.26), WM.poly, 0, -0.005, -0.44); for (let i = 0; i < 6; i++) part(g, B(0.062, 0.004, 0.01), WM.dark, 0, 0.0, -0.34 - i * 0.04);
+  cz(g, 0.012, 0.5, WM.blued, 0, 0.02, -0.8, 12); cz(g, 0.01, 0.3, WM.chrome, 0, 0.062, -0.62, 10); cz(g, 0.022, 0.05, WM.blued, 0, 0.04, -0.7, 12);
+  part(g, B(0.012, 0.05, 0.012), WM.blued, 0, 0.085, -0.88); part(g, B(0.03, 0.01, 0.012), WM.blued, 0, 0.11, -0.88); cz(g, 0.019, 0.07, WM.blued, 0, 0.02, -1.05, 12);
+  part(g, B(0.014, 0.05, 0.03), WM.blued, 0, 0.1, -0.2); part(g, B(0.01, 0.012, 0.05), WM.chrome, 0, 0.12, -0.2);
+  part(g, B(0.04, 0.1, 0.07), WM.poly, 0, -0.1, -0.2, 0.2); part(g, B(0.042, 0.1, 0.07), WM.poly, 0, -0.19, -0.23, 0.45); part(g, B(0.044, 0.08, 0.07), WM.poly, 0, -0.26, -0.28, 0.7);
+  part(g, B(0.05, 0.12, 0.05), WM.poly, 0, -0.1, 0.1, -0.3); part(g, B(0.056, 0.012, 0.15), WM.blued, 0, -0.045, -0.02);
+  for (const s of [-1, 1]) part(g, B(0.014, 0.075, 0.3), WM.blued, s * 0.025, -0.01, 0.34, 0.06); part(g, B(0.05, 0.1, 0.018), WM.poly, 0, -0.03, 0.5, 0.06);
+  part(g, B(0.014, 0.02, 0.05), WM.chrome, 0.036, 0.03, -0.1);
+  hand(g, 0.0, -0.12, 0.08, 0.1); hand(g, -0.005, -0.045, -0.5, -0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0.02, -1.1);
+  return g;
+}
 function buildRay() {   // 50s sci-fi pistol
   const g = new THREE.Group();
   cap(g, 0.036, 0.3, WM.red, 0, 0.02, -0.14); cz(g, 0.022, 0.26, WM.mid, 0, 0.02, -0.4, 14); part(g, new THREE.SphereGeometry(0.04, 12, 10), WM.green, 0, 0.02, -0.55);
@@ -1221,7 +1251,7 @@ function papGlow(m) {
   part(g, B(0.05, 0.006, 0.006), WM.pap, 0, 0.05, -0.4); g.visible = false; m.add(g); m.userData.pg = g;
 }
 // first-person models
-const vm = { pistol: buildPistol(), ak: buildAK(), crossbow: buildCrossbow(), raygun: buildRay(), shotgun: buildShotgun(), raygun2: buildRay2() };
+const vm = { pistol: buildPistol(), ak: buildAK(), crossbow: buildCrossbow(), raygun: buildRay(), shotgun: buildShotgun(), raygun2: buildRay2(), smg: buildSMG(), galil: buildGalil() };
 for (const k in vm) papGlow(vm[k]);
 for (const k in vm) { vm[k].visible = false; camera.add(vm[k]); }
 const knifeModel = buildKnife(); knifeModel.visible = false; camera.add(knifeModel);
@@ -1234,7 +1264,7 @@ muzzleFlash.visible = false;
 const muzzleLight = new THREE.PointLight(0xffb060, 0, 12, 2);
 
 // mystery box floating display models
-mbox.models.teddy = buildTeddy(); mbox.models.ak = buildAK(); mbox.models.crossbow = buildCrossbow(); mbox.models.raygun = buildRay(); mbox.models.shotgun = buildShotgun(); mbox.models.raygun2 = buildRay2();
+mbox.models.teddy = buildTeddy(); mbox.models.ak = buildAK(); mbox.models.crossbow = buildCrossbow(); mbox.models.raygun = buildRay(); mbox.models.shotgun = buildShotgun(); mbox.models.raygun2 = buildRay2(); mbox.models.smg = buildSMG(); mbox.models.galil = buildGalil();
 for (const k in mbox.models) { mbox.models[k].scale.setScalar(1.5); mbox.models[k].rotation.y = Math.PI / 2; mbox.models[k].visible = false; mbox.display.add(mbox.models[k]); }
 
 /* ===================================================================
@@ -1391,7 +1421,7 @@ function buildWarlordVariant() {   // armoured sprinter: stahlhelm, gas mask, pl
 }
 const warlordVariant = buildWarlordVariant();
 const zMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: texGrain(), roughness: 0.96, metalness: 0.0 });
-const zEyeMat = new THREE.MeshBasicMaterial({ color: 0xffd36b, fog: false }); // dim sickly amber glow
+const zEyeMat = new THREE.MeshBasicMaterial({ color: 0x55b4ff, fog: false }); // dim sickly amber glow
 
 /* ===================================================================
    STATE
@@ -1412,7 +1442,7 @@ const player = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, pitch: 0, bob: 0,
   cur: 'pistol', slot2: null, slot3: null, pap: {}, jumpY: 0, jumpVel: 0, onGround: true,
   slot1: 'pistol',
-  ammo: { pistol: { mag: 12, res: Infinity }, ak: { mag: 30, res: 120 }, crossbow: { mag: 3, res: 12 }, raygun: { mag: 20, res: 160 }, shotgun: { mag: 6, res: 36 }, raygun2: { mag: 24, res: 120 } },
+  ammo: { pistol: { mag: 12, res: Infinity }, ak: { mag: 30, res: 120 }, crossbow: { mag: 3, res: 12 }, raygun: { mag: 20, res: 160 }, shotgun: { mag: 6, res: 36 }, raygun2: { mag: 24, res: 120 }, smg: { mag: 32, res: 160 }, galil: { mag: 35, res: 140 } },
 };
 const keys = {};
 let locked = false;
@@ -1498,6 +1528,8 @@ const sfx = {
   pistol: () => gunSnd({ c0: 9000, c1: 3000, v: 0.55, b: 0.1, b0: 5000, b1: 400, t0: 180, t1: 50, tb: 0.09, tail: 0.35, f0: 2200 }),
   ak: () => gunSnd({ c0: 8000, c1: 2500, v: 0.65, b: 0.14, b0: 4200, b1: 300, t0: 140, t1: 40, tb: 0.12, tail: 0.55, f0: 1800 }),
   shotgun: () => { gunSnd({ c0: 7000, c1: 1500, v: 0.95, b: 0.28, b0: 3200, b1: 150, t0: 100, t1: 30, tb: 0.28, tail: 0.9, f0: 1400 }); setTimeout(() => noiseBurst(0.05, 2200, 700, 0.3, 'highpass'), 420); setTimeout(() => { noiseBurst(0.06, 1800, 500, 0.35, 'highpass'); tone('square', 140, 90, 0.05, 0.15); }, 560); },
+  smg: () => gunSnd({ c0: 9500, c1: 3500, v: 0.5, b: 0.08, b0: 5200, b1: 500, t0: 200, t1: 60, tb: 0.07, tail: 0.3, f0: 2400 }),
+  galil: () => gunSnd({ c0: 8200, c1: 2600, v: 0.68, b: 0.15, b0: 4000, b1: 280, t0: 130, t1: 38, tb: 0.13, tail: 0.6, f0: 1700 }),
   raygun2: () => { tone('sawtooth', 2200, 260, 0.28, 0.28); tone('sine', 1000, 120, 0.3, 0.3); noiseBurst(0.12, 6000, 1200, 0.25, 'highpass'); },
   crossbow: () => { tone('triangle', 520, 90, 0.2, 0.45); tone('sine', 110, 50, 0.15, 0.5); noiseBurst(0.12, 3500, 500, 0.3, 'highpass'); noiseBurst(0.3, 1200, 200, 0.15); },
   raygun: () => { tone('sawtooth', 1500, 180, 0.3, 0.3); tone('square', 760, 90, 0.24, 0.2); noiseBurst(0.1, 5000, 1500, 0.2, 'highpass'); },
@@ -1987,7 +2019,7 @@ function interact() {
     if (state.score < BOX_COST) { notice(`NEED ${BOX_COST} POINTS`); sfx.deny(); return; }
     state.score -= BOX_COST; sfx.buy();
     mbox.state = 'rolling'; mbox.t = 0; mbox.cycleT = 0; const teddy = (curMap.boxSpots || []).length > 1 && (mbox.uses || 0) >= 3 && (Math.random() < 0.22 || mbox.uses >= 8);
-    mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2']);
+    mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2']);
     mbox.display.visible = true; mbox.display.position.y = 0.9;
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach(i => { setTimeout(() => { if (mbox.state === 'rolling') tone('triangle', [523, 659, 784, 659][i % 4], [523, 659, 784, 659][i % 4], 0.15, 0.1); }, i * 200); });
   } else if (mbox.state === 'ready') {
@@ -2054,7 +2086,7 @@ function resetWorld() {
   });
   camera.fov = 75; camera.updateProjectionMatrix();
   player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
-  player.ammo.pistol = { mag: 12, res: Infinity }; player.ammo.ak = { mag: 30, res: 120 }; player.ammo.crossbow = { mag: 3, res: 12 }; player.ammo.raygun = { mag: 20, res: 160 }; player.ammo.shotgun = { mag: 6, res: 36 }; player.ammo.raygun2 = { mag: 24, res: 120 };
+  player.ammo.pistol = { mag: 12, res: Infinity }; player.ammo.ak = { mag: 30, res: 120 }; player.ammo.crossbow = { mag: 3, res: 12 }; player.ammo.raygun = { mag: 20, res: 160 }; player.ammo.shotgun = { mag: 6, res: 36 }; player.ammo.raygun2 = { mag: 24, res: 120 }; player.ammo.smg = { mag: 32, res: 160 }; player.ammo.galil = { mag: 35, res: 140 };
   vm.crossbow.userData.bolt.visible = true;
   mbox.state = 'closed'; mbox.display.visible = false; mbox.lid.rotation.x = 0; placeBox(curMap.boxPos.x, curMap.boxPos.z, curMap.boxRot); mbox.uses = 0;
   boughtExtraPerks.clear();
@@ -2441,7 +2473,10 @@ function updateAmbient(dt) {
 }
 
 function doorNear() { return curMap.id === 'factory' && !house.open && Math.hypot(player.pos.x - house.doorX, player.pos.z - (house.cz + house.d / 2)) < 3; }
-function cdNear() { return curMap.id === 'factory' ? cottageDoors.find(c => !c.open && Math.hypot(player.pos.x - c.doorX, player.pos.z - c.doorZ) < 2.4) : null; }
+function cdNear() {
+  if (curMap.barriers) return curMap.barriers.find(b => !b.open && Math.hypot(player.pos.x - b.pos.x, player.pos.z - b.pos.z) < 3.4) || null;
+  return curMap.id === 'factory' ? cottageDoors.find(c => !c.open && Math.hypot(player.pos.x - c.doorX, player.pos.z - c.doorZ) < 2.4) : null;
+}
 function resetHouse() {
   cdHold = 0; swHold = 0; if (curMap.onReset) curMap.onReset(); const FF = MAPS.factory;
   for (const c of cottageDoors) { c.open = false; c.t = 0; c.pivot.rotation.y = 0; if (!FF.obs.includes(c.obs)) FF.obs.push(c.obs); if (!FF.occ.includes(c.mesh)) FF.occ.push(c.mesh); }
@@ -2477,7 +2512,8 @@ function updatePerks(dt) {
     if (swHold >= 4) { swHold = 0; sw.on = true; curMap.power[sw.id] = true; if (curMap.onPower) curMap.onPower(sw.id); sfx.door(); sfx.chime(); notice(`POWER ON: ${sw.name}`, 3200); }
   } else swHold = Math.max(0, swHold - dt * 2);
   const cd = cdNear();
-  if (cd && keys['KeyE']) { cdHold += dt; if (cdHold >= 0.7) { if (state.score < cd.cost) { notice(`NEED ${cd.cost} POINTS`); sfx.deny(); cdHold = -0.8; } else { cdHold = 0; state.score -= cd.cost; cd.open = true; sfx.door(); notice('DOOR OPENED'); const FF = MAPS.factory; FF.obs.splice(FF.obs.indexOf(cd.obs), 1); FF.occ.splice(FF.occ.indexOf(cd.mesh), 1); } } } else cdHold = Math.max(0, cdHold - dt * 3);
+  if (cd && keys['KeyE']) { cdHold += dt; if (cdHold >= 0.7) { if (state.score < cd.cost) { notice(`NEED ${cd.cost} POINTS`); sfx.deny(); cdHold = -0.8; } else { cdHold = 0; state.score -= cd.cost; cd.open = true; sfx.door(); notice(cd.label ? cd.label + ' OPENED' : 'DOOR OPENED'); if (cd.onOpen) cd.onOpen(); else { const FF = MAPS.factory; FF.obs.splice(FF.obs.indexOf(cd.obs), 1); FF.occ.splice(FF.occ.indexOf(cd.mesh), 1); } } } } else cdHold = Math.max(0, cdHold - dt * 3);
+  for (const b of curMap.barriers || []) if (b.open && b.t < 1) { b.t = Math.min(1, b.t + dt * 1.1); b.anim(b.t); }
   for (const c of cottageDoors) if (c.open && c.t < 1) { c.t = Math.min(1, c.t + dt * 1.2); c.pivot.rotation.y = -c.t * Math.PI * 0.5; }
   pap.gear.rotation.y += dt * 1.2; pap.gear.position.y = 2.42 + Math.sin(state.time * 2) * 0.04;
 }
@@ -2485,7 +2521,7 @@ function updateInteractions() {
   let p = '';
   const cd = cdNear(), u = nearestUse();
   if (doorNear()) p = `HOLD E: OPEN DOOR [${DOOR_COST}]`;
-  else if (cd) p = `HOLD E: OPEN DOOR [${cd.cost}]`;
+  else if (cd) p = `HOLD E: OPEN ${cd.label || 'DOOR'} [${cd.cost}]`;
   else if (u) {
     if (u.k === 'nopower') p = 'NO POWER - FIND THE POWER SWITCH';
     else if (u.k === 'switch') p = `HOLD E: START POWER (${u.w.name})`;
@@ -2747,7 +2783,7 @@ function buildWindowMap() {
   // every perk + pack-a-punch + mystery box in the room
   addPerk(-4.8, -10, 0, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
   const defs = [
-    { id: 'quick', x: -1.6, z: -10, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 1500 },
+    { id: 'quick', x: -1.6, z: -10, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500 },
     { id: 'speed', x: 1.6, z: -10, rot: 0, title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
     { id: 'double', x: 4.8, z: -10, rot: 0, title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
     { id: 'mule', x: 6.05, z: -1.9, rot: -Math.PI / 2, title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
@@ -2821,7 +2857,7 @@ function buildIronMire() {
   addSolid(9.5, -29, 5, 14, 5, MAT.brick); dv(new THREE.ConeGeometry(3.6, 4, 4), '#2c2a2c', 9.5, 16, -29, PI / 4);
   const churchL = lightAt(0, 4.5, -42, 0xffa860, 28, 22);
   const jg = machine({ x: -4.5, z: -53, rot: 0, title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' }, 'church'); perks.pop();
-  machine({ x: 4.5, z: -53, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 1500, id: 'quick' }, 'church');
+  machine({ x: 4.5, z: -53, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500, id: 'quick' }, 'church');
   powerSwitch(-7.2, -34, PI / 2, 'church', 'CHURCH');
   // ---- Hangar (east): dormant giant, Speed Cola, Double Tap, Mule Kick, switch 2 ----
   room(46, -10, 24, 34, 11, MAT.warehouse, [{ side: 'W', at: 0, w: 8, h: 8 }]);
@@ -2882,6 +2918,11 @@ MAPS.window = { id: 'window', name: 'WINDOW', sub: 'ONE ROOM &middot; ONE WINDOW
 MAPS.ironmire = { id: 'ironmire', name: 'IRON MIRE', sub: 'MUD &middot; TRENCHES &middot; GIANTS', built: false, build: buildIronMire };
 MAPS.giant = { id: 'giant', name: 'THE GIANT: RESEARCH SITE', sub: 'SNOWBOUND INDUSTRIAL FACILITY', built: false, build: buildDerRieseInspired };
 
+function rebuildNav() {
+  const m = curMap; if (!m || !m.nav) return;
+  m.nav = buildNav(m); Object.assign(NAV, m.nav, { on: true, last: -1, t: 0 });
+  navFlood(m.spawn.x, m.spawn.z); for (let i = 0; i < NAV.dist.length; i++) NAV.reach[i] = NAV.dist[i] < NAV_BIG ? 1 : 0; m.nav.reachDone = true;
+}
 function activateMap(id) {
   const m = MAPS[id];
   if (!m.built) { Object.assign(m, m.build()); m.built = true; }
@@ -3007,7 +3048,7 @@ function treeGeo(crown, big = 1) {   // spring tree: pale trunk, bare branches, 
 }
 
 function buildOsterled() {
-  const AXo = 51, AZo = 48;
+  const AXo = 60, AZo = 58;
   const obs = [], occ = [], OG = [], LW = [], EM = [], CF = [];
   const sv = { o: obstacles, m: obstacleMeshes, t: DT };
   obstacles = obs; obstacleMeshes = occ; DT = OG;
@@ -3026,6 +3067,8 @@ function buildOsterled() {
     chain: new THREE.MeshStandardMaterial({ map: texChain(), transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.5 }),
     win: new THREE.MeshBasicMaterial({ vertexColors: true }), emis: new THREE.MeshBasicMaterial({ vertexColors: true }),
   };
+  MO.lav = std(texPlaster('#b6b2c4')); MO.brickDark = std(texBrick('#5c3128', '#7a756c')); MO.brickRed = std(texBrick('#8f4a38', '#9a948a')); MO.roofBlue = std(texMetal('#3c4757', 0.25));
+  MO.grey = std(texPlaster('#aeb4ba')); MO.trafo = std(texMetal('#cfd2d0', 0.1)); MO.shed = std(texPlanks('#6f6a62', { n: 10 }));
 
   /* ---------- helpers ---------- */
   const setCol = (g, hex, jit = 0) => {
@@ -3048,23 +3091,23 @@ function buildOsterled() {
   {
     const g = new THREE.Mesh(planeGeo(AXo * 2 + 60, AZo * 2 + 60, 8), MAT.grass); g.rotation.x = -PI / 2; g.receiveShadow = true; scene.add(g);
     const outer = new THREE.Mesh(planeGeo(700, 700, 8), MAT.outer); outer.rotation.x = -PI / 2; outer.position.y = -0.3; scene.add(outer);
-    slab(-90, 37.6, 90, 46.4, 0.02, MO.asphalt, 6);            // Esperedsvägen
-    slab(-90, 34.8, 90, 37.6, 0.05, MO.paving, 4);             // pavement
-    slab(-44, 25.6, -12.5, 34.8, 0.034, MO.asphalt, 6);        // staff car park
-    slab(-8, 12, 8, 34.8, 0.034, MO.grit, 5);                  // gate plaza
-    slab(-30, -34, 28, 12, 0.022, MO.grit, 5);                 // courtyard + north yard
-    slab(28, 11, 41, 18.5, 0.028, MO.grit, 5);                 // east passage
-    slab(-30, 23.5, -8, 26.2, 0.05, MO.paving, 3);             // front of the entrance building
-    slab(41.2, 23.5, 44.2, 34.8, 0.05, MO.paving, 3);          // preschool footpath
-    slab(-46, -40, -42.5, 26, 0.03, MO.paving, 4);             // west footpath
-    slab(-46, -44.2, 46, -41, 0.03, MO.grit, 5);               // back path
-    // painted road markings
-    for (let i = 0; i < 8; i++) dv(BX(3.2, 0.02, 0.5), '#e4e4de', 1.5, 0.045, 38.5 + i * 0.95);
-    for (let i = -17; i <= 16; i++) if (Math.abs(i * 5 - 1.5) > 4) dv(BX(2.2, 0.02, 0.16), '#d8d29a', i * 5, 0.045, 42);
-    for (let i = 0; i < 12; i++) dv(BX(0.1, 0.02, 4.4), '#cfd0d0', -43 + i * 2.7, 0.05, 29.2);
-    dv(BX(180, 0.14, 0.28), '#8a8d8e', 0, 0.07, 37.7);       // kerb
-    const rt = new THREE.Mesh(new THREE.PlaneGeometry(15, 2.2), new THREE.MeshStandardMaterial({ map: texLabel('Esperedsvägen', 1024, 150, 'rgba(232,232,226,0.88)', null, 'bold 120px Arial'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-    rt.rotation.x = -PI / 2; rt.position.set(-24, 0.05, 39.8); scene.add(rt);
+    slab(-90, 44, 90, 54, 0.02, MO.asphalt, 6);             // Esperedsvägen
+    slab(-90, 40.4, 90, 44, 0.05, MO.paving, 4);            // pavement
+    slab(-46, 29, -9, 40.4, 0.034, MO.asphalt, 6);          // staff car park
+    slab(-8, 12, 8, 40.4, 0.034, MO.asphalt, 5);            // entrance path
+    slab(8, 30, 34, 40.4, 0.034, MO.grit, 5);               // bike yard
+    slab(-35, -23, 32, 12, 0.022, MO.asphalt, 6);           // courtyard
+    slab(-36, -38, 18, -22, 0.03, MO.grit, 5);              // service yard north of the courtyard
+    slab(46, -52, 54, 44, 0.025, MO.asphalt, 6);            // Transformatorsgatan
+    slab(43, -22, 46, 40.4, 0.05, MO.paving, 3);            // pavement along the east wing
+    slab(44, -52, 60, -22, 0.03, MO.asphalt, 6);            // PE car park
+    slab(-59, -50, -48, 40.4, 0.03, MO.grit, 5);            // west lane
+    for (let i = 0; i < 9; i++) dv(BX(3.2, 0.02, 0.5), '#e4e4de', 6, 0.06, 44.6 + i * 0.95);   // zebra crossing in front of the entrance
+    for (let x = -88; x < 90; x += 5) dv(BX(2.2, 0.02, 0.16), '#d8d29a', x, 0.045, 49);
+    for (let i = 0; i < 16; i++) dv(BX(0.1, 0.02, 4.6), '#cfd0d0', -46 + i * 2.55, 0.05, 34.2);   // car-park lines
+    dv(BX(180, 0.14, 0.28), '#8a8d8e', 0, 0.07, 40.4);
+    const rt = new THREE.Mesh(new THREE.PlaneGeometry(15, 2.2), new THREE.MeshStandardMaterial({ map: texLabel('Esperedsvägen', 1024, 150, 'rgba(232,232,226,0.88)', null, 'bold 120px Arial'), transparent: true, roughness: 0.9 }));
+    rt.rotation.x = -PI / 2; rt.position.set(-24, 0.06, 51.8); scene.add(rt);
   }
 
   /* ---------- buildings ---------- */
@@ -3093,88 +3136,6 @@ function buildOsterled() {
   };
   const vent = (x, y, z, w = 0.9) => { dv(BX(w, 0.8, w), '#6a7076', x, y + 0.4, z); dv(BX(w + 0.2, 0.1, w + 0.2), '#4a5056', x, y + 0.85, z); };
 
-  // A: west wing
-  const A = building(-35.5, -16, 11, 48, 3.6, MO.panel);
-  {
-    const eo = even(48, 14, 2.6), noDoor = o => Math.abs(o - 12) > 2.4;
-    wins(A, 'E', eo.filter(noDoor), { y: 2.0, ww: 2.4, wh: 1.4 }); wins(A, 'W', eo, { y: 2.0, ww: 2.4, wh: 1.4 });
-    wins(A, 'N', [-2.5, 2.5], { y: 2.0 }); wins(A, 'S', [-2.5, 2.5], { y: 2.0 });
-    dv(BX(0.12, 2.3, 2.6), '#233038', -29.94, 1.15, -4); lw(-29.9, 1.15, -4, PI / 2, 2.3, 2.0, '#ffe0a0');
-    dv(BX(3.2, 0.14, 3.4), '#2f6b55', -28.4, 2.7, -4);
-    for (const z of [-5.5, -2.5]) { dv(BX(0.12, 2.7, 0.12), '#3a4a44', -27.0, 1.35, z); block(-27.08, -26.92, z - 0.08, z + 0.08); }
-    for (let z = -34; z <= -9; z += 5) { dv(BX(0.14, 2.85, 0.14), '#4a525a', -27.6, 1.43, z); block(-27.7, -27.5, z - 0.1, z + 0.1); }
-    dv(BX(2.8, 0.14, 25.4), '#2e3a40', -28.6, 2.92, -21.5);   // covered walk along the wing
-    for (const x of [-37.4, -33.6]) for (let z = -37; z <= -7; z += 2.4) dv(BX(2.8, 0.06, 2.2).rotateX(-0.25), '#17263f', x, 4.25, z);   // solar panels
-    vent(-35.5, 3.9, 4); vent(-35.5, 3.9, -39);
-  }
-  // B: entrance building
-  const B = building(-19, 18, 22, 11, 3.4, MO.brick);
-  {
-    band(B, '#dcd9cf', 2.95, 0.9);
-    wins(B, 'S', [-8.6, -5.9, -3.2, -0.5, 8.9], { y: 1.7 }); wins(B, 'N', even(22, 7, 2), { y: 1.7 });
-    wins(B, 'E', [-2.2, 2.2], { y: 1.7 }); wins(B, 'W', [-2.2, 2.2], { y: 1.7 });
-    dv(BX(3.6, 2.6, 0.12), '#202830', -14, 1.3, 23.56); lw(-14, 1.25, 23.62, 0, 3.0, 2.3, '#ffe0a0');   // lit glass entrance
-    dv(BX(5.4, 0.2, 2.7), '#14171a', -14, 2.65, 24.85);                                                  // black canopy
-    for (const x of [-16.6, -11.4]) { dv(BX(0.1, 2.6, 0.1), '#2c3034', x, 1.3, 26.0); block(x - 0.08, x + 0.08, 25.92, 26.08); }
-    sign(texLabel('ÖSTERLEDSKOLAN', 512, 64, '#e8e8e8', '#2b3a4a', 'bold 40px Arial'), 5.0, 0.6, -14, 3.08, 23.5, 0);
-    for (let i = 0; i < 3; i++) dv(BX(3.6, 0.15, 0.5), '#8f9192', -14, 0.08 + i * 0.15, 24.2 + (2 - i) * 0.5);   // steps
-    addSolid(-23.5, 25.2, 9.0, 0.8, 0.5, MO.stone, { collide: true }); addSolid(-8.6, 25.2, 5.6, 0.8, 0.5, MO.stone, { collide: true });
-    dv(new THREE.CylinderGeometry(0.4, 0.4, 0.08, 16).rotateX(PI / 2), '#e9e6dc', -24.5, 2.6, 23.55); dv(BX(0.04, 0.3, 0.02), '#222', -24.5, 2.68, 23.6);   // clock
-    dv(BX(0.9, 1.6, 0.06), '#44606c', -22.2, 1.7, 23.55);    // wall plaque
-    vent(-24, 3.9, 16.5); vent(-14, 3.9, 20);
-  }
-  // C: north hall (brick, black cladding above)
-  const C = building(-4, -24, 22, 16, 4.2, MO.brick);
-  {
-    addSolid(-4, -25, 15, 2.6, 11, MO.blackMetal, { y0: 4.5, collide: false, den: 2.5 });
-    dv(BX(14, 0.5, 0.3), '#2f4a66', -4, 5.4, -19.4);
-    wins(C, 'S', [-8, -4.5, 4.5, 8], { y: 1.8 }); wins(C, 'N', even(22, 5, 2.5), { y: 1.8 }); wins(C, 'E', [-3, 3], { y: 1.8 }); wins(C, 'W', [-3, 3], { y: 1.8 });
-    dv(BX(8, 0.14, 2.4), '#2f5f8f', -4, 3.2, -14.7);                                                  // blue entrance awning
-    for (const x of [-7.6, -0.4]) { dv(BX(0.1, 3.2, 0.1), '#2c3034', x, 1.6, -13.6); block(x - 0.08, x + 0.08, -13.68, -13.52); }
-    dv(BX(2.4, 2.4, 0.12), '#202830', -4, 1.2, -15.94); lw(-4, 1.2, -15.88, 0, 2.0, 2.1, '#ffe0a0');
-    vent(-9, 7.1, -29, 1.3); vent(1, 7.1, -29, 1.3);
-  }
-  // D: stepped east wing
-  const D1 = building(34.5, -27, 11, 18, 3.4, MO.plaster), D2 = building(34, -10, 12, 16, 4.0, MO.brick), D3 = building(34, 4.5, 12, 13, 3.6, MO.panel);
-  wins(D1, 'W', even(18, 4, 2.4), { y: 1.9 }); wins(D1, 'E', even(18, 4, 2.4), { y: 1.9 });
-  wins(D2, 'W', even(16, 5, 2.0).filter(o => o < 5), { y: 2.0 }); wins(D2, 'E', even(16, 5, 2.0), { y: 2.0 });
-  wins(D3, 'W', even(13, 4, 2.0), { y: 1.9, ww: 2.2 }); wins(D3, 'E', even(13, 4, 2.0), { y: 1.9, ww: 2.2 }); wins(D3, 'S', [-2.5, 2.5], { y: 1.9 });
-  band(D2, '#dcd9cf', 3.55, 0.7);
-  dv(BX(2.8, 0.14, 3.0), '#2f6b55', 27.4, 2.7, -4);  for (const z of [-5.3, -2.7]) { dv(BX(0.12, 2.7, 0.12), '#3a4a44', 26.1, 1.35, z); block(26.04, 26.16, z - 0.08, z + 0.08); }
-  dv(BX(0.12, 2.3, 2.4), '#233038', 27.94, 1.15, -4); lw(27.9, 1.15, -4, -PI / 2, 2.2, 2.0, '#ffe0a0');
-  vent(32, 4.0, -12); vent(36, 4.0, -8); vent(34, 3.6, 8);
-  // E: south-east building
-  const E = building(22, 24, 28, 12, 4.6, MO.plaster);
-  {
-    addSolid(26, 24, 14, 1.8, 12, MO.blackMetal, { y0: 4.9, collide: false, den: 2.5 });
-    wins(E, 'S', even(28, 9, 2.2), { y: 2.0, ww: 2.0 }); wins(E, 'N', even(28, 9, 2.2), { y: 2.0, ww: 2.0 }); wins(E, 'W', [-3, 3], { y: 2.0 }); wins(E, 'E', [-3, 3], { y: 2.0 });
-    band(E, '#c4c0b4', 4.2, 0.6);
-    dv(BX(9, 0.14, 2.2), '#2f5f8f', 22, 3.3, 30.9); for (const x of [17.8, 26.2]) { dv(BX(0.1, 3.3, 0.1), '#2c3034', x, 1.65, 31.8); block(x - 0.08, x + 0.08, 31.72, 31.88); }
-    vent(14, 5.0, 22, 1.1); vent(30, 6.7, 26, 1.1); vent(20, 5.0, 26);
-  }
-  // P: Hedens Förskola
-  const P = building(44.5, 18, 9, 11, 3.2, MO.brickLt, { roof: MO.roofGreen });
-  {
-    addSolid(44.5, 23.5 - 0.01, 3.4, 3.2, 0.06, MO.beige, { collide: false, den: 2.5 });
-    wins(P, 'S', [-3.2, 3.3], { y: 1.7, ww: 1.4 }); wins(P, 'N', [-2.5, 2.5], { y: 1.7 }); wins(P, 'W', [-2.5, 2.5], { y: 1.7 }); wins(P, 'E', [-2.5, 2.5], { y: 1.7 });
-    for (const x of [43.4, 45.6]) { dv(BX(1.0, 2.1, 0.12), '#d9822b', x, 1.05, 23.58); lw(x, 1.5, 23.65, 0, 0.6, 0.8, pick(['#ffd88a', '#1b2733'])); }
-    sign(texLabel('HEDENS FÖRSKOLA', 512, 64, '#d4741e', '#d6c9ab', 'bold 42px Arial'), 4.4, 0.55, 44.5, 2.75, 23.5, 0);
-    dv(BX(3.6, 0.12, 1.7), '#6b5a46', 44.5, 2.55, 24.4);
-    vent(42, 3.3, 15); vent(47, 3.3, 20);
-  }
-
-  /* ---------- roads end here: overturned buses + gates ---------- */
-  const bus = (cx, cz, alongX) => {
-    const L = 12, Hh = 2.55, Dd = 3.0, ry = alongX ? 0 : PI / 2;
-    addSolid(cx, cz, alongX ? L : Dd, Hh, alongX ? Dd : L, MO.bus, { den: 3 });
-    lv(BX(L - 1.0, Hh - 0.7, 0.06), '#1c1f22', cx, cz, 0, Hh / 2, Dd / 2 + 0.03, ry);                  // exposed underside
-    lv(BX(L - 1.6, 0.04, 1.5), '#16212a', cx, cz, 0, Hh + 0.02, -0.25, ry);                            // side windows (now on top)
-    lv(BX(L - 0.4, 0.12, 0.06), '#e8ebe6', cx, cz, 0, 1.25, -Dd / 2 - 0.03, ry);                       // white stripe
-    lv(BX(0.06, 1.3, Dd - 0.8), '#16212a', cx, cz, L / 2 + 0.03, 1.4, 0, ry);                          // windscreen
-    for (const lx of [3.9, -3.0, -4.4]) lv(new THREE.CylinderGeometry(0.55, 0.55, 0.38, 12), '#121416', cx, cz, lx, Hh + 0.2, Dd / 2 - 0.6, ry);
-    for (const lx of [3.9, -3.0, -4.4]) lv(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 8), '#7d8388', cx, cz, lx, Hh + 0.2, Dd / 2 - 0.6, ry);
-    dv(BX(0.4, 0.3, 0.4), '#7a2a22', cx + (alongX ? 7 : 1.7), 0.15, cz + (alongX ? 1.2 : 7));          // debris
-  };
   const chain = (x0, z0, x1, z1, h = 1.9, collide = true) => {
     const alongX = z0 === z1, len = Math.abs(alongX ? x1 - x0 : z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, ry = alongX ? 0 : PI / 2;
     const g = planeGeo(len, h, 1.2); g.rotateY(ry); g.translate(cx, h / 2 + 0.02, cz); CF.push(g);
@@ -3183,42 +3144,6 @@ function buildOsterled() {
     dv(BX(len, 0.05, 0.05), '#7a8084', cx, h, cz, ry);
     if (collide) block(Math.min(x0, x1) - (alongX ? 0 : 0.1), Math.max(x0, x1) + (alongX ? 0 : 0.1), Math.min(z0, z1) - (alongX ? 0.1 : 0), Math.max(z0, z1) + (alongX ? 0.1 : 0));
   };
-  const gateLine = (x0, z0, x1, z1) => {   // tall gate: fence + heavy posts + cross braces
-    const alongX = z0 === z1, len = Math.abs(alongX ? x1 - x0 : z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, ry = alongX ? 0 : PI / 2, h = 2.3;
-    chain(x0, z0, x1, z1, h, true);
-    for (const [px, pz] of [[x0, z0], [x1, z1]]) dv(BX(0.2, h + 0.4, 0.2), '#d6a516', px, (h + 0.4) / 2, pz);
-    const a = Math.atan2(h - 0.3, len);
-    dv(BX(Math.hypot(len, h - 0.3), 0.07, 0.07).rotateZ(a), '#7a8084', cx, h / 2 + 0.1, cz, ry);
-    dv(BX(Math.hypot(len, h - 0.3), 0.07, 0.07).rotateZ(-a), '#7a8084', cx, h / 2 + 0.1, cz, ry);
-  };
-  bus(-46, 42.5, false); bus(46, 42.5, false);
-  gateLine(-50.8, 36.5, -47.5, 36.5); gateLine(47.5, 36.5, 50.8, 36.5);
-  dv(BX(1.6, 0.9, 0.6), '#9a9c9a', -43.6, 0.45, 40.2); block(-44.4, -42.8, 39.9, 40.5);   // concrete blocks in front of the bus
-  dv(BX(1.6, 0.9, 0.6), '#9a9c9a', 43.6, 0.45, 44.0); block(42.8, 44.4, 43.7, 44.3);
-
-  /* ---------- perimeter: hedges, fences, guard rail ---------- */
-  addSolid(0, -47.4, AXo * 2, 2.4, 1.2, MO.hedge, { den: 2.5 }); addSolid(0, 47.4, AXo * 2, 2.0, 1.2, MO.hedge, { den: 2.5 });
-  addSolid(-50.4, -5.75, 1.2, 2.4, 84.5, MO.hedge, { den: 2.5 }); addSolid(50.4, -5.75, 1.2, 4.2, 84.5, MO.conifer, { den: 2.5 });
-  for (let x = -44; x <= 44; x += 4) dv(BX(0.1, 0.9, 0.1), '#8a8f94', x, 0.45, 46.2);
-  dv(BX(88, 0.22, 0.06), '#a7adb2', 0, 0.75, 46.2); dv(BX(88, 0.22, 0.06), '#a7adb2', 0, 0.4, 46.2); block(-44.5, 44.5, 46.05, 46.35);
-
-  /* ---------- fences, barrier, small stuff ---------- */
-  chain(38, 24.8, 38, 34.8, 1.8); chain(38, 34.8, 39.6, 34.8, 1.8); chain(45.4, 34.8, 46.2, 34.8, 1.8);   // preschool lawn fence (gap = footpath)
-  chain(46.2, 24.8, 46.2, 34.8, 1.8);
-  // boom barrier (arm lies across half of the gate plaza) + striped concrete blocks
-  dv(BX(0.5, 1.1, 0.5), '#9a9c9a', -6.6, 0.55, 33.4); block(-6.85, -6.35, 33.15, 33.65);
-  for (let i = 0; i < 10; i++) dv(BX(0.8, 0.12, 0.12), i % 2 ? '#e8e8e4' : '#c4161c', -5.9 + i * 0.8, 1.05, 33.4);
-  block(-6.4, 1.8, 33.3, 33.5);
-  for (const [x, z, r] of [[3.2, 31, 0.3], [5.4, 33.2, -0.4], [6.9, 29.6, 0.2]]) {
-    dv(BX(1.0, 0.7, 0.6), '#9a9892', x, 0.35, z, r); dv(BX(0.5, 0.2, 0.04), '#e0661a', x + Sn(r) * -0.0, 0.5, z + 0.31, r); block(x - 0.55, x + 0.55, z - 0.4, z + 0.4);
-  }
-  // flag island + flagpole + P sign + give-way sign
-  slab(-14.5, 30, -8.5, 33.6, 0.04, MAT.grass, 3);
-  dv(BX(6.2, 0.14, 0.2), '#8a8d8e', -11.5, 0.07, 29.9); dv(BX(6.2, 0.14, 0.2), '#8a8d8e', -11.5, 0.07, 33.7);
-  dv(new THREE.CylinderGeometry(0.07, 0.11, 9, 8), '#c8ccce', -11.5, 4.5, 31.8); block(-11.7, -11.3, 31.6, 32.0); dv(new THREE.SphereGeometry(0.14, 6, 5), '#d6c27a', -11.5, 9.05, 31.8);
-  sign(texLabel('P', 128, 128, '#ffffff', '#1f4fa0', 'bold 100px Arial'), 0.8, 0.8, 45.0, 2.3, 33.4, 0); dv(new THREE.CylinderGeometry(0.04, 0.04, 2.7, 6), '#8a8f94', 45.0, 1.35, 33.35); block(44.9, 45.1, 33.25, 33.45);
-  sign(texGiveWay(), 0.9, 0.9, 46.2, 2.3, 34.4, 0); dv(new THREE.CylinderGeometry(0.04, 0.04, 2.7, 6), '#8a8f94', 46.2, 1.35, 34.35);
-  // bike racks with bikes
   const bike = (x, z, ry, hex) => {
     const tire = new THREE.TorusGeometry(0.33, 0.025, 4, 12);
     lv(tire, '#15171a', x, z, 0.52, 0.36, 0, ry); lv(tire.clone(), '#15171a', x, z, -0.52, 0.36, 0, ry);
@@ -3234,8 +3159,6 @@ function buildOsterled() {
     for (let i = 0; i < n; i++) bike(cx - len / 2 + 0.55 + i * 0.55, cz, PI / 2 + (i % 2 ? 0.1 : -0.1), cols[i % 8]);
     block(cx - len / 2 - 0.1, cx + len / 2 + 0.1, cz - 0.7, cz + 0.75);
   };
-  bikeRack(4.5, 14.5, 8);
-  // parked cars (white hatchbacks like the photos + dark estates)
   const car = (cx, cz, ry, hex) => {
     lv(BX(4.1, 0.62, 1.74), hex, cx, cz, 0, 0.62, 0, ry); lv(BX(2.1, 0.62, 1.6), hex, cx, cz, -0.2, 1.22, 0, ry);
     lv(BX(2.12, 0.4, 1.62), '#1a2630', cx, cz, -0.2, 1.24, 0, ry); lv(BX(1.9, 0.08, 1.5), hex, cx, cz, -0.2, 1.56, 0, ry);
@@ -3244,41 +3167,15 @@ function buildOsterled() {
     const al = Math.abs(Sn(ry)) < 0.5, hx = al ? 2.1 : 0.95, hz = al ? 0.95 : 2.1;
     block(cx - hx, cx + hx, cz - hz, cz + hz); occluder(cx, 0.9, cz, hx * 2, 1.8, hz * 2);
   };
-  const W = '#d9dde0', K = '#1c2128', S = '#9aa0a6', R = '#7d2a2a';
-  for (const [x, c] of [[-41.5, K], [-38.8, W], [-33.4, S], [-28.0, W], [-25.3, W], [-22.6, K], [-19.9, W]]) car(x, 29.4, PI / 2, c);
-  car(-32, 40.2, 0, K); car(8, 44.3, 0, R); car(-12, 39.9, PI, W);
-
-  /* ---------- courtyard & yard dressing ---------- */
-  // feature tree in a round bed
-  addCylinder(-3, 2, 2.4, 0.3, MO.stone, { seg: 20 }); dv(new THREE.CylinderGeometry(2.2, 2.2, 0.02, 20), '#4a3a2a', -3, 0.31, 2);
-  // ping-pong tables, sandpit, benches, bins, boulders, shrubs
   const table = (x, z, ry) => {
     lv(BX(2.7, 0.08, 1.5), '#5a6a74', x, z, 0, 0.78, 0, ry); lv(BX(0.04, 0.16, 1.5), '#d8d8d8', x, z, 0, 0.9, 0, ry);
     for (const lx of [-1.0, 1.0]) { lv(BX(0.06, 0.75, 1.3), '#7a8084', x, z, lx, 0.4, 0, ry); lv(new THREE.SphereGeometry(0.12, 5, 4), '#8a9096', x, z, lx, 0.1, 0.6, ry); lv(new THREE.SphereGeometry(0.12, 5, 4), '#8a9096', x, z, lx, 0.1, -0.6, ry); }
     const al = Math.abs(Sn(ry)) < 0.5; block(x - (al ? 1.4 : 0.8), x + (al ? 1.4 : 0.8), z - (al ? 0.8 : 1.4), z + (al ? 0.8 : 1.4));
   };
-  table(17, -8, 0); table(22, -8, 0); table(18, 4, PI / 2);
-  dv(BX(2.0, 0.4, 1.5), '#2f6f8f', 12, 0.2, 7); dv(BX(1.9, 0.06, 1.4), '#6a5a42', 12, 0.43, 7); block(11, 13, 6.2, 7.8);
   const bench = (x, z, ry) => { lv(BX(1.7, 0.07, 0.5), '#6a5a42', x, z, 0, 0.5, 0, ry); lv(BX(1.7, 0.4, 0.06), '#6a5a42', x, z, 0, 0.78, -0.26, ry); lv(BX(0.08, 0.5, 0.45), '#3a3d40', x, z, -0.7, 0.25, 0, ry); lv(BX(0.08, 0.5, 0.45), '#3a3d40', x, z, 0.7, 0.25, 0, ry); const al = Math.abs(Sn(ry)) < 0.5; block(x - (al ? 0.9 : 0.35), x + (al ? 0.9 : 0.35), z - (al ? 0.35 : 0.9), z + (al ? 0.35 : 0.9)); };
-  bench(-26, 5, PI / 2); bench(-26, -14, PI / 2); bench(-12, 6, 0); bench(6, -10, PI); bench(24, 10, 0); bench(0, 26, PI); bench(31, 28, PI);
   const bin = (x, z) => { dv(new THREE.CylinderGeometry(0.26, 0.22, 0.85, 8), '#1a1c1e', x, 0.43, z); dv(BX(0.06, 1.1, 0.06), '#55595c', x, 0.55, z + 0.3); };
-  for (const [x, z] of [[-24, 8], [-29.3, -18], [9, 12], [27, 14], [-2, 28], [-13, 36.4]]) bin(x, z);
-  for (let i = 0; i < 30; i++) {
-    const x = rnd(-48, 48), z = rnd(-44, 33); if (insideObstacle(x, z, 1.2) || (z > 35 && z < 47)) continue;
-    const r = rnd(0.3, 0.75); dv(new THREE.IcosahedronGeometry(r, 0).scale(1.25, 0.7, 1), pick(['#6d6f6c', '#5b5e5c', '#7a7c78']), x, r * 0.3, z, rnd(0, 6));
-    if (r > 0.6) block(x - 0.6, x + 0.6, z - 0.5, z + 0.5);
-  }
   const shrub = (x, z, r, hex) => dv(new THREE.SphereGeometry(r, 7, 5).scale(1, 0.8, 1), hex, x, r * 0.62, z);
   const sc = ['#8a6a2a', '#a07a2a', '#35552e', '#2b4a2a', '#8a4a30', '#6a5a2a'];
-  for (let z = -33; z < 8; z += 4.3) shrub(-29.2 + rnd(-0.2, 0.2), z + rnd(-0.6, 0.6), rnd(0.5, 0.85), pick(sc));
-  for (let x = -29; x < -9; x += 3.6) { shrub(x, 22.6, rnd(0.45, 0.8), pick(sc)); }
-  for (let x = 10; x < 35; x += 4) shrub(x, 22.8, rnd(0.45, 0.8), pick(sc));
-  for (const [x, z] of [[41, 21], [48.4, 21], [48.4, 15], [41, 12]]) { shrub(x, z, 0.7, pick(sc)); shrub(x + 0.8, z + 0.3, 0.5, pick(sc)); }
-  for (let x = -28; x < 5; x += 3) shrub(x, -33.5 + (x % 2), 0.7, pick(sc));
-  // roof clutter, stacked chairs & crates by the bins
-  for (const [x, z] of [[-22, 6], [-21, 6.3], [20, 8], [21, 8.4]]) dv(BX(0.5, 0.45, 0.5), '#3a5a8a', x, 0.22, z);
-
-  /* ---------- street lamps ---------- */
   const lamp = (x, z, dx, dz, lit = true) => {
     dv(new THREE.CylinderGeometry(0.09, 0.13, 5.2, 8), '#2a2d30', x, 2.6, z); block(x - 0.15, x + 0.15, z - 0.15, z + 0.15);
     dv(dx ? BX(1.1, 0.08, 0.1) : BX(0.1, 0.08, 1.1), '#2a2d30', x + dx * 0.5, 5.2, z + dz * 0.5);
@@ -3286,25 +3183,133 @@ function buildOsterled() {
     em(dx ? new THREE.BoxGeometry(0.4, 0.06, 0.16) : new THREE.BoxGeometry(0.16, 0.06, 0.4), '#ffd9a0', x + dx, 5.13, z + dz);
     if (lit) { const l = new THREE.PointLight(0xffb06a, 55, 34, 2); l.position.set(x + dx, 4.9, z + dz); scene.add(l); flickerLights.push({ light: l, base: 55, phase: Math.random() * 10 }); }
   };
-  lamp(-33, 35.4, 0, 1); lamp(-1, 35.4, 0, 1, false); lamp(20, 35.4, 0, 1); lamp(-4, 7, 1, 0); lamp(19, -4, 1, 0); lamp(39.0, 29.5, 1, 0);
-  lamp(-44.5, -4, 1, 0, false); lamp(-12, -38, 0, 1, false); lamp(44, -10, -1, 0, false); lamp(-20, 10.5, 0, -1, false);
 
+  const V = (x, y, z) => new THREE.Vector3(x, y, z), K = '#1c2128', Wc = '#d9dde0', Sc = '#9aa0a6', Rc = '#7d2a2a';
+  /* ---------- buyable barricades (striped concrete blocks + boom gate) ---------- */
+  const stripeM = new THREE.MeshStandardMaterial({ color: 0xd2a817, roughness: 0.7 }), redM = new THREE.MeshStandardMaterial({ color: 0xb02a22, roughness: 0.7 }), whiteM = new THREE.MeshStandardMaterial({ color: 0xe8e8e4, roughness: 0.7 });
+  const stripeBlock = (x, z, ry) => {
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g);
+    const bl = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.7), MO.stone); bl.position.y = 0.45; bl.castShadow = true; g.add(bl);
+    for (let i = 0; i < 2; i++) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.72), i ? redM : stripeM); st.position.set(i ? 0.22 : -0.22, 0.62, 0); g.add(st); }
+    return g;
+  };
+  const barriers = [];
+  function barrier(id, label, cost, hold, rects, blocks, arm) {
+    const parts = blocks.map(([x, z, ry]) => stripeBlock(x, z, ry));
+    let pivot = null;
+    if (arm) {
+      pivot = new THREE.Group(); pivot.position.set(arm.x, 0, arm.z); scene.add(pivot);
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.4), MO.stone); post.position.set(arm.x, 0.65, arm.z); scene.add(post);
+      for (let i = 0; i < 8; i++) { const sg = new THREE.Mesh(new THREE.BoxGeometry(arm.len / 8, 0.12, 0.12), i % 2 ? redM : whiteM); sg.position.set(arm.len / 8 * (i + 0.5), 1.1, 0); pivot.add(sg); }
+    }
+    const obsList = rects.map(r => ({ ...r })), occs = parts.map(p => p.children[0]);
+    obs.push(...obsList); occ.push(...occs);
+    const b = { id, label, cost, pos: V(hold[0], 0, hold[1]), open: false, t: 0 };
+    b.anim = t => { parts.forEach(p => { p.position.y = -1.3 * t; p.visible = t < 0.98; }); if (pivot) pivot.rotation.z = 1.45 * t; };
+    b.onOpen = () => { for (const o of obsList) { const i = obs.indexOf(o); if (i >= 0) obs.splice(i, 1); } for (const o of occs) { const j = occ.indexOf(o); if (j >= 0) occ.splice(j, 1); } rebuildNav(); };
+    b.close = () => { b.open = false; b.t = 0; b.anim(0); for (const o of obsList) if (!obs.includes(o)) obs.push(o); for (const o of occs) if (!occ.includes(o)) occ.push(o); };
+    barriers.push(b); return b;
+  }
+  barrier('gate', 'ENTRANCE GATE', 750, [0, 29.8], [{ minX: -8, maxX: 8, minZ: 26.6, maxZ: 27.4 }], [[2.9, 27, 0], [4.3, 27, 0], [5.7, 27, 0], [7.1, 27, 0]], { x: -7.6, z: 27, len: 8.4 });
+  { const bl = []; for (let x = -58.4; x <= -47.5; x += 1.3) bl.push([x, 38, 0]); for (let z = 30; z < 37.5; z += 1.3) bl.push([-47, z, PI / 2]);
+    barrier('west', 'WEST LANE', 1000, [-53.5, 40], [{ minX: -59, maxX: -46.3, minZ: 37.4, maxZ: 38.6 }, { minX: -47.6, maxX: -46.4, minZ: 29.3, maxZ: 38.6 }], bl); }
+  { const bl = []; for (let x = 46.7; x <= 53.5; x += 1.3) bl.push([x, 38, 0]);
+    barrier('road', 'EAST ROAD', 1250, [50, 40.6], [{ minX: 46, maxX: 54, minZ: 37.4, maxZ: 38.6 }], bl); }
+  sign(texLabel('STÄNGT', 256, 128, '#ffffff', '#b02a22', 'bold 70px Arial'), 1.4, 0.7, 50, 1.6, 36.9, PI); dv(BX(0.1, 1.7, 0.1), '#555', 50, 0.85, 36.95);
+
+  /* ---------- the school: lavender plaster W + A2, dark brick G + east wing, brick PE ---------- */
+  const W = building(-28, 24, 40, 10, 3.5, MO.lav, { roof: MO.roofGreen });
+  dv(BX(40.1, 1.0, 0.12), '#8a3c2c', -28, 0.5, 29.04);
+  wins(W, 'S', even(40, 12, 2.4), { y: 2.0, ww: 2.4, wh: 1.5 }); wins(W, 'N', even(40, 12, 2.4), { y: 2.0, ww: 2.4, wh: 1.5 }); wins(W, 'W', [-2, 2], { y: 2.0 });
+  sign(texLabel('ÖSTERLEDSKOLAN', 512, 64, '#e8e8e8', '#2b3a4a', 'bold 40px Arial'), 7.2, 0.9, -20, 3.35, 29.07, 0);
+  dv(BX(40.4, 0.12, 1.4), '#dcdad2', -28, 3.5, 29.6); dv(BX(2.4, 2.5, 0.12), '#202830', -14, 1.25, 29.06); lw(-14, 1.25, 29.13, 0, 2.0, 2.2, '#ffe0a0'); vent(-30, 3.7, 22); vent(-18, 3.7, 24);
+  const A2 = building(-42, -5.5, 12, 49, 3.5, MO.lav, { roof: MO.roofGreen });
+  wins(A2, 'E', even(49, 15, 2.4), { y: 2.0, ww: 2.2 }); wins(A2, 'W', even(49, 15, 2.4), { y: 2.0, ww: 2.2 }); vent(-42, 3.7, -20); vent(-42, 3.7, 6);
+  const N = building(0, -30, 34, 9, 3.4, MO.brickDark, { roof: MO.roofBlue });
+  wins(N, 'S', even(34, 8, 2.4).filter(o => o < 8), { y: 1.9, ww: 1.4, wh: 1.3 }); wins(N, 'N', even(34, 8, 2.4), { y: 1.9, ww: 1.4, wh: 1.3 });
+  dv(BX(3.0, 2.9, 0.14), '#9fb0b8', 11, 1.45, -25.4); lw(11, 1.45, -25.32, 0, 2.6, 2.5, '#ffe0a0'); dv(BX(3.6, 0.14, 1.6), '#4a5258', 11, 2.95, -24.8);
+  for (const x of [9.4, 12.6]) { dv(BX(0.1, 2.9, 0.1), '#aab4ba', x, 1.45, -24.1); block(x - 0.08, x + 0.08, -24.18, -24.02); }
+  addCylinder(0, -4, 2.4, 0.3, MO.stone, { seg: 20 }); dv(new THREE.CylinderGeometry(2.2, 2.2, 0.02, 20), '#4a3a2a', 0, 0.31, -4);
+  const Es = [building(37.5, -19, 11, 10, 4.0, MO.brickDark, { roof: MO.roofBlue }), building(38.5, -9, 9, 10, 3.6, MO.brickDark, { roof: MO.roofBlue }), building(37.5, 1, 11, 10, 4.0, MO.brickDark, { roof: MO.roofBlue }), building(38.5, 9, 9, 6, 3.6, MO.brickDark, { roof: MO.roofBlue })];
+  for (const e of Es) {
+    wins(e, 'W', even(e.d, Math.max(2, Math.round(e.d / 3)), 1.8), { y: 1.9, ww: 2.0, wh: 1.5 }); wins(e, 'E', even(e.d, Math.max(2, Math.round(e.d / 3)), 1.8), { y: 1.9, ww: 2.0, wh: 1.5 });
+    for (const sg of [-1, 1]) { dv(BX(0.16, 1.1, e.d - 0.8), '#2f4a74', e.cx + sg * (e.w / 2 + 0.05), e.h - 0.7, e.cz); dv(BX(0.9, 0.08, e.d - 1.4).rotateZ(sg * 0.22), '#c9ced1', e.cx + sg * (e.w / 2 + 0.55), e.h - 0.9, e.cz); }
+    for (const dz of [-e.d / 2 + 0.2, e.d / 2 - 0.2]) dv(BX(0.5, e.h + 0.5, 0.5), '#5c3128', e.cx + e.w / 2 + 0.05, (e.h + 0.5) / 2, e.cz + dz);
+  }
+  vent(37, 4.0, -19); vent(38, 3.6, -9); vent(37, 4.0, 3);
+  addCylinder(44.2, -25.6, 0.5, 6, MO.stone);
+  for (let i = 0; i < 16; i++) { const an = i * 0.6; dv(BX(1.3, 0.07, 0.45), '#8a9096', 44.2 + Math.cos(an) * 0.95, 0.5 + i * 0.34, -25.6 + Math.sin(an) * 0.95, -an); }
+  for (let i = 0; i < 5; i++) dv(new THREE.CylinderGeometry(0.03, 0.03, 5.4, 5), '#9aa0a6', 44.2 + Math.cos(i * 1.25) * 1.65, 2.9, -25.6 + Math.sin(i * 1.25) * 1.65);
+  sign(texLabel('Esperedsv matorg', 256, 64, '#202428', '#d6d0b8', 'bold 32px Arial'), 1.2, 0.3, 42.8, 2.2, -25.0, 0);
+  addSolid(44.8, -30, 3.2, 2.4, 2.0, MO.trafo);
+  // G: dark brick hall with the relief mural, blue band and louvre awning
+  const G = building(21, 21, 26, 18, 4.6, MO.brickDark, { roof: MO.roofBlue });
+  addSolid(18, 17, 14, 3.4, 9, MO.blackMetal, { y0: 4.9, collide: false, den: 2.5 }); addSolid(27, 15, 12, 2.4, 6, MO.blueMetal, { y0: 4.9, collide: false, den: 2.5 });
+  dv(BX(26.2, 1.4, 0.16), '#2f4a74', 21, 3.9, 30.06); dv(BX(26, 0.1, 1.6).rotateX(0.18), '#c0c6ca', 21, 3.3, 30.8);
+  wins(G, 'S', even(26, 9, 2.1), { y: 1.9, ww: 2.3, wh: 1.7 }); wins(G, 'W', [-1, 3], { y: 1.9 }); wins(G, 'N', even(26, 6, 3), { y: 1.9 });
+  for (let i = 0; i < 9; i++) dv(BX(0.14, 0.32, rnd(2.2, 3.4)), pick(['#e8e4da', '#cfcabd', '#5a6a78', '#dcd7ca']), 7.93, 1.1 + i * 0.38, 22 + rnd(-0.3, 0.3));
+  dv(new THREE.SphereGeometry(0.9, 8, 6).scale(0.18, 0.7, 1.7), '#efece4', 7.92, 4.4, 22);
+  dv(BX(2.2, 2.9, 3.4), '#9fb0b8', 6.9, 1.45, 16); lw(6.4, 1.45, 16, -PI / 2, 3.0, 2.5, '#ffe0a0'); block(5.8, 8.0, 14.3, 17.7);
+  vent(14, 4.9, 24); vent(28, 4.9, 16);
+  // bike yard (bikes are OUTSIDE the school) with wooden fence
+  const wfence = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), th = -Math.atan2(z1 - z0, x1 - x0); for (let t = 0; t <= L; t += 2.5) dv(BX(0.12, 1.0, 0.12), '#6a5a42', x0 + (x1 - x0) * t / L, 0.5, z0 + (z1 - z0) * t / L); dv(BX(L, 0.08, 0.06), '#7a6a50', (x0 + x1) / 2, 0.85, (z0 + z1) / 2, th); dv(BX(L, 0.08, 0.06), '#7a6a50', (x0 + x1) / 2, 0.5, (z0 + z1) / 2, th); block(Math.min(x0, x1) - 0.1, Math.max(x0, x1) + 0.1, Math.min(z0, z1) - 0.1, Math.max(z0, z1) + 0.1); };
+  wfence(10, 30.6, 10, 36.6); wfence(34, 30.6, 34, 38.4); wfence(10, 38.4, 20, 38.4); wfence(24, 38.4, 34, 38.4);
+  bikeRack(14, 33.8, 9); bikeRack(22, 33.8, 9); bikeRack(29.5, 33.8, 8);
+  // preschool (light brick, orange doors) + chain-link lawn
+  const P = building(40, 33, 10, 8, 3.2, MO.brickLt, { roof: MO.roofDark });
+  wins(P, 'S', [-3.2, 3.3], { y: 1.7, ww: 1.4 }); wins(P, 'N', [-2.5, 2.5], { y: 1.7 }); wins(P, 'W', [-2, 2], { y: 1.7 }); wins(P, 'E', [-2, 2], { y: 1.7 });
+  for (const x of [38.8, 41.2]) { dv(BX(1.0, 2.1, 0.12), '#d9822b', x, 1.05, 37.06); lw(x, 1.5, 37.13, 0, 0.6, 0.8, pick(['#ffd88a', '#1b2733'])); }
+  sign(texLabel('HEDENS FÖRSKOLA', 512, 64, '#d4741e', '#d6c9ab', 'bold 42px Arial'), 4.4, 0.55, 40, 2.75, 37.04, 0); vent(37, 3.3, 31);
+  chain(34, 27, 46, 27, 1.8); chain(46, 27, 46, 40.4, 1.8); chain(34, 27, 34, 30.6, 1.8);
+  addSolid(57, 36, 6, 2.2, 1.2, MO.hedge, { den: 2.5 }); chain(54, 36, 60, 36, 1.9);
+  // PE hall at the end of Transformatorsgatan + shed + modern hall behind
+  const PE = building(31, -39, 26, 9, 3.4, MO.brickRed, { roof: MO.roofDark });
+  wins(PE, 'S', even(26, 11, 1.6), { y: 1.9, ww: 0.9, wh: 1.6 }); wins(PE, 'N', even(26, 11, 1.6), { y: 1.9, ww: 0.9, wh: 1.6 });
+  dv(BX(1.6, 2.4, 0.12), '#d8e0e4', 30, 1.2, -34.44); lw(30, 1.2, -34.37, 0, 1.3, 2.2, '#ffe0a0'); vent(24, 3.8, -39); vent(31, 3.8, -40); vent(38, 3.8, -38);
+  const SH = building(12, -41, 6, 4, 2.8, MO.shed, { roof: MO.roofDark }); wins(SH, 'S', [0], { y: 1.5, ww: 1.2, wh: 1.2 });
+  const MH = building(-10, -53, 22, 6, 6, MO.grey, { roof: MO.roofDark });
+  for (let ix = 0; ix < 8; ix++) for (let iz = 0; iz < 2; iz++) if ((ix + iz) % 2) dv(BX(1.6, 1.2, 0.1), '#3a4a6a', -10 - 9 + ix * 2.4, 2 + iz * 1.5, -49.95);
+  /* ---------- perimeter, rails, caravan ---------- */
+  addSolid(0, -AZo + 0.6, AXo * 2, 2.4, 1.2, MO.hedge, { den: 2.5 }); addSolid(0, AZo - 0.6, AXo * 2, 2.0, 1.2, MO.hedge, { den: 2.5 });
+  addSolid(-AXo + 0.6, 0, 1.2, 2.4, AZo * 2, MO.hedge, { den: 2.5 }); addSolid(AXo - 0.6, 0, 1.2, 4.2, AZo * 2, MO.conifer, { den: 2.5 });
+  for (let z = -18; z <= 38; z += 4) dv(BX(0.1, 0.9, 0.1), '#8a8f94', 45.6, 0.45, z); dv(BX(0.06, 0.22, 56), '#a7adb2', 45.6, 0.8, 10); dv(BX(0.06, 0.22, 56), '#a7adb2', 45.6, 0.42, 10);
+  dv(BX(2.4, 2.2, 5.6), '#e6e8e6', 57, 1.3, 8); dv(BX(2.42, 0.3, 5.62), '#2a4a8a', 57, 1.0, 8); block(55.7, 58.3, 5.1, 10.9);
+  // parked cars along the school front (noses to the building) + street + PE car park
+  for (const [x, c] of [[-44.5, K], [-41.9, Wc], [-39.3, Sc], [-36.7, Wc], [-31.5, K], [-28.9, Wc], [-26.3, Sc], [-23.7, Wc], [-18.5, Wc], [-15.9, K]]) car(x, 34.2, PI / 2, c);
+  car(8, 47.5, 0, Rc); car(-14, 51, PI, Wc); car(52, -31, 0, '#2a52b8'); car(55, -36, PI / 2, Rc); car(57, -28, PI / 2, Wc); car(-5, -42, PI / 2, '#2a52b8');
+  // dry hedge in front of the school (gap for Quick Revive), flag island, give way sign, benches, bins, tables
+  for (let x = -46; x < -9; x += 2.2) { if (x > -30.6 && x < -21.6) continue; dv(BX(2.1, rnd(0.7, 1.1), 1.2), pick(['#6a5238', '#7a6040', '#5a4430']), x + 1, 0.5, 30.3); }
+  block(-46, -30.6, 29.7, 30.9); block(-21.6, -9, 29.7, 30.9);
+  slab(-12.8, 31, -8.8, 35, 0.04, MAT.grass, 3); dv(new THREE.CylinderGeometry(0.07, 0.11, 9, 8), '#c8ccce', -10.8, 4.5, 33); block(-11, -10.6, 32.8, 33.2);
+  bench(-26, 5, PI / 2); bench(-26, -14, PI / 2); bench(-12, 6, 0); bench(6, -10, PI); bench(24, -4, 0); bench(-6, -38, PI / 2);
+  for (const [x, z] of [[-24, 8], [-29.3, -18], [9, 12], [27, -2], [-2, 34], [-13, 42]]) bin(x, z);
+  table(17, -8, 0); table(22, -8, 0); table(14, 4, PI / 2); dv(BX(2.0, 0.4, 1.5), '#2f6f8f', 20, 0.2, 5); dv(BX(1.9, 0.06, 1.4), '#6a5a42', 20, 0.43, 5); block(19, 21, 4.2, 5.8);
+  for (let i = 0; i < 3; i++) dv(BX(3.4, 0.16, 0.5), '#8f9192', -31, 0.08 + i * 0.16, 12 - i * 0.5);   // ramp steps by the west wing
+  for (const [x, z, r] of [[3.2, 28, 0.3], [5.6, 25, -0.4]]) { dv(BX(1.0, 0.7, 0.6), '#9a9892', x, 0.35, z, r); dv(BX(0.5, 0.2, 0.04), '#e0661a', x, 0.5, z + 0.31, r); }
+  for (let z = -33; z < 8; z += 4.3) shrub(-36.6 + rnd(-0.2, 0.2), z + rnd(-0.6, 0.6), rnd(0.5, 0.85), pick(sc));
+  for (let x = 10; x < 33; x += 4) shrub(x, 11.3, rnd(0.45, 0.8), pick(sc));
+  for (let i = 0; i < 30; i++) {
+    const x = rnd(-56, 56), z = rnd(-52, 52); if (insideObstacle(x, z, 1.4) || (z > 38 && z < 56) || (Math.abs(x) < 40 && z > 26 && z < 42)) continue;
+    const r = rnd(0.3, 0.75); dv(new THREE.IcosahedronGeometry(r, 0).scale(1.25, 0.7, 1), pick(['#6d6f6c', '#5b5e5c', '#7a7c78']), x, r * 0.3, z, rnd(0, 6)); if (r > 0.6) block(x - 0.6, x + 0.6, z - 0.5, z + 0.5);
+  }
+  lamp(-30, 41.2, 0, 1); lamp(0, 41.2, 0, 1, false); lamp(30, 41.2, 0, 1); lamp(-14, 0, 1, 0); lamp(18, -6, -1, 0, false); lamp(0, -20, 0, 1, false); lamp(52, -40, -1, 0); lamp(44, 10, 1, 0, false);
   /* ---------- perks, mystery box ---------- */
-  addPerk(-7.4, 17.5, PI / 2, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
-  const pg = addPerk(8.2, -24, PI / 2, { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P' });
+  addPerk(-35.55, -8, PI / 2, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
+  const pg = addPerk(36, -34.05, 0, { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P' });
   const gear = makePapGear(pg);
-  { const pl = new THREE.PointLight(0x7a6bff, 14, 10, 2); pl.position.set(9.4, 2.2, -24); scene.add(pl); }
+  { const pl = new THREE.PointLight(0x7a6bff, 14, 10, 2); pl.position.set(36, 2.2, -32.4); scene.add(pl); }
   const osPerks = [
-    { id: 'quick', x: 14, z: 10, rot: -PI / 2, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 1500 },
-    { id: 'speed', x: 14, z: 6, rot: -PI / 2, title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
-    { id: 'double', x: 14, z: 2, rot: -PI / 2, title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
-    { id: 'stamin', x: -16, z: 3, rot: PI / 2, title: 'STAMIN-UP', fs: 25, body: '#6e8d35', trim: '#f2f2f2', emb: '↑', cost: 2000 },
-    { id: 'mule', x: -16, z: -1, rot: PI / 2, title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
-  ].map(q => { addPerk(q.x, q.z, q.rot, q); return { ...q, pos: new THREE.Vector3(q.x, 0, q.z) }; });
-  block(-21 - 0.55, -21 + 0.55, -4 - 0.85, -4 + 0.85); boxObs.osterled = obs[obs.length - 1]; occ.push(mbox.body);
+    { id: 'quick', x: -26, z: 29.5, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500 },
+    { id: 'speed', x: -35.55, z: 0, rot: PI / 2, title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
+    { id: 'double', x: 31.55, z: -19, rot: -PI / 2, title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
+    { id: 'stamin', x: 24, z: -34.05, rot: 0, title: 'STAMIN-UP', fs: 25, body: '#6e8d35', trim: '#f2f2f2', emb: '↑', cost: 2000 },
+    { id: 'mule', x: 28, z: 30.6, rot: 0, title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
+  ].map(q => { addPerk(q.x, q.z, q.rot, q); return { ...q, pos: V(q.x, 0, q.z) }; });
+  makeWallBuy(-38, 1.55, 29.06, 0, 'REMINGTON 870 MCS', SHOTGUN_WALL_COST);
+  block(10 - 0.85, 10 + 0.85, -16 - 0.55, -16 + 0.55); boxObs.osterled = obs[obs.length - 1]; occ.push(mbox.body);
 
   /* ---------- trees ---------- */
-  const treeSpots = [[-47, -34], [-47, -16], [-47, 2], [-45, 17], [-23, -44], [-8, -44], [10, -44], [28, -43], [14, -36], [24, -30], [23, 4], [46, -36], [46, -20], [46, -4], [46, 8], [45, 28.5], [-20, -12], [-12, -8], [30, 15]];
+  const treeSpots = [[-55, -34], [-55, -12], [-55, 8], [-53, 24], [-30, -42], [-14, -46], [6, -46], [24, -47], [-20, -14], [10, -6], [22, 8], [40, 20], [58, -16], [56, 18], [56, -22], [-6, 23], [-46, 20], [44, -44]];
   const treesBare = treeGeo(['#9fb46a', '#b9c58a', '#8da45a'], 1), treesPink = treeGeo(['#e3a9c0', '#d98fae', '#f0c4d2'], 1), feature = treeGeo(['#7a5a3a', '#6a4a2a', '#8a6a42', '#a07a4a'], 1.6);
   {
     const dm = new THREE.Object3D(), geoFor = i => (treeSpots[i][0] > 38 && treeSpots[i][1] > 20) || i % 5 === 0 ? treesPink : treesBare;
@@ -3315,7 +3320,7 @@ function buildOsterled() {
       pts.forEach((p, i) => { dm.position.set(p[0], 0, p[1]); dm.scale.setScalar(rnd(1.0, 1.35)); dm.rotation.y = rnd(0, 6.28); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
       im.castShadow = im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
     }
-    const ft = new THREE.Mesh(feature, pineMat); ft.position.set(-3, 0.3, 2); ft.scale.setScalar(1.5); ft.castShadow = true; scene.add(ft);
+    const ft = new THREE.Mesh(feature, pineMat); ft.position.set(0, 0.3, -4); ft.scale.setScalar(1.5); ft.castShadow = true; scene.add(ft);
     // forest ring + hills beyond the hedges
     const N = 170, inst = new THREE.InstancedMesh(pineGeo, pineMat, N); let i = 0;
     while (i < N) {
@@ -3335,7 +3340,7 @@ function buildOsterled() {
     for (let k = -1; k <= 1; k += 2) lw(x + k * w * 0.25, 1.9, z - d / 2 - 0.03, PI, 1.1, 1.2, Math.random() < 0.4 ? '#ffd88a' : '#1b2733');
     lw(x - w * 0.25, 4.8, z - d / 2 - 0.03, PI, 0.9, 1.0, '#ffcf75');
   };
-  house2(-30, 60, 9, 8, 5, '#d9d6cc', MAT.shingle); house2(-12, 64, 8, 7, 4.6, '#7a4a3a', MAT.roofMetal); house2(12, 60, 9, 8, 5, '#e0ddd2', MAT.shingle); house2(36, 63, 8, 7, 4.5, '#c9c4b0', MAT.shingle); house2(62, 58, 9, 8, 5, '#d9d6cc', MAT.roofMetal);
+  house2(-40, 64, 9, 8, 5, '#d9d6cc', MAT.shingle); house2(-18, 67, 8, 7, 4.6, '#7a4a3a', MAT.roofMetal); house2(8, 64, 9, 8, 5, '#e0ddd2', MAT.shingle); house2(32, 66, 8, 7, 4.5, '#c9c4b0', MAT.shingle);
 
   /* ---------- merge everything small ---------- */
   const dm = new THREE.Mesh(mergeGeometries(OG), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })); dm.castShadow = dm.receiveShadow = true; scene.add(dm);
@@ -3347,10 +3352,12 @@ function buildOsterled() {
   for (const c of scene.children.slice(w0)) if (c !== root) root.add(c);
   obstacles = sv.o; obstacleMeshes = sv.m; DT = sv.t;
   const m = {
-    id: 'osterled', ax: AXo, az: AZo, fog: 0.013, shadowX: 66, shadowZ: 62,
-    spawn: { x: 3, z: 9, yaw: 0 }, menuCam: { cx: 0, cz: 0, r: 64, rv: 4, h: 26, look: 2 },
-    root, obs, occ, jugPos: new THREE.Vector3(-7.4, 0, 17.5), papPos: new THREE.Vector3(8.2, 0, -24), papGear: gear, boxPos: new THREE.Vector3(-21, 0, -4), boxRot: PI / 2, perks: osPerks,
-    boxSpots: [{ x: -21, z: -4, rot: PI / 2 }, { x: 12, z: -16, rot: -PI / 2 }, { x: 8, z: 10, rot: 0 }, { x: -14, z: -26, rot: PI / 2 }, { x: -2, z: 24, rot: 0 }],
+    id: 'osterled', ax: AXo, az: AZo, fog: 0.013, shadowX: 76, shadowZ: 70,
+    spawn: { x: 0, z: 42, yaw: 0 }, menuCam: { cx: 0, cz: 0, r: 80, rv: 4, h: 34, look: 2 },
+    root, obs, occ, jugPos: V(-35.55, 0, -8), papPos: V(36, 0, -34.05), papGear: gear, boxPos: V(10, 0, -16), boxRot: 0, perks: osPerks, barriers,
+    wallBuys: [{ pos: V(-38, 0, 31.4), type: 'shotgun', cost: SHOTGUN_WALL_COST }],
+    boxSpots: [{ x: 10, z: -16, rot: 0 }, { x: -20, z: -8, rot: 0 }, { x: -26, z: -30, rot: 0 }, { x: -20, z: 42, rot: 0 }, { x: 52, z: -44, rot: 0 }, { x: 24, z: 8, rot: 0 }],
+    onReset() { for (const bb of barriers) bb.close(); rebuildNav(); },
   };
   m.nav = buildNav(m);
   return m;
