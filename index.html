@@ -100,6 +100,7 @@
   .panel h1 { font-size: 20px; text-align: center; letter-spacing: 3px; margin-bottom: 26px; text-shadow: 3px 3px 0 #000; font-weight: normal; }
   #goStats { font-size: 10px; line-height: 2.4; text-align: center; color: #cfd2d6; margin-bottom: 22px; }
   #goStats em { color: var(--acc); font-style: normal; }
+  input.mpin{user-select:text;-webkit-user-select:text;width:100%;padding:12px;margin:8px 0 14px;background:#0b0d12;color:#fff;border:2px solid #e8d27a;font:11px "Press Start 2P",monospace;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -186,6 +187,7 @@
   });
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script type="importmap">
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -1541,6 +1543,187 @@ let locked = false;
 let best = 0;
 try { best = parseInt(localStorage.getItem('surstromming_best') || '0', 10) || 0; } catch (e) {}
 
+/* ===================== MULTIPLAYER (host-authoritative co-op over public MQTT broker) ===================== */
+const MP = {
+  on: false, host: false, client: false, down: false, silent: false, rx: false, zid: 0,
+  id: Math.random().toString(36).slice(2, 8), name: '', status: '', topic: '', map: '', view: '',
+  peers: new Map(), servers: new Map(), zmap: new Map(), me: { x: 0, z: 0, me: true },
+  PRE: 'czmb1/', BR: ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'], bi: 0, fails: 0, c: null,
+  tp: 0, ts: 0, tb: 0, th: 0, lastS: 0, panel: null, hud: null,
+  esc: s => String(s).replace(/[^\w \-.]/g, '').slice(0, 14),
+  init() {
+    if (this.c) return;
+    if (typeof mqtt === 'undefined') { this.status = 'NETWORK LIBRARY BLOCKED'; this.draw(); return; }
+    this.status = 'CONNECTING...';
+    const c = this.c = mqtt.connect(this.BR[this.bi % 2], { clientId: 'zmb' + this.id + Math.random().toString(36).slice(2, 5), connectTimeout: 6000, reconnectPeriod: 2500, will: { topic: this.PRE + 'list/' + this.id, payload: '', retain: true } });
+    c.on('connect', () => { this.status = ''; this.fails = 0; c.subscribe(this.PRE + 'list/+'); if (this.topic) c.subscribe(this.topic); this.draw(); });
+    c.on('message', (t, p) => { try { this.msg(t, p.toString()); } catch (e) {} });
+    c.on('error', () => { if (c.connected) return; this.status = 'CANNOT REACH SERVER...'; if (++this.fails % 2 === 0) { c.end(true); this.c = null; this.bi++; this.init(); } this.draw(); });
+  },
+  send(o) { o.i = this.id; if (this.c && this.topic) this.c.publish(this.topic, JSON.stringify(o)); },
+  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: 4 }), { retain: true }); },
+  startHost(map) {
+    this.leave(); this.init(); this.on = this.host = true; this.map = map; this.topic = this.PRE + 'g/' + this.id;
+    if (this.c) this.c.subscribe(this.topic); this.beat();
+  },
+  join(sid) {
+    const s = this.servers.get(sid); if (!s || !this.c) return;
+    this.leave(); this.on = this.client = true; this.topic = this.PRE + 'g/' + sid; this.map = s.m; this.joined = false;
+    this.c.subscribe(this.topic); this.status = 'JOINING ' + s.n + '...'; this.draw();
+    const tryJoin = () => this.send({ t: 'join', n: this.name });
+    tryJoin(); const iv = setInterval(() => { if (this.joined || !this.client) clearInterval(iv); else tryJoin(); }, 1000);
+    setTimeout(() => { if (this.client && !this.joined) { this.leave(); this.status = 'SERVER NOT RESPONDING'; this.draw(); } }, 6500);
+  },
+  leave() {
+    if (this.on && this.c) { this.send({ t: 'bye' }); try { this.c.unsubscribe(this.topic); } catch (e) {} if (this.host) this.c.publish(this.PRE + 'list/' + this.id, '', { retain: true }); }
+    for (const p of this.peers.values()) if (p.g) scene.remove(p.g);
+    this.peers.clear(); this.zmap.clear(); this.on = this.host = this.client = this.down = false; this.topic = ''; this.joined = false;
+    if (this.hud) this.hud.style.display = 'none';
+  },
+  msg(t, s) {
+    if (t.startsWith(this.PRE + 'list/')) {
+      const id = t.split('/')[2]; if (!s) this.servers.delete(id); else this.servers.set(id, Object.assign(JSON.parse(s), { seen: Date.now() }));
+      this.draw(); return;
+    }
+    const m = JSON.parse(s); if (m.i === this.id || !this.on) return;
+    if (m.to && m.to !== this.id) return;
+    const now = performance.now();
+    switch (m.t) {
+      case 'join':
+        if (!this.host) break;
+        if (!this.peers.has(m.i) && this.peers.size >= 3) { this.send({ t: 'full', to: m.i }); break; }
+        if (!this.peers.has(m.i)) this.peers.set(m.i, { n: this.esc(m.n), x: 0, y: 0, z: 0, yaw: 0, pt: 0, d: 0, h: 100, w: 'pistol', seen: now });
+        this.send({ t: 'welcome', to: m.i, map: this.map }); this.beat(); break;
+      case 'full': this.leave(); this.status = 'SERVER FULL'; this.draw(); break;
+      case 'welcome':
+        if (this.joined) break; this.joined = true; this.status = ''; this.lastS = now; this.panelHide();
+        if (MAPS[m.map]) { selectMap(m.map); startCountdown(); } break;
+      case 'p': {
+        if (this.host && !this.peers.has(m.i)) break;
+        let p = this.peers.get(m.i); if (!p) { p = { n: '', x: m.x, y: 0, z: m.z, seen: now }; this.peers.set(m.i, p); }
+        Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, seen: now }); break; }
+      case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); this.beat(); break; }
+      case 's': if (this.client) this.sync(m); break;
+      case 'hit': if (this.host) this.onHit(m); break;
+      case 'hurt': hurtPlayer(m.d); break;
+      case 'aw': state.score += m.ds; state.kills += m.dk; if (m.dk) { popPoints('+' + m.ds, m.h); sfx.kill(); } else if (m.ds) popPoints('+' + m.ds, false); updateHUD(); break;
+      case 'rev': this.revive(); break;
+      case 'over': state.wave = m.w; gameOver(); this.leave(); break;
+      case 'tr': this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2])); this.rx = false; break;
+    }
+  },
+  sync(m) {
+    this.lastS = performance.now();
+    if (m.w !== state.wave) { if (m.w > state.wave) sfx.round(); state.wave = m.w; }
+    const seen = new Set();
+    for (const [id, x, z, f, sp] of m.z) {
+      seen.add(id); let zb = this.zmap.get(id);
+      if (zb && (zb.dead || !zombies.includes(zb))) zb = null;
+      if (!zb) { zb = createZombie(x, z, { boss: !!(f & 1), warlord: !!(f & 2), hound: !!(f & 4) }); zb.mid = id; zb.runner = !!(f & 8); zb.speed = sp; this.zmap.set(id, zb); }
+      zb.tx = x; zb.tz = z;
+    }
+    for (const zb of [...zombies]) if (!seen.has(zb.mid)) { zb.dead = true; zombies.splice(zombies.indexOf(zb), 1); this.zmap.delete(zb.mid); zb.deadT = 0; dying.push(zb); }
+  },
+  onHit(m) {
+    const z = zombies.find(q => q.mid === m.id); if (!z || z.dead) return;
+    const s0 = state.score, k0 = state.kills; this.silent = true;
+    damageZombie(z, m.d, new THREE.Vector3(z.root.position.x, 1.2, z.root.position.z), !!m.h, !!m.k);
+    this.silent = false; const ds = state.score - s0, dk = state.kills - k0; state.score = s0; state.kills = k0;
+    if (ds || dk) this.send({ t: 'aw', to: m.i, ds, dk, h: !!m.h });
+  },
+  sendHit(z, d, h, k) { this.send({ t: 'hit', id: z.mid, d: Math.round(d), h: h ? 1 : 0, k: k ? 1 : 0 }); },
+  sendTr(a, b) { if (this.tn && performance.now() - this.tn < 40) return; this.tn = performance.now(); const r = v => [+v.x.toFixed(1), +v.y.toFixed(1), +v.z.toFixed(1)]; this.send({ t: 'tr', a: r(a), b: r(b) }); },
+  zHit(z, tp) {
+    if (!this.on) { hurtPlayer(z.dmg || ZOMBIE_DAMAGE); return; }
+    if (!this.host) return;
+    if (tp.me) hurtPlayer(z.dmg || ZOMBIE_DAMAGE); else if (tp.id) this.send({ t: 'hurt', to: tp.id, d: z.dmg || ZOMBIE_DAMAGE });
+  },
+  alive() { const a = []; for (const [id, p] of this.peers) if (!p.d && p.tx !== undefined) a.push({ x: p.x, z: p.z, id, me: false }); if (!this.down) { this.me.x = player.pos.x; this.me.z = player.pos.z; a.push(this.me); } return a; },
+  nearest(g) {
+    this.me.x = player.pos.x; this.me.z = player.pos.z; if (!this.on) return this.me;
+    let best = null, bd = 1e9; for (const c of this.alive()) { const d = (c.x - g.x) ** 2 + (c.z - g.z) ** 2; if (d < bd) { bd = d; best = c; } }
+    return best || this.me;
+  },
+  pick() { this.me.x = player.pos.x; this.me.z = player.pos.z; if (!this.on) return this.me; const a = this.alive(); return a.length ? a[(Math.random() * a.length) | 0] : this.me; },
+  goDown() { this.down = true; state.health = 0; state.mouseDown = false; state.rmb = false; notice('YOU ARE DOWN - BACK NEXT ROUND', 4000); },
+  revive() { if (!this.down) return; this.down = false; state.health = state.maxHealth; state.lastHurt = -10; notice('REVIVED!', 2500); },
+  hostRound() { if (this.on && this.host) { this.send({ t: 'rev' }); this.revive(); } },
+  over() { this.send({ t: 'over', w: state.wave }); gameOver(); this.leave(); },
+  avatar(name, col) {
+    const g = new THREE.Group(); g.rotation.order = 'YXZ';
+    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 }), skin = new THREE.MeshStandardMaterial({ color: 0xe0b48c, roughness: 0.8 }), dk = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.8 });
+    const bx = (w, h, d, m, x, y, z, par = g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; par.add(b); return b; };
+    bx(0.5, 0.62, 0.28, mat, 0, 1.15, 0);
+    const head = new THREE.Group(); head.position.set(0, 1.55, 0); g.add(head); bx(0.28, 0.28, 0.28, skin, 0, 0.14, 0, head); bx(0.3, 0.1, 0.3, dk, 0, 0.3, 0, head);
+    const mkLeg = x => { const l = new THREE.Group(); l.position.set(x, 0.84, 0); g.add(l); bx(0.2, 0.84, 0.22, dk, 0, -0.42, 0, l); return l; };
+    g.userData = { head, lL: mkLeg(-0.13), lR: mkLeg(0.13) };
+    bx(0.14, 0.55, 0.14, mat, -0.34, 1.12, -0.05); const ar = bx(0.14, 0.14, 0.55, mat, 0.34, 1.3, -0.25); bx(0.08, 0.1, 0.55, dk, 0.34, 1.3, -0.6);
+    const c = document.createElement('canvas'); c.width = 256; c.height = 48; const x = c.getContext('2d'); x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 5; x.strokeText(name, 128, 34); x.fillText(name, 128, 34);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.3, 1); sp.position.y = 2.15; sp.renderOrder = 9; g.add(sp);
+    scene.add(g); return g;
+  },
+  tick(dt) {
+    if (!this.on) return; const now = performance.now();
+    this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name }); }
+    if (this.host) {
+      this.ts -= dt; if (this.ts <= 0) { this.ts = 0.1; this.send({ t: 's', w: state.wave, z: zombies.map(z => [z.mid, +z.root.position.x.toFixed(2), +z.root.position.z.toFixed(2), (z.boss ? 1 : 0) | (z.warlord ? 2 : 0) | (z.hound ? 4 : 0) | (z.runner ? 8 : 0), +z.speed.toFixed(2)]) }); }
+      this.tb -= dt; if (this.tb <= 0) { this.tb = 4; this.beat(); }
+      if (this.down && [...this.peers.values()].every(p => p.d)) this.over();
+    } else if (now - this.lastS > 9000) { notice('HOST LEFT THE GAME'); showMenu('mp'); return; }
+    for (const [id, p] of this.peers) {
+      if (now - p.seen > 7000) { if (p.g) scene.remove(p.g); this.peers.delete(id); continue; }
+      if (p.tx === undefined) continue;
+      if (!p.g) p.g = this.avatar(p.n || 'PLAYER', [0x3b6ea5, 0xa5503b, 0x4f9a52, 0xa58f3b][this.peers.size % 4]);
+      const k = Math.min(1, dt * 12), ox = p.x, oz = p.z; p.x += (p.tx - p.x) * k; p.z += (p.tz - p.z) * k;
+      const sp = Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, 1e-3), u = p.g.userData; p.ph = (p.ph || 0) + sp * dt * 2;
+      p.g.position.set(p.x, p.ty || 0, p.z); p.g.rotation.y = p.yaw; u.head.rotation.x = p.pt;
+      u.lL.rotation.x = Math.sin(p.ph) * Math.min(1, sp / 4) * 0.8; u.lR.rotation.x = -u.lL.rotation.x;
+      p.g.rotation.x = p.d ? -1.45 : 0; if (p.d) p.g.position.y += 0.25;
+    }
+    if (this.client) for (const z of zombies) if (z.tx !== undefined && z.spawnT >= 0.9) { const g = z.root.position, k = Math.min(1, dt * 5); if (Math.hypot(z.tx - g.x, z.tz - g.z) > 5) { g.x = z.tx; g.z = z.tz; } else { g.x += (z.tx - g.x) * k; g.z += (z.tz - g.z) * k; } }
+    if (!this.hud) { this.hud = document.createElement('div'); this.hud.style.cssText = 'position:absolute;right:24px;top:22px;font-size:9px;line-height:1.9;text-align:right;color:#cfd3d8'; $('hud').appendChild(this.hud); }
+    this.hud.style.display = 'block'; this.th -= dt;
+    if (this.th <= 0) { this.th = 0.5; this.hud.innerHTML = [[this.name, state.health | 0, this.down]].concat([...this.peers.values()].map(p => [p.n, p.h, p.d])).map(r => `${r[0]} <span style="color:${r[2] ? '#e0453a' : '#7fe05a'}">${r[2] ? 'DOWN' : Math.max(0, r[1] | 0)}</span>`).join('<br>'); }
+  },
+  /* ---- menu UI ---- */
+  panelHide() { if (this.panel) this.panel.style.display = 'none'; },
+  setView(v) {
+    this.view = v; const show = v === 'mp' || v === 'mpmaps';
+    if (!this.panel) {
+      const p = this.panel = document.createElement('div');
+      p.style.cssText = 'position:fixed;right:3vw;top:50%;transform:translateY(-50%);width:min(400px,42vw);max-height:80vh;overflow:auto;padding:18px;background:rgba(8,10,16,.88);border:2px solid #e8d27a;z-index:50;font-size:10px;line-height:1.8';
+      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); this.join(b.dataset.join); } });
+      document.body.appendChild(p);
+    }
+    this.panel.style.display = show ? 'block' : 'none'; if (show) { this.init(); this.draw(); }
+  },
+  draw() {
+    if (!this.panel || this.panel.style.display === 'none') return;
+    const now = Date.now(); let h = '<div style="color:#e8d27a;margin-bottom:10px">SERVER LIST</div>';
+    if (this.status) h += `<div style="color:#ff8a6a;margin-bottom:10px">${this.status}</div>`;
+    let n = 0;
+    for (const [id, s] of this.servers) {
+      if (now - s.seen > 15000) continue; n++; const full = s.p >= s.x;
+      h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #333"><div>${this.esc(s.n)}<br><span style="color:#8e949b">${MAPS[s.m] ? MAPS[s.m].name : s.m} &middot; ${s.p}/${s.x}</span></div>${full ? '<span style="color:#e0453a">FULL</span>' : `<button class="btn" data-join="${id}" style="padding:8px 12px;font-size:9px">JOIN</button>`}</div>`;
+    }
+    if (!n) h += '<div style="color:#8e949b">NO SERVERS YET.<br>CREATE ONE AND TELL YOUR FRIENDS!</div>';
+    this.panel.innerHTML = h;
+  },
+  click(a) {
+    if (a === 'mp') { this.keepName(); renderMenu('mp'); return true; }
+    if (a === 'mpcreate') { this.keepName(); renderMenu('mpmaps'); return true; }
+    if (a === 'mpback') { renderMenu('mp'); return true; }
+    if (a.startsWith('host:')) {
+      const id = a.slice(5); menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>';
+      setTimeout(() => { selectMap(id); this.startHost(id); startCountdown(); }, 40); return true;
+    }
+    return false;
+  },
+  keepName() { const i = $('mpName'); if (i) this.name = this.esc(i.value.trim()) || this.name; if (!this.name) this.name = 'PLAYER' + ((Math.random() * 90 + 10) | 0); try { localStorage.setItem('zmb_name', this.name); } catch (e) {} },
+};
+try { MP.name = MP.esc(localStorage.getItem('zmb_name') || ''); } catch (e) {}
+setInterval(() => { if (MP.panel && MP.panel.style.display !== 'none') MP.draw(); }, 3000);
+
 /* ===================================================================
    HUD
 =================================================================== */
@@ -1571,8 +1754,9 @@ function notice(text, ms = 2600) { el.notice.textContent = text; el.notice.class
 let bannerTimer = 0;
 function banner(text, ms = 2400) { const b = $('banner'); b.textContent = text; b.classList.add('on'); clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('on'), ms); }
 let hitTimer = 0;
-function hitmarker(head) { const h = $('hitmarker'); h.className = 'on' + (head ? ' head' : ''); clearTimeout(hitTimer); hitTimer = setTimeout(() => { h.className = ''; }, 90); }
-function popPoints(txt, head) {
+function hitmarker(head) {
+  if (MP.silent) return; const h = $('hitmarker'); h.className = 'on' + (head ? ' head' : ''); clearTimeout(hitTimer); hitTimer = setTimeout(() => { h.className = ''; }, 90); }
+function popPoints(txt, head) { if (MP.silent) return;
   const p = document.createElement('div'); p.className = 'pop' + (head ? ' head' : ''); p.textContent = txt;
   p.style.marginLeft = (rnd(-60, 40)) + 'px'; hudEl.appendChild(p); setTimeout(() => p.remove(), 900);
 }
@@ -1696,6 +1880,7 @@ function burst(point, count, mat, speed, life, grav = 14) {
   }
 }
 function spawnTracer(from, to) {
+  if (MP.on && !MP.rx) MP.sendTr(from, to);
   const dir = new THREE.Vector3().subVectors(to, from), len = dir.length();
   const m = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, len), new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0.8, fog: false }));
   m.position.copy(from).addScaledVector(dir, 0.5); m.lookAt(to); scene.add(m); tracers.push({ m, life: 0.06 });
@@ -1751,7 +1936,7 @@ function createZombie(x, z, opt = {}) {
     phase: Math.random() * 10, attackCd: 0, spawnT: 0, growlT: rnd(0.5, 3), stagger: 0, stuck: 0, side: Math.random() < 0.5 ? 1 : -1, dead: false, bar: null, deadT: 0, fd: 1,
   };
   zb.meshes.forEach(m => { m.userData.zombie = zb; });
-  zombies.push(zb);
+  zb.mid = ++MP.zid; zombies.push(zb);
   burst(new THREE.Vector3(x, 0.2, z), boss ? 20 : 8, pMat.dirt, 4, 0.7);
   return zb;
 }
@@ -1765,6 +1950,7 @@ function ensureBar(z) {
 }
 
 function damageZombie(z, dmg, point, head, knife = false) {
+  if (MP.client) { MP.sendHit(z, dmg, head, knife); hitmarker(head); sfx.hit(); burst(point, 4, pMat.blood, 4, 0.6); return; }
   if (z.dead) return;
   if (instaT > 0 && !z.boss) dmg = z.hp + 1;
   z.hp -= dmg;
@@ -1794,13 +1980,14 @@ function spawnBoss(warlord = false) {
   createZombie(x, z, { boss: true, warlord }); banner(warlord ? 'THE IRON WARLORD CHARGES!' : 'SOMETHING HUGE APPROACHES...', 3200);
 }
 function spawnZombie() {
+  const ST = MP.pick();
   const hopt = state.houndRound ? { hound: true } : {};
   if (curMap.spawnAt) { createZombie(curMap.spawnAt.x + rnd(-1.5, 1.5), curMap.spawnAt.z + rnd(-1, 1), hopt); return true; }
   let x, z, tries = 0;
   do {
     const a = Math.random() * Math.PI * 2, r = 18 + Math.random() * 22;
-    x = player.pos.x + Math.cos(a) * r; z = player.pos.z + Math.sin(a) * r; tries++;
-  } while (tries < 50 && (Math.abs(x) > AX - 2 || Math.abs(z) > AZ - 2 || insideObstacle(x, z, 1.0) || (NAV.on && !navReachable(x, z)) || Math.hypot(x - player.pos.x, z - player.pos.z) < 16));
+    x = ST.x + Math.cos(a) * r; z = ST.z + Math.sin(a) * r; tries++;
+  } while (tries < 50 && (Math.abs(x) > AX - 2 || Math.abs(z) > AZ - 2 || insideObstacle(x, z, 1.0) || (NAV.on && !navReachable(x, z)) || Math.hypot(x - ST.x, z - ST.z) < 16));
   if (tries >= 50) return false;
   createZombie(x, z, hopt); return true;
 }
@@ -1829,6 +2016,7 @@ function puModel(type) {
   return g;
 }
 function dropPowerup(x, z, forced) {
+  if (MP.on) return;
   const type = forced || pick(['nuke', 'ammo', 'insta', 'double']), m = puModel(type); m.position.set(x, 1.1, z); scene.add(m);
   powerups.push({ type, m, life: 15, t: Math.random() * 6, x, z });
 }
@@ -1955,11 +2143,11 @@ function updateGrenades(dt) {
 }
 
 function hurtPlayer(dmg) {
-  if (state.phase !== 'playing') return;
+  if (state.phase !== 'playing' || MP.down) return;
   state.health -= dmg; state.lastHurt = state.time;
   const v = $('vignette'); v.style.opacity = 1; setTimeout(() => { v.style.opacity = 0; }, 160);
   sfx.hurt(); state.shake = Math.max(state.shake, 0.25);
-  if (state.health <= 0) gameOver();
+  if (state.health <= 0) { if (MP.on) MP.goDown(); else gameOver(); }
 }
 
 /* ===================================================================
@@ -2190,8 +2378,9 @@ function resetWorld() {
 }
 
 function startRound() {
+  MP.hostRound();
   state.wave++; state.roundState = 'active'; state.spawned = 0; state.spawnT = 0.6;
-  state.roundTotal = 6 + (state.wave - 1) * 3;
+  state.roundTotal = Math.round((6 + (state.wave - 1) * 3) * (1 + 0.6 * MP.peers.size));
   state.houndRound = state.wave >= 7 && state.wave % 7 === 0 && state.wave % 10 !== 0;
   if (state.houndRound) { state.roundTotal = 8 + Math.floor(state.wave * 0.7); banner('HELLHOUNDS INCOMING', 3200); }
   sfx.round();
@@ -2209,11 +2398,13 @@ let cdTimer = 0, menuAngle = 0;
 function btn(a, text, sub = '', cls = '') { return `<button class="btn ${cls}" data-a="${a}">${text}${sub ? `<small>${sub}</small>` : ''}</button>`; }
 function renderMenu(view) {
   let h = '';
-  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('controls', 'CONTROLS');
+  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('controls', 'CONTROLS');
   else if (view === 'maps') h = '<div class="label">SELECT MAP</div>' + Object.values(MAPS).map(m => btn('map:' + m.id, m.name, m.sub)).join('') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
-  menuButtons.innerHTML = h;
+  else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'mpmaps') h = '<div class="label">HOST: SELECT MAP</div>' + Object.values(MAPS).map(m => btn('host:' + m.id, m.name, m.sub)).join('') + btn('mpback', '&lt; BACK', '', 'back');
+  menuButtons.innerHTML = h; MP.setView(view);
 }
 menuButtons.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
@@ -2227,11 +2418,12 @@ menuButtons.addEventListener('click', e => {
     if (MAPS[id].built) { selectMap(id); renderMenu('start'); }
     else { menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>'; setTimeout(() => { selectMap(id); renderMenu('start'); }, 40); }
   }
+  else if (MP.click(a)) {}
   else if (a === 'start') startCountdown();
 });
 
 function showMenu(view = 'main') {
-  clearInterval(cdTimer);
+  clearInterval(cdTimer); MP.leave();
   state.phase = 'menu'; resetWorld();
   menuEl.classList.remove('hidden'); cdEl.classList.add('hidden'); pauseEl.classList.add('hidden'); goEl.classList.add('hidden');
   hudEl.classList.remove('show'); $('banner').classList.remove('on'); el.notice.classList.remove('on');
@@ -2240,7 +2432,7 @@ function showMenu(view = 'main') {
 function lock() { try { canvas.requestPointerLock(); } catch (e) {} }
 
 function startCountdown() {
-  clearInterval(cdTimer);
+  clearInterval(cdTimer); MP.panelHide();
   state.phase = 'menu'; cdEl.querySelector('.map').textContent = 'MAP: ' + curMap.name;
   menuEl.classList.add('hidden'); goEl.classList.add('hidden'); pauseEl.classList.add('hidden'); cdEl.classList.remove('hidden');
   let n = 5; $('cdNum').textContent = n; sfx.beep();
@@ -2420,22 +2612,22 @@ function updateZombies(dt) {
       z.spawnT += dt; const sp0 = Math.min(1, z.spawnT / 0.9); gp.y = -2.4 + sp0 * 2.4; if (z.spawnT >= 0.9) gp.y = 0; z.armL.rotation.x = z.armR.rotation.x = -2.9 + sp0 * 1.5; z.upper.rotation.x = 0.5 - sp0 * 0.3;
       continue;
     }
-    let tx = player.pos.x, tz = player.pos.z;
+    const TP = MP.nearest(gp); let tx = TP.x, tz = TP.z;
     const hs = curMap.id === 'factory' ? [house, ...cottageDoors] : (curMap.houses || []);
     for (const H of hs) {   // zombies path through open doors / the window to reach you (and back out)
       if (!H.open) continue;
-      const zi = inBox(H, gp.x, gp.z, 0), pi = inBox(H, player.pos.x, player.pos.z, -0.3);
+      const zi = inBox(H, gp.x, gp.z, 0), pi = inBox(H, TP.x, TP.z, -0.3);
       if (zi !== pi) {
         const dZ = H.doorZ, wO = [H.doorX, dZ + 1.4], wI = [H.doorX, dZ - 1.4], dd = q => Math.hypot(gp.x - q[0], gp.z - q[1]);
         const w = zi ? (dd(wI) > 1 && gp.z < dZ - 1.2 ? wI : wO) : (dd(wO) > 1 && gp.z > dZ + 0.3 ? wO : wI);
         tx = w[0]; tz = w[1]; break;
       }
     }
-    if (NAV.on) {   // flow-field navigation around buildings (ÖSTERLED)
-      const pdx = player.pos.x - gp.x, pdz = player.pos.z - gp.z, pd = Math.hypot(pdx, pdz);
-      if (pd > 2.2 && (pd > 22 || !navLOS(gp.x, gp.z, player.pos.x, player.pos.z))) { const w = navStep(gp.x, gp.z); if (w) { tx = w[0]; tz = w[1]; } }
+    if (NAV.on && TP.me) {   // flow-field navigation around buildings (ÖSTERLED)
+      const pdx = TP.x - gp.x, pdz = TP.z - gp.z, pd = Math.hypot(pdx, pdz);
+      if (pd > 2.2 && (pd > 22 || !navLOS(gp.x, gp.z, TP.x, TP.z))) { const w = navStep(gp.x, gp.z); if (w) { tx = w[0]; tz = w[1]; } }
     }
-    const dist = Math.hypot(player.pos.x - gp.x, player.pos.z - gp.z) || 0.001, dx = tx - gp.x, dz = tz - gp.z, td = Math.hypot(dx, dz) || 0.001;
+    const dist = Math.hypot(TP.x - gp.x, TP.z - gp.z) || 0.001, dx = tx - gp.x, dz = tz - gp.z, td = Math.hypot(dx, dz) || 0.001;
     let dy = Math.atan2(dx, dz) - z.root.rotation.y;
     while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
     z.root.rotation.y += dy * Math.min(1, dt * 8);
@@ -2453,7 +2645,7 @@ function updateZombies(dt) {
       z.phase += dt * sp * (z.hound ? 0.7 : 2.6);
     } else {
       z.attackCd -= dt;
-      if (z.attackCd <= 0) { z.attackCd = ZOMBIE_ATTACK_CD; hurtPlayer(z.dmg || ZOMBIE_DAMAGE); }
+      if (z.attackCd <= 0) { z.attackCd = ZOMBIE_ATTACK_CD; MP.zHit(z, TP); }
       z.phase += dt * 2;
     }
     // separation
@@ -2624,9 +2816,9 @@ function updateInteractions() {
 
 function update(dt) {
   state.time += dt;
-  updatePlayer(dt);
-  updateCombat(dt);
-  updateRounds(dt);
+  if (!MP.down) { updatePlayer(dt); updateCombat(dt); }
+  MP.tick(dt);
+  if (!MP.client) updateRounds(dt);
   if (NAV.on) navUpdate(dt);
   updateZombies(dt);
   updateProjectiles(dt);
@@ -2662,7 +2854,7 @@ function animate() {
     }
   }
 
-  if (state.phase === 'playing' && locked) update(dt);
+  if (state.phase === 'playing' && (locked || MP.on)) update(dt);
   else if (state.phase === 'menu') {
     state.time += dt; menuAngle += dt * 0.07;
     const mc = curMap.menuCam, r = mc.r + Math.sin(menuAngle * 2) * mc.rv;
