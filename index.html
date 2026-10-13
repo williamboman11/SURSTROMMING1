@@ -205,7 +205,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const ARENA = 40;
 let AX = ARENA, AZ = ARENA;      // half-extents of the current map
 const PLAYER_RADIUS = 0.45, PLAYER_HEIGHT = 1.7, WALK_SPEED = 5.5, SPRINT_SPEED = 8.5;
-const MAX_ALIVE = 20;                 // horde cap
+const MAX_ALIVE = 20;                 // horde cap (grows with player count, see updateRounds)
+const MAX_PLAYERS = 20;               // multiplayer server size
 const ZOMBIE_BASE_HP = 100;           // +100 every round
 const HP_PER_ROUND = 100;
 const ZOMBIE_DAMAGE = 35, ZOMBIE_ATTACK_CD = 0.9;
@@ -225,6 +226,11 @@ const DOOR_COST = 500, JUG_COST = 2500, PAP_COST = 5000;   // prices
 WEAPONS.smg = { name: 'MP5 SMG', dmg: 30, delay: 0.065, auto: true, mag: 32, reserve: 192, reload: 1.8, kind: 'hitscan', spread: 0.012, kick: 0.04, rot: 0.045, vm: [0.22, -0.23, -0.44], ads: [0, -0.095, -0.3] };
 WEAPONS.galil = { name: 'GALIL', dmg: 65, delay: 0.115, auto: true, mag: 35, reserve: 210, reload: 2.3, kind: 'hitscan', spread: 0.005, kick: 0.075, rot: 0.065, vm: [0.24, -0.24, -0.48], ads: [0, -0.1, -0.32] };
 WEAPONS.pistol.ads = [0, -0.075, -0.32]; WEAPONS.ak.ads = [0, -0.105, -0.32]; WEAPONS.crossbow.ads = [0, -0.1, -0.34];
+WEAPONS.revolver = { name: '.44 MAGNUM', dmg: 150, delay: 0.45, auto: false, mag: 6, reserve: 36, reload: 2.0, kind: 'hitscan', spread: 0.002, kick: 0.12, rot: 0.12, vm: [0.2, -0.22, -0.42], ads: [0, -0.075, -0.32] };
+WEAPONS.sniper = { name: 'SNIPER RIFLE', dmg: 450, delay: 1.1, auto: false, mag: 5, reserve: 30, reload: 3.0, kind: 'hitscan', spread: 0, kick: 0.14, rot: 0.12, vm: [0.24, -0.24, -0.5], ads: [0, -0.105, -0.34] };
+WEAPONS.minigun = { name: 'MINIGUN', dmg: 40, delay: 0.04, auto: true, mag: 150, reserve: 450, reload: 4.0, kind: 'hitscan', spread: 0.02, kick: 0.03, rot: 0.03, vm: [0.26, -0.26, -0.52], ads: [0, -0.12, -0.36] };
+WEAPONS.dbl = { name: 'DOUBLE-BARREL', dmg: 60, pellets: 12, delay: 0.5, auto: false, mag: 2, reserve: 28, reload: 2.2, kind: 'hitscan', spread: 0.07, kick: 0.18, rot: 0.2, vm: [0.22, -0.24, -0.5], ads: [0, -0.095, -0.3] };
+WEAPONS.thumper = { name: 'THUMPER GRENADE LAUNCHER', dmg: 350, delay: 0.9, auto: false, mag: 4, reserve: 16, reload: 2.6, kind: 'projectile', spread: 0, kick: 0.16, rot: 0.14, vm: [0.22, -0.25, -0.48], ads: [0, -0.11, -0.34] };
 WEAPONS.rpg = { name: 'SURSTRÖMMING RPG', dmg: 500, delay: 1.6, auto: false, mag: 1, reserve: 6, reload: 3.2, kind: 'projectile', spread: 0, kick: 0.22, rot: 0.2, vm: [0.22, -0.27, -0.5], ads: [0, -0.13, -0.36] };
 WEAPONS.shotgun = { name: 'REMINGTON 870 MCS', dmg: 45, pellets: 8, delay: 0.85, auto: false, mag: 6, reserve: 36, reload: 2.6, kind: 'hitscan', spread: 0.05, kick: 0.16, rot: 0.2, vm: [0.22, -0.24, -0.5], ads: [0, -0.095, -0.3] };
 WEAPONS.raygun2 = { name: 'RAY GUN MARK II', dmg: 200, delay: 0.55, auto: false, mag: 24, reserve: 120, reload: 3.0, kind: 'ray', burst: 2, spread: 0, kick: 0.07, rot: 0.1, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
@@ -1314,6 +1320,50 @@ function buildRPG() {   // heavy shoulder-fired launcher with a surströmming ca
   g.userData.muzzle = new THREE.Vector3(0, 0.05, -0.9);
   return g;
 }
+function buildRevolver() {
+  const g = new THREE.Group();
+  part(g, B(0.04, 0.07, 0.16), WM.blued, 0, 0.0, 0.0); cz(g, 0.036, 0.075, WM.blued, 0, 0.012, -0.02, 14); cz(g, 0.014, 0.28, WM.blued, 0, 0.03, -0.2, 12); part(g, B(0.03, 0.03, 0.26), WM.chrome, 0, 0.0, -0.2);
+  part(g, B(0.012, 0.03, 0.03), WM.blued, 0, 0.06, 0.06, 0.4); part(g, B(0.01, 0.02, 0.012), WM.blued, 0, 0.055, -0.33); part(g, B(0.036, 0.11, 0.05), WM.walnut, 0, -0.08, 0.08, 0.25);
+  part(g, B(0.014, 0.034, 0.05), WM.blued, 0, -0.035, 0.0);
+  hand(g, 0.0, -0.1, 0.1, 0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0.03, -0.35); return g;
+}
+function buildSniper() {
+  const g = new THREE.Group();
+  part(g, B(0.05, 0.075, 0.4), WM.blued, 0, 0.0, 0.0); cz(g, 0.014, 1.0, WM.blued, 0, 0.02, -0.7, 12); cz(g, 0.02, 0.1, WM.dark, 0, 0.02, -1.2, 10);
+  part(g, B(0.06, 0.1, 0.34), WM.poly, 0, -0.01, 0.4); part(g, B(0.04, 0.09, 0.12), WM.poly, 0, -0.1, 0.12, 0.3); part(g, B(0.04, 0.1, 0.07), WM.mid, 0, -0.08, -0.05);
+  cz(g, 0.03, 0.34, WM.blued, 0, 0.1, -0.05, 14); cz(g, 0.036, 0.05, WM.blued, 0, 0.1, -0.22, 14); cz(g, 0.038, 0.05, WM.blued, 0, 0.1, 0.12, 14); part(g, new THREE.CircleGeometry(0.03, 14), WM.glow, 0, 0.1, 0.146);
+  part(g, B(0.02, 0.05, 0.02), WM.blued, 0, 0.065, -0.1); part(g, B(0.02, 0.05, 0.02), WM.blued, 0, 0.065, 0.05);
+  for (const sx of [-1, 1]) part(g, CY(0.005, 0.28, 6), WM.chrome, sx * 0.04, -0.07, -0.85, 0.5, 0, sx * 0.4);
+  hand(g, 0.0, -0.12, 0.12, 0.1); hand(g, 0.0, -0.06, -0.42, -0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0.02, -1.26); return g;
+}
+function buildMinigun() {
+  const g = new THREE.Group(), steel = MS({ color: 0x6a6f74, roughness: 0.35, metalness: 0.9 });
+  part(g, B(0.15, 0.15, 0.3), WM.mid, 0, 0.0, 0.1); cz(g, 0.065, 0.14, WM.blued, 0, 0, -0.1, 16);
+  for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; cz(g, 0.013, 0.7, steel, Math.cos(a) * 0.045, Math.sin(a) * 0.045, -0.5, 8); }
+  for (const zz of [-0.25, -0.5, -0.78]) cz(g, 0.066, 0.03, WM.blued, 0, 0, zz, 16);
+  part(g, B(0.05, 0.14, 0.05), WM.poly, 0, -0.14, 0.12); part(g, B(0.05, 0.1, 0.05), WM.poly, 0, -0.12, -0.12, -0.2); part(g, B(0.2, 0.09, 0.07), WM.walnut, 0, 0.12, 0.05);
+  part(g, B(0.14, 0.16, 0.2), WM.green, 0.17, -0.06, 0.2); part(g, B(0.015, 0.02, 0.2), WM.brass, 0.1, -0.02, 0.2);
+  hand(g, 0.0, -0.17, 0.12, 0.1); hand(g, 0.0, -0.15, -0.12, -0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0, -0.85); return g;
+}
+function buildDouble() {
+  const g = new THREE.Group();
+  for (const sx of [-1, 1]) cz(g, 0.019, 0.62, WM.blued, sx * 0.02, 0.02, -0.4, 14);
+  part(g, B(0.016, 0.01, 0.62), WM.chrome, 0, 0.045, -0.4); part(g, B(0.07, 0.07, 0.2), WM.blued, 0, 0.0, -0.02); part(g, B(0.072, 0.05, 0.22), WM.walnut, 0, -0.025, -0.35);
+  part(g, B(0.05, 0.12, 0.2), WM.walnut, 0, -0.08, 0.17, 0.35); part(g, B(0.014, 0.04, 0.05), WM.blued, 0, -0.045, 0.0); part(g, new THREE.SphereGeometry(0.008, 6, 5), WM.chrome, 0, 0.05, -0.7);
+  hand(g, 0.0, -0.11, 0.1, 0.1); hand(g, 0.0, -0.065, -0.35, -0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0.02, -0.72); return g;
+}
+function buildThumper() {
+  const g = new THREE.Group();
+  cz(g, 0.05, 0.5, WM.blued, 0, 0.03, -0.3, 16); cz(g, 0.058, 0.1, WM.mid, 0, 0.03, -0.55, 16); cz(g, 0.056, 0.14, WM.mid, 0, 0.03, -0.1, 16);
+  part(g, B(0.07, 0.09, 0.3), WM.poly, 0, 0.0, 0.1); part(g, B(0.05, 0.12, 0.2), WM.walnut, 0, -0.06, 0.28, 0.3); part(g, B(0.04, 0.12, 0.05), WM.poly, 0, -0.1, -0.02, 0.2); part(g, B(0.03, 0.1, 0.045), WM.poly, 0, -0.09, -0.3, -0.15);
+  part(g, B(0.05, 0.008, 0.12), WM.chrome, 0, 0.11, -0.2); part(g, B(0.012, 0.06, 0.03), WM.blued, 0, 0.085, -0.2); part(g, B(0.012, 0.06, 0.012), WM.blued, 0, 0.09, -0.55);
+  hand(g, 0.0, -0.13, 0.0, 0.1); hand(g, 0.0, -0.12, -0.3, -0.1);
+  g.userData.muzzle = new THREE.Vector3(0, 0.03, -0.62); return g;
+}
 function buildKnife() {
   const g = new THREE.Group();
   part(g, B(0.022, 0.05, 0.28), WM.steel, 0, 0, -0.2);
@@ -1363,7 +1413,7 @@ function papGlow(m) {
   part(g, B(0.05, 0.006, 0.006), WM.pap, 0, 0.05, -0.4); g.visible = false; m.add(g); m.userData.pg = g;
 }
 // first-person models
-const vm = { pistol: buildPistol(), ak: buildAK(), crossbow: buildCrossbow(), raygun: buildRay(), shotgun: buildShotgun(), raygun2: buildRay2(), smg: buildSMG(), galil: buildGalil(), rpg: buildRPG() };
+const vm = { pistol: buildPistol(), ak: buildAK(), crossbow: buildCrossbow(), raygun: buildRay(), shotgun: buildShotgun(), raygun2: buildRay2(), smg: buildSMG(), galil: buildGalil(), rpg: buildRPG(), revolver: buildRevolver(), sniper: buildSniper(), minigun: buildMinigun(), dbl: buildDouble(), thumper: buildThumper() };
 for (const k in vm) papGlow(vm[k]);
 for (const k in vm) { vm[k].visible = false; camera.add(vm[k]); }
 const knifeModel = buildKnife(); knifeModel.visible = false; camera.add(knifeModel);
@@ -1376,7 +1426,7 @@ muzzleFlash.visible = false;
 const muzzleLight = new THREE.PointLight(0xffb060, 0, 12, 2);
 
 // mystery box floating display models
-mbox.models.teddy = buildTeddy(); mbox.models.ak = buildAK(); mbox.models.crossbow = buildCrossbow(); mbox.models.rpg = buildRPG(); mbox.models.raygun = buildRay(); mbox.models.shotgun = buildShotgun(); mbox.models.raygun2 = buildRay2(); mbox.models.smg = buildSMG(); mbox.models.galil = buildGalil();
+mbox.models.teddy = buildTeddy(); mbox.models.ak = buildAK(); mbox.models.crossbow = buildCrossbow(); mbox.models.rpg = buildRPG(); mbox.models.revolver = buildRevolver(); mbox.models.sniper = buildSniper(); mbox.models.minigun = buildMinigun(); mbox.models.dbl = buildDouble(); mbox.models.thumper = buildThumper(); mbox.models.raygun = buildRay(); mbox.models.shotgun = buildShotgun(); mbox.models.raygun2 = buildRay2(); mbox.models.smg = buildSMG(); mbox.models.galil = buildGalil();
 for (const k in mbox.models) { mbox.models[k].scale.setScalar(1.5); mbox.models[k].rotation.y = Math.PI / 2; mbox.models[k].visible = false; mbox.display.add(mbox.models[k]); }
 
 /* ===== MAP VERITY assets (embedded: face textures + the Verity melody) ===== */
@@ -1619,7 +1669,7 @@ const player = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, pitch: 0, bob: 0,
   cur: 'pistol', slot2: null, slot3: null, pap: {}, jumpY: 0, jumpVel: 0, onGround: true,
   slot1: 'pistol',
-  ammo: { pistol: { mag: 12, res: Infinity }, ak: { mag: 30, res: 120 }, crossbow: { mag: 3, res: 12 }, raygun: { mag: 20, res: 160 }, shotgun: { mag: 6, res: 36 }, raygun2: { mag: 24, res: 120 }, smg: { mag: 32, res: 192 }, galil: { mag: 35, res: 210 }, rpg: { mag: 1, res: 6 } },
+  ammo: { pistol: { mag: 12, res: Infinity }, ak: { mag: 30, res: 120 }, crossbow: { mag: 3, res: 12 }, raygun: { mag: 20, res: 160 }, shotgun: { mag: 6, res: 36 }, raygun2: { mag: 24, res: 120 }, smg: { mag: 32, res: 192 }, galil: { mag: 35, res: 210 }, rpg: { mag: 1, res: 6 }, revolver: { mag: 6, res: 36 }, sniper: { mag: 5, res: 30 }, minigun: { mag: 150, res: 450 }, dbl: { mag: 2, res: 28 }, thumper: { mag: 4, res: 16 } },
 };
 const keys = {};
 let locked = false;
@@ -1644,7 +1694,7 @@ const MP = {
     c.on('error', () => { if (c.connected) return; this.status = 'CANNOT REACH SERVER...'; if (++this.fails % 2 === 0) { c.end(true); this.c = null; this.bi++; this.init(); } this.draw(); });
   },
   send(o) { o.i = this.id; if (this.c && this.topic) this.c.publish(this.topic, JSON.stringify(o)); },
-  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: 4 }), { retain: true }); },
+  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: MAX_PLAYERS }), { retain: true }); },
   startHost(map) {
     this.leave(); this.init(); this.on = this.host = true; this.map = map; this.topic = this.PRE + 'g/' + this.id;
     if (this.c) this.c.subscribe(this.topic); this.beat();
@@ -1674,7 +1724,7 @@ const MP = {
     switch (m.t) {
       case 'join':
         if (!this.host) break;
-        if (!this.peers.has(m.i) && this.peers.size >= 3) { this.send({ t: 'full', to: m.i }); break; }
+        if (!this.peers.has(m.i) && this.peers.size >= MAX_PLAYERS - 1) { this.send({ t: 'full', to: m.i }); break; }
         if (!this.peers.has(m.i)) this.peers.set(m.i, { n: this.esc(m.n), x: 0, y: 0, z: 0, yaw: 0, pt: 0, d: 0, h: 100, w: 'pistol', seen: now });
         this.send({ t: 'welcome', to: m.i, map: this.map }); this.beat(); break;
       case 'full': this.leave(); this.status = 'SERVER FULL'; this.draw(); break;
@@ -1756,7 +1806,7 @@ const MP = {
     for (const [id, p] of this.peers) {
       if (now - p.seen > 7000) { if (p.g) scene.remove(p.g); this.peers.delete(id); continue; }
       if (p.tx === undefined) continue;
-      if (!p.g) p.g = this.avatar(p.n || 'PLAYER', [0x3b6ea5, 0xa5503b, 0x4f9a52, 0xa58f3b][this.peers.size % 4]);
+      if (!p.g) p.g = this.avatar(p.n || 'PLAYER', [0x3b6ea5, 0xa5503b, 0x4f9a52, 0xa58f3b, 0x8a4fa5, 0x3ba5a0, 0xa5a03b, 0xa53b6e, 0x6e6e6e, 0xd0884a][this.peers.size % 10]);
       const k = Math.min(1, dt * 12), ox = p.x, oz = p.z; p.x += (p.tx - p.x) * k; p.z += (p.tz - p.z) * k;
       const sp = Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, 1e-3), u = p.g.userData; p.ph = (p.ph || 0) + sp * dt * 2;
       p.g.position.set(p.x, p.ty || 0, p.z); p.g.rotation.y = p.yaw; u.head.rotation.x = p.pt;
@@ -1890,6 +1940,11 @@ const sfx = {
   galil: () => gunSnd({ c0: 7500, c1: 2200, v: 0.7, b: 0.15, b0: 3800, b1: 260, t0: 130, t1: 38, tb: 0.13, tail: 0.6, f0: 1700 }),
   shotgun: () => { gunSnd({ c0: 7000, c1: 1500, v: 0.95, b: 0.28, b0: 3200, b1: 150, t0: 100, t1: 30, tb: 0.28, tail: 0.9, f0: 1400 }); setTimeout(() => noiseBurst(0.05, 2200, 700, 0.3, 'highpass'), 420); setTimeout(() => { noiseBurst(0.06, 1800, 500, 0.35, 'highpass'); tone('square', 140, 90, 0.05, 0.15); }, 560); },
   raygun2: () => { tone('sawtooth', 2200, 260, 0.28, 0.28); tone('sine', 1000, 120, 0.3, 0.3); noiseBurst(0.12, 6000, 1200, 0.25, 'highpass'); },
+  revolver: () => gunSnd({ c0: 7000, c1: 1800, v: 0.85, b: 0.2, b0: 3600, b1: 220, t0: 120, t1: 32, tb: 0.2, tail: 0.7, f0: 1500 }),
+  sniper: () => gunSnd({ c0: 6500, c1: 1200, v: 1.0, b: 0.3, b0: 3000, b1: 140, t0: 100, t1: 28, tb: 0.3, tail: 1.2, f0: 1200 }),
+  minigun: () => gunSnd({ c0: 8500, c1: 3000, v: 0.4, b: 0.07, b0: 4600, b1: 400, t0: 160, t1: 50, tb: 0.06, tail: 0.2, f0: 2200 }),
+  dbl: () => { gunSnd({ c0: 6800, c1: 1400, v: 1.0, b: 0.3, b0: 3000, b1: 140, t0: 95, t1: 28, tb: 0.3, tail: 1.0, f0: 1300 }); setTimeout(() => noiseBurst(0.08, 2000, 500, 0.3, 'highpass'), 380); },
+  thumper: () => { tone('sine', 140, 40, 0.25, 0.6); noiseBurst(0.2, 1800, 200, 0.45); tone('square', 300, 120, 0.12, 0.2); },
   rpg: () => { noiseBurst(0.7, 2500, 200, 0.5, 'highpass'); tone('sawtooth', 160, 40, 0.5, 0.4); tone('sine', 90, 30, 0.35, 0.6); noiseBurst(0.5, 900, 100, 0.4); },
   crossbow: () => { tone('triangle', 520, 90, 0.2, 0.45); tone('sine', 110, 50, 0.15, 0.5); noiseBurst(0.12, 3500, 500, 0.3, 'highpass'); noiseBurst(0.3, 1200, 200, 0.15); },
   raygun: () => { tone('sawtooth', 1500, 180, 0.3, 0.3); tone('square', 760, 90, 0.24, 0.2); noiseBurst(0.1, 5000, 1500, 0.2, 'highpass'); },
@@ -2008,7 +2063,7 @@ function explode(point, ray = false, wt = null) {
 
   for (const z of [...zombies]) {
     const c = new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), dist = c.distanceTo(point);
-    if (dist < R) damageZombie(z, wt === 'rpg' ? dmgOf('rpg') : (wt === 'pistol' ? dmgOf('pistol') * 2.5 : dmgOf(ray ? (wt || 'raygun') : 'crossbow')) * (1 - 0.6 * dist / R), c, false);
+    if (dist < R) damageZombie(z, wt === 'rpg' ? dmgOf('rpg') : wt === 'thumper' ? dmgOf('thumper') * (1 - 0.5 * dist / R) : (wt === 'pistol' ? dmgOf('pistol') * 2.5 : dmgOf(ray ? (wt || 'raygun') : 'crossbow')) * (1 - 0.6 * dist / R), c, false);
   }
 }
 
@@ -2351,10 +2406,11 @@ function fireProj(w) {
     const start = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(_v, 0.7); start.y -= 0.06;
     const mesh = new THREE.Group(), ray = w.kind === 'ray', mk2 = player.cur === 'raygun2';
     if (ray) { part(mesh, new THREE.SphereGeometry(0.1, 8, 6), mk2 ? WM.redb : WM.green, 0, 0, 0); part(mesh, new THREE.SphereGeometry(0.22, 8, 6), mk2 ? WM.redGlow : WM.glow, 0, 0, 0); }
+    else if (player.cur === 'thumper') { part(mesh, new THREE.SphereGeometry(0.07, 10, 8), WM.mid, 0, 0, 0); part(mesh, new THREE.SphereGeometry(0.03, 6, 5), WM.tip, 0, 0, -0.06); }
     else if (player.cur === 'rpg') { part(mesh, CY(0.12, 0.17, 16), (typeof CAN_MAT !== 'undefined') ? CAN_MAT : WM.chrome, 0, 0, 0, Math.PI / 2); part(mesh, CY(0.124, 0.015, 16), WM.chrome, 0, 0, 0.085, Math.PI / 2); part(mesh, CY(0.124, 0.015, 16), WM.chrome, 0, 0, -0.085, Math.PI / 2); part(mesh, new THREE.SphereGeometry(0.1, 8, 6), WM.glow, 0, 0, 0.2); }
     else { part(mesh, CY(0.03, 0.8, 6), WM.steel, 0, 0, 0, Math.PI / 2); part(mesh, new THREE.ConeGeometry(0.07, 0.2, 8), WM.tip, 0, 0, -0.5, -Math.PI / 2); }
     mesh.position.copy(start); mesh.lookAt(start.clone().add(_v)); scene.add(mesh);
-    projectiles.push({ mesh, pos: start.clone(), vel: _v.clone().multiplyScalar(ray ? 75 : player.cur === 'rpg' ? 42 : 52), life: ray ? 2.5 : 4, trail: 0, ray, wt: player.cur });
+    projectiles.push({ mesh, pos: start.clone(), vel: _v.clone().multiplyScalar(ray ? 75 : player.cur === 'rpg' ? 42 : player.cur === 'thumper' ? 34 : 52), life: ray ? 2.5 : 4, trail: 0, ray, wt: player.cur });
   }
 }
 function knife() {
@@ -2413,7 +2469,7 @@ function interact() {
     if (state.score < BOX_COST) { notice(`NEED ${BOX_COST} POINTS`); sfx.deny(); return; }
     state.score -= BOX_COST; sfx.buy();
     mbox.state = 'rolling'; mbox.t = 0; mbox.cycleT = 0; const teddy = (curMap.boxSpots || []).length > 1 && (mbox.uses || 0) >= 3 && (Math.random() < 0.22 || mbox.uses >= 8);
-    mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2', 'rpg', 'rpg']);
+    mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2', 'rpg', 'rpg', 'revolver', 'sniper', 'minigun', 'dbl', 'thumper']);
     mbox.display.visible = true; mbox.display.position.y = 0.9;
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach(i => { setTimeout(() => { if (mbox.state === 'rolling') tone('triangle', [523, 659, 784, 659][i % 4], [523, 659, 784, 659][i % 4], 0.15, 0.1); }, i * 200); });
   } else if (mbox.state === 'ready') {
@@ -2480,7 +2536,7 @@ function resetWorld() {
   });
   camera.fov = 75; camera.updateProjectionMatrix();
   player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
-  player.ammo.pistol = { mag: 12, res: Infinity }; player.ammo.ak = { mag: 30, res: 120 }; player.ammo.crossbow = { mag: 3, res: 12 }; player.ammo.raygun = { mag: 20, res: 160 }; player.ammo.shotgun = { mag: 6, res: 36 }; player.ammo.raygun2 = { mag: 24, res: 120 }; player.ammo.smg = { mag: 32, res: 192 }; player.ammo.galil = { mag: 35, res: 210 }; player.ammo.rpg = { mag: 1, res: 6 };
+  player.ammo.pistol = { mag: 12, res: Infinity }; player.ammo.ak = { mag: 30, res: 120 }; player.ammo.crossbow = { mag: 3, res: 12 }; player.ammo.raygun = { mag: 20, res: 160 }; player.ammo.shotgun = { mag: 6, res: 36 }; player.ammo.raygun2 = { mag: 24, res: 120 }; player.ammo.smg = { mag: 32, res: 192 }; player.ammo.galil = { mag: 35, res: 210 }; player.ammo.rpg = { mag: 1, res: 6 }; player.ammo.revolver = { mag: 6, res: 36 }; player.ammo.sniper = { mag: 5, res: 30 }; player.ammo.minigun = { mag: 150, res: 450 }; player.ammo.dbl = { mag: 2, res: 28 }; player.ammo.thumper = { mag: 4, res: 16 };
   vm.crossbow.userData.bolt.visible = true;
   mbox.state = 'closed'; mbox.display.visible = false; mbox.lid.rotation.x = 0; placeBox(curMap.boxPos.x, curMap.boxPos.z, curMap.boxRot); mbox.uses = 0;
   boughtExtraPerks.clear();
@@ -2494,10 +2550,11 @@ function resetWorld() {
 function startRound() {
   MP.hostRound();
   state.wave++; state.roundState = 'active'; state.spawned = 0; state.spawnT = 0.6;
-  state.roundTotal = Math.round((6 + (state.wave - 1) * 3) * (1 + 0.6 * MP.peers.size));
+  state.roundTotal = Math.round((6 + (state.wave - 1) * 3) * (1 + 0.6 * Math.min(MP.peers.size, 5) + 0.15 * Math.max(0, MP.peers.size - 5)));
   state.houndRound = state.wave >= 7 && state.wave % 7 === 0 && state.wave % 10 !== 0;
   if (state.houndRound) { state.roundTotal = 8 + Math.floor(state.wave * 0.7); banner('HELLHOUNDS INCOMING', 3200); }
   sfx.round();
+  if (curMap.id === 'verity' && !state.houndRound && state.wave % 10 !== 0) banner(pick(['SKIBIDI ROUND', 'OHIO ROUND', 'SIGMA ROUND', 'RIZZ ROUND', 'NO CAP ROUND', 'BRAINROT ROUND', 'TUNG TUNG ROUND', 'GYATT ROUND']) + ' ' + state.wave, 2200);
   if (curMap.id === 'verity') { if (state.wave % 10 === 0) spawnBoss(false, 'vboss'); }
   else if ((curMap.id === 'factory' || curMap.id === 'osterled') && state.wave % 10 === 0) spawnBoss();
   else if (curMap.id === 'ironmire') { if (state.wave % 8 === 0) spawnBoss(true); if (state.wave % 5 === 0) spawnGiant(); }
@@ -2711,7 +2768,7 @@ function updateRounds(dt) {
     state.interT -= dt; if (state.interT <= 0) startRound();
   } else {
     state.spawnT -= dt;
-    if (state.spawnT <= 0 && state.spawned < state.roundTotal && zombies.length < MAX_ALIVE) {
+    if (state.spawnT <= 0 && state.spawned < state.roundTotal && zombies.length < Math.min(60, MAX_ALIVE + 2 * MP.peers.size)) {
       if (spawnZombie()) state.spawned++;
       state.spawnT = Math.max(0.4, 1.6 - state.wave * 0.1) * (0.7 + Math.random() * 0.6);
     }
@@ -3366,12 +3423,16 @@ function buildVerityMap() {
     { cx: 24, cz: -22, s: 1, wall: '#4fc23a', roof: '#2a3a5a', light: 0x7aff6a, name: ['TRALALERO', 'TRALALA'], perk: 'quick', wb: ['smg', 1000, 'MP5 SMG'], pst: 'verity' },
     { cx: -24, cz: 24, s: -1, wall: '#2fb8d9', roof: '#4a2a2a', light: 0x6ad8ff, name: ['BOMBARDIRO', 'CROCODILO'], perk: 'speed', wb: ['ak', 1200, 'AK-47'], pst: 'boss' },
     { cx: 24, cz: 24, s: -1, wall: '#e58a2b', roof: '#2a2a4a', light: 0xffb04a, name: ['LIRILI LARILA', 'HOUSE'], perk: 'double', wb: ['galil', 2000, 'GALIL'], pst: 'tung' },
+    { cx: -38, cz: -14, s: 1, wall: '#9a5ae0', roof: '#2a3a2a', light: 0xb27aff, name: ['CAPPUCCINO', 'ASSASSINO'], perk: 'stamin', wb: ['revolver', 1500, '.44 MAGNUM'], pst: 'verity' },
+    { cx: 38, cz: -14, s: 1, wall: '#e04a4a', roof: '#2a2a2a', light: 0xff7a7a, name: ['BALLERINA', 'CAPPUCCINA'], perk: 'mule', wb: ['sniper', 2500, 'SNIPER RIFLE'], pst: 'boss' },
   ];
   const PD = {
     jug: { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' },
     quick: { id: 'quick', title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500 },
     speed: { id: 'speed', title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
     double: { id: 'double', title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
+    stamin: { id: 'stamin', title: 'STAMIN-UP', fs: 25, body: '#6e8d35', trim: '#f2f2f2', emb: '↑', cost: 2000 },
+    mule: { id: 'mule', title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
   };
   for (const H of hdefs) {
     const { cx, cz, s } = H, w = 12, d = 10, h = 3.6, T = 0.35, dw = 2.4, lwid = (w - dw) / 2, ry0 = s === 1 ? 0 : PI;
@@ -3433,11 +3494,53 @@ function buildVerityMap() {
   const bo = { minX: 10 - 0.85, maxX: 10 + 0.85, minZ: 12 - 0.55, maxZ: 12 + 0.55 }; obs.push(bo); boxObs.verity = bo; occ.push(mbox.body);
   // ---- cotton-candy trees, giant cappuccinos, street lamps ----
   const leafM = [std(null, { color: 0xf08ac0 }), std(null, { color: 0x8af0d0 }), std(null, { color: 0xb08af0 })];
-  [[-12, -30], [12, -30], [-12, 30], [12, 30], [-38, -8], [-38, 10], [38, -8], [38, 10], [-34, 36], [34, -36], [-6, -38], [6, 38]].forEach(([x, z], i) => {
+  [[-12, -30], [12, -30], [-12, 30], [12, 30], [-38, 10], [38, 10], [-34, 36], [34, -36], [-6, -38], [6, 38]].forEach(([x, z], i) => {
     addCylinder(x, z, 0.3, 2.6, MAT.bark, { seg: 8 }); const c = new THREE.Mesh(new THREE.SphereGeometry(1.7, 10, 8), leafM[i % 3]); c.position.set(x, 3.6, z); c.castShadow = true; scene.add(c);
   });
   const cupM = std(null, { color: 0xf4efe6 }), foamM = std(null, { color: 0x8a5a36 });
   for (const [x, z] of [[-14, 14], [14, -14], [-16, -13], [16, 14]]) { addCylinder(x, z, 1.1, 1.5, cupM, { seg: 16 }); const f = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.05, 16), foamM); f.position.set(x, 1.52, z); scene.add(f); const hd = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.1, 6, 12), cupM); hd.position.set(x + 1.2, 0.8, z); scene.add(hd); }
+  // ---- extra brainrot: Skibidi toilets, Tralalero Tralala, Bombardiro Crocodilo, meme signs ----
+  {
+    const porc = std(null, { color: 0xf2f2f0, roughness: 0.3 }), gold = std(null, { color: 0xc98a1c, roughness: 0.9 });
+    for (const [x, z, ry] of [[9, -9, PI * 0.8], [-11, 7, -PI * 0.2], [12, 5, -PI * 0.6]]) {
+      const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry;
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.38, 0.8, 14), porc); bowl.position.y = 0.4; bowl.castShadow = true; g.add(bowl);
+      const tank = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.35), porc); tank.position.set(0, 1.1, -0.5); tank.castShadow = true; g.add(tank);
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.06, 14), porc); lid.position.y = 0.83; g.add(lid);
+      const hd = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 12), gold); hd.position.set(0, 1.35, 0.1); hd.castShadow = true; g.add(hd);
+      const fc = new THREE.Mesh(sphereCap(0.51, 2.3, 2.3, 1.35, 0.1), faceMat(VT.verity)); g.add(fc);
+      scene.add(g); obs.push({ minX: x - 0.7, maxX: x + 0.7, minZ: z - 0.7, maxZ: z + 0.7 }); occ.push(bowl);
+    }
+    // Tralalero Tralala: blue shark on three legs in sneakers
+    { const g = new THREE.Group(); g.position.set(-27, 0, -9); g.rotation.y = 0.5;
+      const blue = std(null, { color: 0x4a8ad0, roughness: 0.6 }), belly = std(null, { color: 0xdfe8f0, roughness: 0.6 }), white = std(null, { color: 0xf4f4f4 }), redM = std(null, { color: 0xd02a2a }), skin = std(null, { color: 0xd8a070 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), blue); body.scale.set(0.95, 0.8, 2.3); body.position.y = 2.4; body.castShadow = true; g.add(body);
+      const bel = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 10), belly); bel.scale.set(0.9, 0.5, 2.1); bel.position.set(0, 2.0, 0.1); g.add(bel);
+      const fin = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.1, 4), blue); fin.position.set(0, 3.6, -0.2); fin.rotation.x = -0.3; g.add(fin);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 4), blue); tail.position.set(0, 2.5, -2.6); tail.rotation.x = -PI / 2; g.add(tail);
+      for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), white); e.position.set(sx * 0.6, 2.8, 1.9); g.add(e); const p = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), std(null, { color: 0x111111 })); p.position.set(sx * 0.6, 2.8, 2.08); g.add(p); }
+      for (const [lx, lz] of [[-0.5, 1.0], [0.5, 1.0], [0, -1.2]]) { const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 1.5, 8), skin); lg.position.set(lx, 0.95, lz); lg.castShadow = true; g.add(lg); const sn = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, 0.8), white); sn.position.set(lx, 0.14, lz + 0.2); g.add(sn); const st = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.82), redM); st.position.set(lx, 0.22, lz + 0.2); g.add(st); }
+      scene.add(g); obs.push({ minX: -29.4, maxX: -24.6, minZ: -12, maxZ: -6 }); }
+    // Bombardiro Crocodilo: crocodile bomber circling overhead (static decor)
+    { const g = new THREE.Group(); g.position.set(20, 11, -4); g.rotation.y = -0.6;
+      const green = std(null, { color: 0x4a7a3a, roughness: 0.7 }), dk = std(null, { color: 0x2f4a2a }), grey = std(null, { color: 0x6a6f74, metalness: 0.5, roughness: 0.4 });
+      const bd = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.55, 6, 10), green); bd.rotation.x = PI / 2; g.add(bd);
+      const hd = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 2.2), dk); hd.position.set(0, -0.1, 4); g.add(hd);
+      for (let i = 0; i < 6; i++) for (const sx of [-1, 1]) { const t = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 4), std(null, { color: 0xf4f4e8 })); t.position.set(sx * 0.4, -0.38, 3.2 + i * 0.35); t.rotation.x = PI; g.add(t); }
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(9, 0.15, 1.6), grey); wing.position.set(0, 0.1, 0.4); g.add(wing);
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(3, 0.12, 0.9), grey); tl.position.set(0, 0.2, -3); g.add(tl);
+      const fn = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.2, 0.9), grey); fn.position.set(0, 0.8, -3); g.add(fn);
+      for (const sx of [-1, 1]) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), std(null, { color: 0x222222 })); b.scale.set(1, 1, 1.6); b.position.set(sx * 2.5, -0.4, 0.4); g.add(b); }
+      const lt = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 5), new THREE.MeshBasicMaterial({ color: 0xff3030 })); lt.position.set(4.4, 0.2, 0.4); g.add(lt); scene.add(g); }
+    // neon meme signs
+    const signPole = (x, z, ry, lines, bg, fg) => {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 4, 6), MAT.steelDark); p.position.set(x, 2, z); scene.add(p);
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.38), new THREE.MeshBasicMaterial({ map: texBrain(lines, bg, fg) })); sg.position.set(x, 4.3, z); sg.rotation.y = ry; scene.add(sg);
+      const bk = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.58), frameM); bk.position.set(x - Math.sin(ry) * 0.02, 4.3, z - Math.cos(ry) * 0.02); bk.rotation.y = ry; scene.add(bk);
+    };
+    signPole(0, -12.5, 0, ['WELCOME TO', 'OHIO'], '#1a0a2a', '#ff5ac8'); signPole(0, 31, PI, ['SKIBIDI', 'TOILET ZONE'], '#0a2a1a', '#7aff6a');
+    signPole(31, 8, -PI / 2, ['SIX SEVEN', 'NO CAP FR FR'], '#2a1a0a', '#ffb04a'); signPole(-31, -6, PI / 2, ['SIGMA', 'RIZZ PARTY'], '#0a1a2a', '#6ad8ff');
+  }
   const lampM = new THREE.MeshBasicMaterial({ color: 0xffa8ff });
   for (const [x, z] of [[-6, -14], [6, -14], [-6, 14], [6, 14], [-14, -6], [-14, 6], [14, -6], [14, 6], [-6, -36], [6, 36], [-36, 6], [36, -6]]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 3.6, 6), MAT.steelDark); p.position.set(x, 1.8, z); scene.add(p); const b = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), lampM); b.position.set(x, 3.7, z); scene.add(b); }
   const root = new THREE.Group(); scene.add(root);
