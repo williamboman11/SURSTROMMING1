@@ -1206,7 +1206,7 @@ Object.assign(WM, {
 const cz = (g, r, l, m, x, y, z, s = 16) => part(g, CY(r, l, s), m, x, y, z, Math.PI / 2);
 const cap = (g, r, l, m, x, y, z) => part(g, new THREE.CapsuleGeometry(r, l, 4, 12), m, x, y, z, Math.PI / 2);
 function hand(g, x, y, z, rz = 0, ry = 0) {   // gloved hand + sleeve
-  const h = new THREE.Group(); h.position.set(x, y, z); h.rotation.set(0, ry, rz); g.add(h);
+  const h = new THREE.Group(); h.userData.hand = true; h.position.set(x, y, z); h.rotation.set(0, ry, rz); g.add(h);
   part(h, B(0.062, 0.046, 0.09), WM.glove, 0, 0, 0);
   for (let i = 0; i < 4; i++) part(h, CY(0.0105, 0.07, 6), WM.glove, -0.021 + i * 0.014, -0.034, -0.036, 0.25);
   part(h, CY(0.013, 0.06, 6), WM.glove, 0.038, 0.004, -0.02, 0.9, 0, 0.7);
@@ -1683,6 +1683,7 @@ let best = 0;
 try { best = parseInt(localStorage.getItem('surstromming_best') || '0', 10) || 0; } catch (e) {}
 
 /* ===================== MULTIPLAYER (host-authoritative co-op over public MQTT broker) ===================== */
+const WBUILD = { pistol: buildPistol, ak: buildAK, crossbow: buildCrossbow, raygun: buildRay, shotgun: buildShotgun, raygun2: buildRay2, smg: buildSMG, galil: buildGalil, rpg: buildRPG, revolver: buildRevolver, sniper: buildSniper, minigun: buildMinigun, dbl: buildDouble, thumper: buildThumper };
 const MP = {
   on: false, host: false, client: false, down: false, silent: false, rx: false, zid: 0,
   id: Math.random().toString(36).slice(2, 8), name: '', status: '', topic: '', map: '', view: '',
@@ -1741,10 +1742,11 @@ const MP = {
         if (!this.host) break;
         if (!this.peers.has(m.i) && this.peers.size >= MAX_PLAYERS - 1) { this.send({ t: 'full', to: m.i }); break; }
         if (!this.peers.has(m.i)) this.peers.set(m.i, { n: this.esc(m.n), x: 0, y: 0, z: 0, yaw: 0, pt: 0, d: 0, h: 100, w: 'pistol', seen: now });
-        this.send({ t: 'welcome', to: m.i, map: this.map }); this.beat(); break;
+        this.send({ t: 'welcome', to: m.i, map: this.map, dr: openedDoors(), bx: [+mbox.pos.x.toFixed(2), +mbox.pos.z.toFixed(2), +mbox.group.rotation.y.toFixed(3)] }); this.beat(); break;
       case 'full': this.leave(); this.status = 'SERVER FULL'; this.draw(); break;
       case 'welcome':
         if (this.joined) break; this.joined = true; this.status = ''; this.lastS = now; this.panelHide();
+        this.pend = { dr: m.dr || [], bx: m.bx || null };
         if (MAPS[m.map]) { selectMap(m.map); startCountdown(); } break;
       case 'p': {
         if (this.host && !this.peers.has(m.i)) break;
@@ -1758,7 +1760,11 @@ const MP = {
       case 'aw': state.score += m.ds; state.kills += m.dk; if (m.dk) { popPoints('+' + m.ds, m.h); sfx.kill(); } else if (m.ds) popPoints('+' + m.ds, false); updateHUD(); break;
       case 'rev': this.revive(); break;
       case 'over': state.wave = m.w; gameOver(); this.leave(); break;
-      case 'tr': this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2])); this.rx = false; break;
+      case 'pj': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; const w = WEAPONS[m.w]; if (w && m.a && m.d) spawnProj(m.w, w, new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.d[0], m.d[1], m.d[2]), true); break; }
+      case 'gr': if (m.a && m.v) spawnGrenade(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.v[0], m.v[1], m.v[2]), true); break;
+      case 'door': if (state.phase === 'playing') applyDoor(m.id, false); else (this.pend = this.pend || {}).dr = ((this.pend.dr) || []).concat([m.id]); break;
+      case 'box': boxRx(m); break;
+      case 'tr': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; } this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2])); this.rx = false; break;
     }
   },
   sync(m) {
@@ -1809,7 +1815,19 @@ const MP = {
     bx(0.14, 0.55, 0.14, mat, -0.34, 1.12, -0.05); const ar = bx(0.14, 0.14, 0.55, mat, 0.34, 1.3, -0.25); bx(0.08, 0.1, 0.55, dk, 0.34, 1.3, -0.6);
     const c = document.createElement('canvas'); c.width = 256; c.height = 48; const x = c.getContext('2d'); x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 5; x.strokeText(name, 128, 34); x.fillText(name, 128, 34);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.3, 1); sp.position.y = 2.15; sp.renderOrder = 9; g.add(sp);
+    const gun = new THREE.Group(); gun.position.set(0.34, 1.3, -0.3); g.add(gun); g.userData.gun = gun;
     scene.add(g); return g;
+  },
+  showGun(p) {
+    const gun = p.g.userData.gun; if (!gun) return;
+    while (gun.children.length) gun.remove(gun.children[0]);
+    p.fl3 = null; const b = WBUILD[p.w]; p.wShown = p.w; if (!b) return;
+    let m; try { m = b(); } catch (e) { return; }
+    const del = []; m.traverse(o => { if (o.userData && o.userData.hand) del.push(o); }); for (const o of del) if (o.parent) o.parent.remove(o);
+    m.scale.setScalar(0.85); m.position.set(0, 0, 0); gun.add(m);
+    const mz = (m.userData && m.userData.muzzle) ? m.userData.muzzle.clone().multiplyScalar(0.85) : new THREE.Vector3(0, 0, -0.7);
+    const fl = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    fl.position.copy(mz); fl.visible = false; gun.add(fl); p.fl3 = fl;
   },
   tick(dt) {
     if (!this.on) return; const now = performance.now();
@@ -1828,6 +1846,9 @@ const MP = {
       p.g.position.set(p.x, p.ty || 0, p.z); p.g.rotation.y = p.yaw; u.head.rotation.x = p.pt;
       u.lL.rotation.x = Math.sin(p.ph) * Math.min(1, sp / 4) * 0.8; u.lR.rotation.x = -u.lL.rotation.x;
       p.g.rotation.x = p.d ? -1.45 : 0; if (p.d) p.g.position.y += 0.25;
+      if (p.wShown !== p.w) this.showGun(p);
+      if (p.g.userData.gun) p.g.userData.gun.rotation.x = p.pt || 0;
+      if (p.fl > 0) p.fl -= dt; if (p.fl3) p.fl3.visible = p.fl > 0;
     }
     if (this.client) for (const z of zombies) if (z.tx !== undefined && z.spawnT >= 0.9) { const g = z.root.position, k = Math.min(1, dt * 5); if (Math.hypot(z.tx - g.x, z.tz - g.z) > 5) { g.x = z.tx; g.z = z.tz; } else { g.x += (z.tx - g.x) * k; g.z += (z.tz - g.z) * k; } }
     if (!this.hud) { this.hud = document.createElement('div'); this.hud.style.cssText = 'position:absolute;right:24px;top:22px;font-size:9px;line-height:1.9;text-align:right;color:#cfd3d8'; $('hud').appendChild(this.hud); }
@@ -2066,7 +2087,7 @@ function spawnTracer(from, to) {
 }
 const explLight = new THREE.PointLight(0xff8a30, 0, 24, 2); scene.add(explLight);
 let explLightT = 0;
-function explode(point, ray = false, wt = null) {
+function explode(point, ray = false, wt = null, vis = false) {
   const R = ray ? 3.2 : wt === 'rpg' ? 6.5 : EXPLOSION_RADIUS;
   const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: ray ? 0x66ff44 : 0xff9a3a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   m.position.copy(point); scene.add(m); explosions.push({ m, t: 0, R });
@@ -2077,7 +2098,7 @@ function explode(point, ray = false, wt = null) {
   const d = Math.hypot(point.x - player.pos.x, point.z - player.pos.z);
   if (d < 22) state.shake = Math.max(state.shake, 1 - d / 22);
 
-  for (const z of [...zombies]) {
+  if (!vis) for (const z of [...zombies]) {
     const c = new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), dist = c.distanceTo(point);
     if (dist < R) damageZombie(z, wt === 'rpg' ? dmgOf('rpg') : wt === 'thumper' ? dmgOf('thumper') * (1 - 0.5 * dist / R) : (wt === 'pistol' ? dmgOf('pistol') * 2.5 : dmgOf(ray ? (wt || 'raygun') : 'crossbow')) * (1 - 0.6 * dist / R), c, false);
   }
@@ -2154,6 +2175,7 @@ function killZombie(z, point, head, knife = false) {
   popPoints(head && !knife ? `+${pts} HEADSHOT` : `+${pts}`, head && !knife);
   head ? sfx.head() : sfx.kill();
   if (z.hound && (state.roundTotal - state.spawned) + zombies.length <= 0) dropPowerup(z.root.position.x, z.root.position.z, 'ammo');
+  else if (state.powerAll) dropPowerup(z.root.position.x, z.root.position.z);
   else if (!noPts && (z.boss || (!z.hound && Math.random() < 0.10))) dropPowerup(z.root.position.x, z.root.position.z);
 }
 
@@ -2200,7 +2222,7 @@ function puModel(type) {
   return g;
 }
 function dropPowerup(x, z, forced) {
-  if (MP.on) return;
+  if (MP.on && !state.powerAll) return;
   const type = forced || pick(['nuke', 'ammo', 'insta', 'double']), m = puModel(type); m.position.set(x, 1.1, z); scene.add(m);
   powerups.push({ type, m, life: 15, t: Math.random() * 6, x, z });
 }
@@ -2294,14 +2316,19 @@ function updateBossCans(dt) {
 }
 function clearPowerups() { for (const c of bossCans) scene.remove(c.m); bossCans.length = 0; for (const gi of giants) scene.remove(gi.m); giants.length = 0; if (curMap.dormant) curMap.dormant.visible = true; for (const p of powerups) scene.remove(p.m); powerups.length = 0; instaT = 0; doubleT = 0; }
 
+function spawnGrenade(start, vel, vis) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), new THREE.MeshStandardMaterial({ color: 0x30362c, roughness: 0.65, metalness: 0.55 }));
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 5, 12), new THREE.MeshStandardMaterial({ color: 0xb6a66a, metalness: 0.7, roughness: 0.4 }));
+  mesh.add(band); band.rotation.x = Math.PI / 2; mesh.position.copy(start); scene.add(mesh);
+  grenades.push({ mesh, pos: start.clone(), vel: vel.clone(), fuse: GRENADE_FUSE, spin: 0, vis });
+}
 function throwGrenade() {
   if (grenadeCooldown > 0) { notice(`GRENADE READY IN ${grenadeCooldown.toFixed(1)}s`, 900); return; }
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
   const start = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, 0.65);
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), new THREE.MeshStandardMaterial({ color: 0x30362c, roughness: 0.65, metalness: 0.55 }));
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 5, 12), new THREE.MeshStandardMaterial({ color: 0xb6a66a, metalness: 0.7, roughness: 0.4 }));
-  mesh.add(band); band.rotation.x = Math.PI / 2; mesh.position.copy(start); scene.add(mesh);
-  grenades.push({ mesh, pos: start.clone(), vel: dir.multiplyScalar(9.5).add(new THREE.Vector3(0, 3.2, 0)), fuse: GRENADE_FUSE, spin: 0 });
+  const vel = dir.multiplyScalar(9.5).add(new THREE.Vector3(0, 3.2, 0));
+  spawnGrenade(start, vel, false);
+  if (MP.on) { const r = v => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; MP.send({ t: 'gr', a: r(start), v: r(vel) }); }
   grenadeCooldown = 2.5; tone('triangle', 480, 260, 0.08, 0.09); notice('GRENADE OUT — 3 SECONDS', 950);
 }
 function detonateGrenade(g) {
@@ -2311,7 +2338,7 @@ function detonateGrenade(g) {
   m.position.copy(point); scene.add(m); explosions.push({ m, t: 0, R });
   explLight.position.copy(point); explLight.intensity = 115; explLightT = 0.28;
   burst(point, 24, pMat.fire, 12, 0.7, 4); burst(point, 18, pMat.smoke, 6, 1.1, -1.2); burst(point, 12, pMat.spark, 14, 0.5, 8); sfx.explode();
-  for (const z of [...zombies]) {
+  if (!g.vis) for (const z of [...zombies]) {
     const c = new THREE.Vector3(z.root.position.x, 1.0, z.root.position.z), dist = c.distanceTo(point);
     if (dist <= R) damageZombie(z, Math.max(1, GRENADE_DAMAGE * (1 - 0.45 * dist / R)), c, false);
   }
@@ -2416,18 +2443,22 @@ function shoot() {
   }
   if (a.mag === 0 && a.res > 0) startReload();
 }
-function fireProj(w) {
+function spawnProj(type, w, start, dir, vis) {
   {
-    camera.getWorldDirection(_v);
-    const start = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(_v, 0.7); start.y -= 0.06;
-    const mesh = new THREE.Group(), ray = w.kind === 'ray', mk2 = player.cur === 'raygun2';
+    const mesh = new THREE.Group(), ray = w.kind === 'ray', mk2 = type === 'raygun2';
     if (ray) { part(mesh, new THREE.SphereGeometry(0.1, 8, 6), mk2 ? WM.redb : WM.green, 0, 0, 0); part(mesh, new THREE.SphereGeometry(0.22, 8, 6), mk2 ? WM.redGlow : WM.glow, 0, 0, 0); }
-    else if (player.cur === 'thumper') { part(mesh, new THREE.SphereGeometry(0.07, 10, 8), WM.mid, 0, 0, 0); part(mesh, new THREE.SphereGeometry(0.03, 6, 5), WM.tip, 0, 0, -0.06); }
-    else if (player.cur === 'rpg') { part(mesh, CY(0.12, 0.17, 16), (typeof CAN_MAT !== 'undefined') ? CAN_MAT : WM.chrome, 0, 0, 0, Math.PI / 2); part(mesh, CY(0.124, 0.015, 16), WM.chrome, 0, 0, 0.085, Math.PI / 2); part(mesh, CY(0.124, 0.015, 16), WM.chrome, 0, 0, -0.085, Math.PI / 2); part(mesh, new THREE.SphereGeometry(0.1, 8, 6), WM.glow, 0, 0, 0.2); }
+    else if (type === 'thumper') { part(mesh, new THREE.SphereGeometry(0.07, 10, 8), WM.mid, 0, 0, 0); part(mesh, new THREE.SphereGeometry(0.03, 6, 5), WM.tip, 0, 0, -0.06); }
+    else if (type === 'rpg') { part(mesh, CY(0.12, 0.17, 16), (typeof CAN_MAT !== 'undefined') ? CAN_MAT : WM.chrome, 0, 0, 0, Math.PI / 2); part(mesh, CY(0.124, 0.015, 16), WM.chrome, 0, 0, 0.085, Math.PI / 2); part(mesh, CY(0.124, 0.015, 16), WM.chrome, 0, 0, -0.085, Math.PI / 2); part(mesh, new THREE.SphereGeometry(0.1, 8, 6), WM.glow, 0, 0, 0.2); }
     else { part(mesh, CY(0.03, 0.8, 6), WM.steel, 0, 0, 0, Math.PI / 2); part(mesh, new THREE.ConeGeometry(0.07, 0.2, 8), WM.tip, 0, 0, -0.5, -Math.PI / 2); }
-    mesh.position.copy(start); mesh.lookAt(start.clone().add(_v)); scene.add(mesh);
-    projectiles.push({ mesh, pos: start.clone(), vel: _v.clone().multiplyScalar(ray ? 75 : player.cur === 'rpg' ? 42 : player.cur === 'thumper' ? 34 : 52), life: ray ? 2.5 : 4, trail: 0, ray, wt: player.cur });
+    mesh.position.copy(start); mesh.lookAt(start.clone().add(dir)); scene.add(mesh);
+    projectiles.push({ mesh, pos: start.clone(), vel: dir.clone().multiplyScalar(ray ? 75 : type === 'rpg' ? 42 : type === 'thumper' ? 34 : 52), life: ray ? 2.5 : 4, trail: 0, ray, wt: type, vis });
   }
+}
+function fireProj(w) {
+  camera.getWorldDirection(_v);
+  const start = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(_v, 0.7); start.y -= 0.06;
+  spawnProj(player.cur, w, start, _v, false);
+  if (MP.on) { const r = v => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; MP.send({ t: 'pj', w: player.cur, a: r(start), d: r(_v) }); }
 }
 function knife() {
   if (state.knifeCd > 0 || state.phase !== 'playing') return;
@@ -2483,14 +2514,17 @@ function interact() {
   if (u.k === 'wall') { buyWall(u.q); return; }
   if (mbox.state === 'closed') {
     if (state.score < BOX_COST) { notice(`NEED ${BOX_COST} POINTS`); sfx.deny(); return; }
-    state.score -= BOX_COST; sfx.buy();
+    state.score -= BOX_COST; sfx.buy(); mbox.owner = MP.id;
     mbox.state = 'rolling'; mbox.t = 0; mbox.cycleT = 0; const teddy = (curMap.boxSpots || []).length > 1 && (mbox.uses || 0) >= 3 && (Math.random() < 0.22 || mbox.uses >= 8);
     mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2', 'rpg', 'rpg', 'revolver', 'sniper', 'minigun', 'dbl', 'thumper']);
     mbox.display.visible = true; mbox.display.position.y = 0.9;
+    if (MP.on) MP.send({ t: 'box', a: 'open', r: mbox.result, u: mbox.uses || 0 });
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach(i => { setTimeout(() => { if (mbox.state === 'rolling') tone('triangle', [523, 659, 784, 659][i % 4], [523, 659, 784, 659][i % 4], 0.15, 0.1); }, i * 200); });
   } else if (mbox.state === 'ready') {
     if (mbox.result === 'teddy') return;
-    mbox.uses = (mbox.uses || 0) + 1;
+    if (MP.on && mbox.owner && mbox.owner !== MP.id) { notice('THIS WEAPON IS SOMEONE ELSE\'S', 1500); sfx.deny(); return; }
+    mbox.uses = (mbox.uses || 0) + 1; mbox.owner = null;
+    if (MP.on) MP.send({ t: 'box', a: 'take', u: mbox.uses });
     const t = mbox.result; mbox.state = 'closed'; mbox.display.visible = false;
     giveWeapon(t); sfx.swap(); notice(`GOT ${WEAPONS[t].name}`);
   }
@@ -2503,7 +2537,14 @@ function placeBox(x, z, rot) {
 function moveBox() {
   const spots = (curMap.boxSpots || []).filter(p => Math.hypot(p.x - mbox.pos.x, p.z - mbox.pos.z) > 3 && !insideObstacle(p.x, p.z, 1.3));
   if (!spots.length) return;
-  const p = pick(spots); placeBox(p.x, p.z, p.rot); mbox.uses = 0; sfx.chime(); notice('THE MYSTERY BOX HAS MOVED', 3000);
+  const p = pick(spots); placeBox(p.x, p.z, p.rot); mbox.uses = 0; mbox.owner = null; sfx.chime(); notice('THE MYSTERY BOX HAS MOVED', 3000);
+  if (MP.on) MP.send({ t: 'box', a: 'move', x: p.x, z: p.z, r: p.rot });
+}
+function boxRx(m) {
+  const b = mbox;
+  if (m.a === 'open') { if (b.state !== 'closed') return; b.state = 'rolling'; b.t = 0; b.cycleT = 0; b.result = m.r; b.owner = m.i; b.uses = m.u || 0; b.display.visible = true; b.display.position.y = 0.9; }
+  else if (m.a === 'take') { b.state = 'closed'; b.display.visible = false; b.uses = m.u || 0; b.owner = null; }
+  else if (m.a === 'move') { placeBox(m.x, m.z, m.r); b.state = 'closed'; b.display.visible = false; b.uses = 0; b.owner = null; sfx.chime(); notice('THE MYSTERY BOX HAS MOVED', 3000); }
 }
 function updateBox(dt) {
   const b = mbox;
@@ -2518,7 +2559,8 @@ function updateBox(dt) {
     if (b.t >= 3) { b.state = 'ready'; b.readyT = 10; for (const k in b.models) b.models[k].visible = k === b.result; sfx.chime(); }
   } else if (b.state === 'ready') {
     b.readyT -= dt;
-    if (b.result === 'teddy' && b.readyT < 7.5) { state.score += BOX_COST; notice('THE BOX LAUGHS... POINTS REFUNDED', 3200); [0, 1, 2, 3].forEach(i => tone('square', 400 - i * 60, 380 - i * 60, 0.18, 0.12, i * 0.18)); b.state = 'closed'; b.display.visible = false; moveBox(); }
+    if (b.result === 'teddy' && b.readyT < 7.5 && MP.on && b.owner && b.owner !== MP.id) { b.state = 'closed'; b.display.visible = false; }
+    else if (b.result === 'teddy' && b.readyT < 7.5) { state.score += BOX_COST; notice('THE BOX LAUGHS... POINTS REFUNDED', 3200); [0, 1, 2, 3].forEach(i => tone('square', 400 - i * 60, 380 - i * 60, 0.18, 0.12, i * 0.18)); b.state = 'closed'; b.display.visible = false; moveBox(); }
     if (b.readyT <= 0) { b.state = 'closed'; b.display.visible = false; }
   }
   if (b.display.visible) { b.display.rotation.y += dt * 1.6; b.display.position.y += Math.sin(state.time * 3) * 0.002; }
@@ -2631,6 +2673,7 @@ function startCountdown() {
 }
 $('cdCancel').addEventListener('click', () => { clearInterval(cdTimer); sfx.click(); showMenu('start'); });
 function beginGame() {
+  if (MP.pend && MP.client) { const q = MP.pend; MP.pend = null; if (q.bx) placeBox(q.bx[0], q.bx[1], q.bx[2]); for (const id of q.dr || []) applyDoor(id, true); }
   cdEl.classList.add('hidden'); state.phase = 'playing'; hudEl.classList.add('show');
   state.roundState = 'intermission'; state.interT = 3;
   setViewmodels(); updateHUD();
@@ -2700,7 +2743,8 @@ function sendChat() {
   chatAdd(nm, t, '#7fe05a'); if (MP.on) MP.send({ t: 'chat', n: nm, m: t });
 }
 let cheatBuf = '';
-function cheatRound(n) {
+function cheatRound(add) {
+  const n = Math.max(1, state.wave) + add;
   if (MP.client) { notice('ONLY THE HOST CAN CHANGE THE ROUND'); return; }
   for (const z of [...zombies]) { scene.remove(z.root); disposeBar(z); } zombies.length = 0; MP.zmap.clear();
   state.wave = n - 1; state.roundState = 'intermission'; state.interT = 1.5; state.spawned = 0; state.roundTotal = 0; state.houndRound = false;
@@ -2709,6 +2753,8 @@ function cheatRound(n) {
 const CHEATS = {
   hack: () => { state.god = !state.god; if (state.god) state.health = state.maxHealth; notice(state.god ? 'CHEAT: GOD MODE ON' : 'CHEAT: GOD MODE OFF', 2600); sfx.chime(); },
   round: () => cheatRound(10),
+  perk: () => { for (const k of ['quick', 'speed', 'double', 'stamin', 'mule']) boughtExtraPerks.add(k); if (!jug.bought) { jug.bought = true; state.maxHealth = 200; } state.health = state.maxHealth; notice('CHEAT: ALL PERKS', 2600); sfx.chime(); sfx.heal(); },
+  power: () => { state.powerAll = !state.powerAll; notice(state.powerAll ? 'CHEAT: ALL ZOMBIES DROP POWER-UPS' : 'CHEAT: POWER-UP DROPS OFF', 2600); sfx.chime(); },
   money: () => { state.score += 10000; notice('CHEAT: +10000 POINTS', 2600); sfx.chime(); },
 };
 document.addEventListener('keydown', e => {
@@ -2973,7 +3019,7 @@ function updateProjectiles(dt) {
     if (hits.length) boom = hits[0].point.clone();
     else if (p.pos.y + step.y <= 0.05) { boom = p.pos.clone().addScaledVector(step, Math.max(0, (p.pos.y - 0.05) / Math.max(1e-4, -step.y))); boom.y = 0.1; }
     else if (p.life <= 0) boom = p.pos.clone();
-    if (boom) { scene.remove(p.mesh); projectiles.splice(i, 1); explode(boom, p.ray, p.wt); continue; }
+    if (boom) { scene.remove(p.mesh); projectiles.splice(i, 1); explode(boom, p.ray, p.wt, p.vis); continue; }
     p.pos.add(step); p.mesh.position.copy(p.pos);
     p.mesh.lookAt(_v2.copy(p.pos).add(p.vel));
     p.trail -= dt; if (p.trail <= 0) { p.trail = 0.03; burst(p.pos, 1, p.ray ? pMat.green : pMat.smoke, 0.6, 0.5, -0.5); }
@@ -3016,7 +3062,21 @@ function resetHouse() {
   if (!F.obs.includes(doorObs)) F.obs.push(doorObs);
   if (!F.occ.includes(doorMesh)) F.occ.push(doorMesh);
 }
+function openedDoors() {
+  if (curMap.id === 'factory') return (house.open ? ['house'] : []).concat(cottageDoors.filter(c => c.open).map(c => c.id));
+  return (curMap.gates || []).filter(g => g.open).map(g => g.id);
+}
+function applyDoor(id, silent) {
+  if (curMap.id === 'factory') {
+    if (id === 'house') { if (house.open) return; house.open = true; const i = obstacles.indexOf(doorObs), j = obstacleMeshes.indexOf(doorMesh); if (i >= 0) obstacles.splice(i, 1); if (j >= 0) obstacleMeshes.splice(j, 1); }
+    else { const c = cottageDoors.find(q => q.id === id); if (!c || c.open) return; c.open = true; const FF = MAPS.factory, i = FF.obs.indexOf(c.obs), j = FF.occ.indexOf(c.mesh); if (i >= 0) FF.obs.splice(i, 1); if (j >= 0) FF.occ.splice(j, 1); }
+  } else {
+    const g = (curMap.gates || []).find(q => q.id === id); if (!g || g.open) return; g.open = true; if (g.open_fn) g.open_fn();
+  }
+  if (!silent) { sfx.door(); notice('A TEAMMATE OPENED A DOOR', 2200); }
+}
 function openDoor() {
+  if (MP.on) MP.send({ t: 'door', id: 'house' });
   state.score -= DOOR_COST; house.open = true; sfx.door(); notice('DOOR OPENED');
   obstacles.splice(obstacles.indexOf(doorObs), 1); obstacleMeshes.splice(obstacleMeshes.indexOf(doorMesh), 1);
 }
@@ -3043,7 +3103,7 @@ function updatePerks(dt) {
     if (swHold >= 4) { swHold = 0; sw.on = true; curMap.power[sw.id] = true; if (curMap.onPower) curMap.onPower(sw.id); sfx.door(); sfx.chime(); notice(`POWER ON: ${sw.name}`, 3200); }
   } else swHold = Math.max(0, swHold - dt * 2);
   const cd = cdNear();
-  if (cd && keys['KeyE']) { cdHold += dt; if (cdHold >= 0.7) { if (state.score < cd.cost) { notice(`NEED ${cd.cost} POINTS`); sfx.deny(); cdHold = -0.8; } else { cdHold = 0; state.score -= cd.cost; cd.open = true; sfx.door(); if (cd.open_fn) { notice('BARRICADE OPENED'); cd.open_fn(); } else { notice('DOOR OPENED'); const FF = MAPS.factory; FF.obs.splice(FF.obs.indexOf(cd.obs), 1); FF.occ.splice(FF.occ.indexOf(cd.mesh), 1); } } } } else cdHold = Math.max(0, cdHold - dt * 3);
+  if (cd && keys['KeyE']) { cdHold += dt; if (cdHold >= 0.7) { if (state.score < cd.cost) { notice(`NEED ${cd.cost} POINTS`); sfx.deny(); cdHold = -0.8; } else { cdHold = 0; state.score -= cd.cost; cd.open = true; sfx.door(); if (MP.on) MP.send({ t: 'door', id: cd.id }); if (cd.open_fn) { notice('BARRICADE OPENED'); cd.open_fn(); } else { notice('DOOR OPENED'); const FF = MAPS.factory; FF.obs.splice(FF.obs.indexOf(cd.obs), 1); FF.occ.splice(FF.occ.indexOf(cd.mesh), 1); } } } } else cdHold = Math.max(0, cdHold - dt * 3);
   for (const c of cottageDoors) if (c.open && c.t < 1) { c.t = Math.min(1, c.t + dt * 1.2); c.pivot.rotation.y = -c.t * Math.PI * 0.5; }
   pap.gear.rotation.y += dt * 1.2; pap.gear.position.y = 2.42 + Math.sin(state.time * 2) * 0.04;
 }
@@ -3059,7 +3119,7 @@ function updateInteractions() {
     else if (u.k === 'jug') p = `PRESS E: BUY JUGGER-NOG [${JUG_COST}]`;
     else if (u.k === 'pap') p = player.pap[player.cur] ? 'ALREADY PACKED' : `PRESS E: PACK-A-PUNCH [${PAP_COST}]`;
     else if (u.k === 'wall') p = (player.slot1 === u.q.type || player.slot2 === u.q.type || player.slot3 === u.q.type) ? `PRESS E: AMMO [${Math.floor(u.q.cost / 2)}]` : `PRESS E: BUY ${WEAPONS[u.q.type].name} [${u.q.cost}]`;
-    else if (u.k === 'box') { if (mbox.state === 'closed') p = `PRESS E: MYSTERY BOX [${BOX_COST}]`; else if (mbox.state === 'ready' && mbox.result !== 'teddy') p = `PRESS E: TAKE ${WEAPONS[mbox.result].name}`; }
+    else if (u.k === 'box') { if (mbox.state === 'closed') p = `PRESS E: MYSTERY BOX [${BOX_COST}]`; else if (mbox.state === 'ready' && mbox.result !== 'teddy') p = (MP.on && mbox.owner && mbox.owner !== MP.id) ? 'SOMEONE ELSE\'S WEAPON' : `PRESS E: TAKE ${WEAPONS[mbox.result].name}`; }
   }
   setText(el.prompt, p);
 }
