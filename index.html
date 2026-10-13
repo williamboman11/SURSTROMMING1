@@ -100,6 +100,17 @@
   .pager .btn { flex: 1; width: auto; padding: 10px 12px; font-size: 9px; text-align: center; }
   .pager .btn.off { opacity: .25; pointer-events: none; }
   .pager em { font-style: normal; font-size: 9px; color: var(--dim); }
+  #lockerView { position: fixed; left: 50%; top: 50%; transform: translate(-40%,-50%); z-index: 19; display: none; text-align: center; pointer-events: none; }
+  #lockerView canvas { width: 300px; height: 433px; display: block; }
+  #lockerView b { display: block; font-weight: normal; font-size: 9px; letter-spacing: 3px; color: var(--dim); text-shadow: 2px 2px 0 #000; }
+  .ltabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 22px 12px 14px; }
+  .lt { font-family: inherit; font-size: 8px; letter-spacing: 1px; color: var(--dim); background: rgba(255,255,255,.05); border: 1px solid #343a44; padding: 8px 9px; cursor: pointer; }
+  .lt.on, .lt:hover { color: #fff; border-color: var(--acc); background: rgba(255,255,255,.12); }
+  .lgrid { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 6px 14px; max-height: 46vh; overflow: auto; }
+  .sw { width: 38px; height: 38px; border: 2px solid #343a44; cursor: pointer; }
+  .lo { font-family: inherit; font-size: 8px; letter-spacing: 1px; color: #cfd2d6; background: rgba(255,255,255,.05); border: 1px solid #343a44; padding: 10px 11px; cursor: pointer; }
+  .sw.on, .lo.on { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc); color: #fff; }
+  .sw:hover, .lo:hover { border-color: #fff; }
   #menuVer { margin-top: auto; padding-left: 14px; font-size: 8px; color: #5d636a; }
 
   #countdown { position: fixed; left: 0; right: 0; top: 16%; text-align: center; z-index: 15; text-shadow: 3px 3px 0 #000; pointer-events: none; }
@@ -1692,6 +1703,102 @@ let best = 0;
 try { best = parseInt(localStorage.getItem('surstromming_best') || '0', 10) || 0; } catch (e) {}
 
 /* ===================== MULTIPLAYER (host-authoritative co-op over public MQTT broker) ===================== */
+/* ===================================================================
+   LOCKER / AVATAR LOOK
+=================================================================== */
+const LOOK_SHIRTS = ['#3b6ea5', '#a5503b', '#4f9a52', '#a58f3b', '#8a4fa5', '#3ba5a0', '#d9d9d9', '#222428', '#c93a3a', '#e8a33a', '#e86aa8', '#6b4a2f'];
+const LOOK_SKIN = ['#f3d2b0', '#e0b48c', '#c68f64', '#a06a42', '#7a4a2a', '#4d2f1c', '#cfe0b0', '#9fb7d6'];
+const LOOK_HAIRC = ['#17140f', '#4a2f1a', '#d6b25a', '#a23a1c', '#d8d8d8', '#2f6fd6', '#e86aa8', '#3ab05a'];
+const LOOK_HAIR = ['BALD', 'SHORT', 'LONG', 'MOHAWK', 'SPIKY'];
+const LOOK_HATS = ['NONE', 'CAP', 'BEANIE', 'COWBOY', 'TOP HAT', 'HELMET', 'CROWN', 'PARTY', 'VIKING', 'CHEF', 'SANTA', 'CONE', 'WIZARD', 'BUCKET'];
+const LOOK_KEYS = ['shirt', 'skin', 'hair', 'hc', 'hat'], LOOK_MAX = [LOOK_SHIRTS.length, LOOK_SKIN.length, LOOK_HAIR.length, LOOK_HAIRC.length, LOOK_HATS.length];
+const lookStr = l => LOOK_KEYS.map(k => l[k]).join('.');
+function parseLook(str, fallbackShirt = 0) {
+  const l = { shirt: fallbackShirt % LOOK_SHIRTS.length, skin: 1, hair: 1, hc: 0, hat: 0 };
+  if (typeof str === 'string') { const a = str.split('.').map(Number); LOOK_KEYS.forEach((k, i) => { if (Number.isInteger(a[i]) && a[i] >= 0 && a[i] < LOOK_MAX[i]) l[k] = a[i]; }); }
+  return l;
+}
+let LOOK = parseLook(null, 0);
+try { const sv = localStorage.getItem('zmb_look'); if (sv) LOOK = parseLook(sv); } catch (e) {}
+function saveLook() { try { localStorage.setItem('zmb_look', lookStr(LOOK)); } catch (e) {} }
+const _lm = new Map();
+const lmat = c => { let m = _lm.get(c); if (!m) { m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 }); _lm.set(c, m); } return m; };
+function addHat(head, id) {
+  const M = (geo, col, x, y, z, rx = 0, rz = 0) => { const m = new THREE.Mesh(geo, lmat(col)); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); m.castShadow = true; head.add(m); return m; };
+  const Cy = (a, b, h, n = 14) => new THREE.CylinderGeometry(a, b, h, n), Co = (r, h, n = 12) => new THREE.ConeGeometry(r, h, n), Sp = (r, hs = false) => hs ? new THREE.SphereGeometry(r, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2) : new THREE.SphereGeometry(r, 10, 8);
+  switch (id) {
+    case 1: M(new THREE.BoxGeometry(0.31, 0.1, 0.31), '#c93a3a', 0, 0.31, 0); M(new THREE.BoxGeometry(0.3, 0.02, 0.15), '#a82a2a', 0, 0.27, -0.2); break;
+    case 2: M(Cy(0.165, 0.17, 0.14), '#c93a3a', 0, 0.33, 0); M(Sp(0.045), '#ffffff', 0, 0.42, 0); break;
+    case 3: M(Cy(0.34, 0.34, 0.02, 20), '#6b4a2f', 0, 0.28, 0); M(Cy(0.14, 0.17, 0.15), '#7b5636', 0, 0.35, 0); M(Cy(0.172, 0.172, 0.03), '#2a1d12', 0, 0.3, 0); break;
+    case 4: M(Cy(0.23, 0.23, 0.02, 20), '#111', 0, 0.28, 0); M(Cy(0.13, 0.13, 0.26), '#111', 0, 0.41, 0); M(Cy(0.135, 0.135, 0.04), '#a82a2a', 0, 0.31, 0); break;
+    case 5: M(Sp(0.2, true), '#5a6b3a', 0, 0.22, 0); M(Cy(0.21, 0.21, 0.02, 18), '#4a5a30', 0, 0.22, 0); break;
+    case 6: M(Cy(0.15, 0.15, 0.08, 10), '#e8c23a', 0, 0.31, 0); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; M(Co(0.04, 0.1, 6), '#e8c23a', Math.cos(a) * 0.14, 0.4, Math.sin(a) * 0.14); } break;
+    case 7: M(Co(0.12, 0.3), '#e86aa8', 0, 0.42, 0); M(Sp(0.04), '#ffd23a', 0, 0.58, 0); break;
+    case 8: M(Sp(0.2, true), '#8c9096', 0, 0.22, 0); for (const sd of [-1, 1]) M(Co(0.04, 0.22, 6), '#f0ead6', sd * 0.2, 0.34, 0, 0, -sd * 0.6); break;
+    case 9: M(Cy(0.15, 0.15, 0.1), '#fff', 0, 0.31, 0); { const b = M(Sp(0.2), '#fff', 0, 0.45, 0); b.scale.y = 0.75; } break;
+    case 10: M(Co(0.17, 0.32), '#c93a3a', 0, 0.42, 0, 0, 0.25); M(Cy(0.17, 0.17, 0.05), '#fff', 0, 0.29, 0); M(Sp(0.05), '#fff', 0.09, 0.56, 0); break;
+    case 11: M(Co(0.15, 0.32), '#ff7a1a', 0, 0.43, 0); M(Cy(0.1, 0.1, 0.04), '#fff', 0, 0.42, 0); M(Cy(0.18, 0.18, 0.02, 4), '#ff7a1a', 0, 0.27, 0); break;
+    case 12: M(Cy(0.26, 0.26, 0.02, 20), '#4a2a7a', 0, 0.28, 0); M(Co(0.15, 0.5), '#4a2a7a', 0, 0.54, 0, 0, 0.12); M(Cy(0.155, 0.155, 0.04), '#e8c23a', 0, 0.31, 0); break;
+    case 13: M(Cy(0.15, 0.17, 0.12), '#b6a46a', 0, 0.32, 0); M(Cy(0.23, 0.23, 0.02, 18), '#b6a46a', 0, 0.27, 0); break;
+  }
+}
+function buildAvatar(name, look) {
+  const g = new THREE.Group(); g.rotation.order = 'YXZ';
+  const shirt = lmat(LOOK_SHIRTS[look.shirt]), skin = lmat(LOOK_SKIN[look.skin]), dk = lmat('#2a2d33'), hairM = lmat(LOOK_HAIRC[look.hc]);
+  const bx = (w, h, d, m, x, y, z, par = g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; par.add(b); return b; };
+  bx(0.5, 0.62, 0.28, shirt, 0, 1.15, 0);
+  const head = new THREE.Group(); head.position.set(0, 1.55, 0); g.add(head); bx(0.28, 0.28, 0.28, skin, 0, 0.14, 0, head);
+  bx(0.04, 0.04, 0.02, dk, -0.07, 0.17, -0.145, head); bx(0.04, 0.04, 0.02, dk, 0.07, 0.17, -0.145, head);
+  switch (look.hair) {
+    case 1: bx(0.3, 0.08, 0.3, hairM, 0, 0.3, 0, head); bx(0.3, 0.2, 0.06, hairM, 0, 0.18, 0.13, head); break;
+    case 2: bx(0.3, 0.08, 0.3, hairM, 0, 0.3, 0, head); bx(0.3, 0.42, 0.07, hairM, 0, 0.06, 0.14, head); bx(0.04, 0.2, 0.26, hairM, -0.15, 0.18, 0, head); bx(0.04, 0.2, 0.26, hairM, 0.15, 0.18, 0, head); break;
+    case 3: bx(0.06, 0.14, 0.32, hairM, 0, 0.34, 0, head); break;
+    case 4: for (let i = 0; i < 7; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.14, 5), hairM); c.position.set(((i % 3) - 1) * 0.09, 0.34, (Math.floor(i / 3) - 1) * 0.09); head.add(c); } bx(0.3, 0.05, 0.3, hairM, 0, 0.28, 0, head); break;
+  }
+  if (look.hat) addHat(head, look.hat);
+  const mkLeg = x => { const l = new THREE.Group(); l.position.set(x, 0.84, 0); g.add(l); bx(0.2, 0.84, 0.22, dk, 0, -0.42, 0, l); return l; };
+  g.userData = { head, lL: mkLeg(-0.13), lR: mkLeg(0.13) };
+  bx(0.14, 0.55, 0.14, shirt, -0.34, 1.12, -0.05); bx(0.14, 0.14, 0.55, shirt, 0.34, 1.3, -0.25); bx(0.09, 0.1, 0.1, skin, 0.34, 1.3, -0.56);
+  if (name) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 48; const x = c.getContext('2d'); x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 5; x.strokeText(name, 128, 34); x.fillText(name, 128, 34);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.3, 1); sp.position.y = 2.25; sp.renderOrder = 9; g.add(sp);
+  }
+  const gun = new THREE.Group(); gun.position.set(0.34, 1.3, -0.3); g.add(gun); g.userData.gun = gun;
+  return g;
+}
+/* locker UI (second small renderer in the middle of the menu) */
+let lockerTab = 0;
+const lockerBox = document.createElement('div'); lockerBox.id = 'lockerView'; lockerBox.innerHTML = '<canvas></canvas><b>YOUR CHARACTER</b>'; document.body.appendChild(lockerBox);
+const L3 = { r: null, scene: null, cam: null, av: null, timer: 0, ry: 0.6 };
+function lockerRebuild() {
+  if (!L3.scene) return;
+  if (L3.av) L3.scene.remove(L3.av);
+  L3.av = buildAvatar(null, LOOK); L3.av.rotation.y = L3.ry; L3.scene.add(L3.av);
+}
+function lockerShow(on) {
+  lockerBox.style.display = on ? 'block' : 'none';
+  if (!on) { clearInterval(L3.timer); L3.timer = 0; return; }
+  if (!L3.r) {
+    try {
+      const cv = lockerBox.querySelector('canvas'); cv.width = 360; cv.height = 520;
+      L3.r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); L3.r.setSize(360, 520, false);
+      L3.scene = new THREE.Scene(); L3.cam = new THREE.PerspectiveCamera(32, 360 / 520, 0.1, 30); L3.cam.position.set(0, 1.25, 4.6); L3.cam.lookAt(0, 1.0, 0);
+      L3.scene.add(new THREE.AmbientLight(0xffffff, 1.1)); const dl = new THREE.DirectionalLight(0xffffff, 2.2); dl.position.set(2, 4, 4); L3.scene.add(dl);
+      const fl = new THREE.Mesh(new THREE.CircleGeometry(0.9, 32), new THREE.MeshBasicMaterial({ color: 0x20242c })); fl.rotation.x = -Math.PI / 2; fl.position.y = -0.01; L3.scene.add(fl);
+    } catch (e) { L3.r = null; lockerBox.style.display = 'none'; return; }
+  }
+  lockerRebuild();
+  if (!L3.timer) L3.timer = setInterval(() => { if (!L3.av) return; L3.ry += 0.02; L3.av.rotation.y = L3.ry; L3.r.render(L3.scene, L3.cam); }, 33);
+}
+function lockerHTML() {
+  const tabs = [['shirt', 'SHIRT'], ['skin', 'SKIN'], ['hair', 'HAIR'], ['hc', 'HAIR COLOR'], ['hat', 'HATS']];
+  let h = '<div class="label">LOCKER</div><div class="ltabs">' + tabs.map((t, i) => `<button class="lt ${i === lockerTab ? 'on' : ''}" data-a="lt:${i}">${t[1]}</button>`).join('') + '</div><div class="lgrid">';
+  const key = tabs[lockerTab][0], cur = LOOK[key];
+  const cols = { shirt: LOOK_SHIRTS, skin: LOOK_SKIN, hc: LOOK_HAIRC }[key];
+  if (cols) h += cols.map((c, i) => `<button class="sw ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}" style="background:${c}"></button>`).join('');
+  else h += (key === 'hair' ? LOOK_HAIR : LOOK_HATS).map((n, i) => `<button class="lo ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}">${n}</button>`).join('');
+  return h + '</div><div class="label" style="margin-top:12px">YOUR LOOK IS SHOWN TO PLAYERS IN MULTIPLAYER</div>';
+}
 const WBUILD = { pistol: buildPistol, ak: buildAK, crossbow: buildCrossbow, raygun: buildRay, shotgun: buildShotgun, raygun2: buildRay2, smg: buildSMG, galil: buildGalil, rpg: buildRPG, revolver: buildRevolver, sniper: buildSniper, minigun: buildMinigun, dbl: buildDouble, thumper: buildThumper };
 const MP = {
   on: false, host: false, client: false, down: false, silent: false, rx: false, zid: 0,
@@ -1760,7 +1867,7 @@ const MP = {
       case 'p': {
         if (this.host && !this.peers.has(m.i)) break;
         let p = this.peers.get(m.i); if (!p) { p = { n: '', x: m.x, y: 0, z: m.z, seen: now }; this.peers.set(m.i, p); }
-        Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, seen: now }); break; }
+        Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, lk: m.lk, seen: now }); break; }
       case 'chat': chatAdd(this.esc(m.n) || 'PLAYER', String(m.m).slice(0, 80)); break;
       case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); this.beat(); break; }
       case 's': if (this.client) this.sync(m); break;
@@ -1813,20 +1920,7 @@ const MP = {
   revive() { if (!this.down) return; this.down = false; state.health = state.maxHealth; state.lastHurt = -10; notice('REVIVED!', 2500); },
   hostRound() { if (this.on && this.host) { this.send({ t: 'rev' }); this.revive(); } },
   over() { this.send({ t: 'over', w: state.wave }); gameOver(); this.leave(); },
-  avatar(name, col) {
-    const g = new THREE.Group(); g.rotation.order = 'YXZ';
-    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 }), skin = new THREE.MeshStandardMaterial({ color: 0xe0b48c, roughness: 0.8 }), dk = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.8 });
-    const bx = (w, h, d, m, x, y, z, par = g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; par.add(b); return b; };
-    bx(0.5, 0.62, 0.28, mat, 0, 1.15, 0);
-    const head = new THREE.Group(); head.position.set(0, 1.55, 0); g.add(head); bx(0.28, 0.28, 0.28, skin, 0, 0.14, 0, head); bx(0.3, 0.1, 0.3, dk, 0, 0.3, 0, head);
-    const mkLeg = x => { const l = new THREE.Group(); l.position.set(x, 0.84, 0); g.add(l); bx(0.2, 0.84, 0.22, dk, 0, -0.42, 0, l); return l; };
-    g.userData = { head, lL: mkLeg(-0.13), lR: mkLeg(0.13) };
-    bx(0.14, 0.55, 0.14, mat, -0.34, 1.12, -0.05); const ar = bx(0.14, 0.14, 0.55, mat, 0.34, 1.3, -0.25); bx(0.08, 0.1, 0.55, dk, 0.34, 1.3, -0.6);
-    const c = document.createElement('canvas'); c.width = 256; c.height = 48; const x = c.getContext('2d'); x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 5; x.strokeText(name, 128, 34); x.fillText(name, 128, 34);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.3, 1); sp.position.y = 2.15; sp.renderOrder = 9; g.add(sp);
-    const gun = new THREE.Group(); gun.position.set(0.34, 1.3, -0.3); g.add(gun); g.userData.gun = gun;
-    scene.add(g); return g;
-  },
+  avatar(name, lk, fb) { const g = buildAvatar(name, parseLook(lk, fb)); scene.add(g); return g; },
   showGun(p) {
     const gun = p.g.userData.gun; if (!gun) return;
     while (gun.children.length) gun.remove(gun.children[0]);
@@ -1840,7 +1934,7 @@ const MP = {
   },
   tick(dt) {
     if (!this.on) return; const now = performance.now();
-    this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name }); }
+    this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name, lk: lookStr(LOOK) }); }
     if (this.host) {
       this.ts -= dt; if (this.ts <= 0) { this.ts = 0.1; this.send({ t: 's', w: state.wave, z: zombies.map(z => [z.mid, +z.root.position.x.toFixed(2), +z.root.position.z.toFixed(2), (z.boss ? 1 : 0) | (z.warlord ? 2 : 0) | (z.hound ? 4 : 0) | (z.runner ? 8 : 0) | (z.kind === 'verity' ? 16 : 0) | (z.kind === 'tung' ? 32 : 0) | (z.kind === 'vboss' ? 64 : 0), +z.speed.toFixed(2)]) }); }
       this.tb -= dt; if (this.tb <= 0) { this.tb = 4; this.beat(); }
@@ -1849,7 +1943,8 @@ const MP = {
     for (const [id, p] of this.peers) {
       if (now - p.seen > 7000) { if (p.g) scene.remove(p.g); this.peers.delete(id); continue; }
       if (p.tx === undefined) continue;
-      if (!p.g) p.g = this.avatar(p.n || 'PLAYER', [0x3b6ea5, 0xa5503b, 0x4f9a52, 0xa58f3b, 0x8a4fa5, 0x3ba5a0, 0xa5a03b, 0xa53b6e, 0x6e6e6e, 0xd0884a][this.peers.size % 10]);
+      if (p.g && p.lkShown !== p.lk) { scene.remove(p.g); p.g = null; p.wShown = undefined; }
+      if (!p.g) { p.g = this.avatar(p.n || 'PLAYER', p.lk, this.peers.size); p.lkShown = p.lk; }
       const k = Math.min(1, dt * 12), ox = p.x, oz = p.z; p.x += (p.tx - p.x) * k; p.z += (p.tz - p.z) * k;
       const sp = Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, 1e-3), u = p.g.userData; p.ph = (p.ph || 0) + sp * dt * 2;
       p.g.position.set(p.x, p.ty || 0, p.z); p.g.rotation.y = p.yaw; u.head.rotation.x = p.pt;
@@ -2715,18 +2810,22 @@ menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('[da
 menuButtons.addEventListener('mouseleave', () => { mprev.style.display = 'none'; });
 function renderMenu(view) {
   let h = ''; menuView = view; mprev.style.display = 'none';
-  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('controls', 'CONTROLS');
+  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character') + btn('controls', 'CONTROLS');
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
   else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
-  menuButtons.innerHTML = h; MP.setView(view);
+  menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker');
 }
 menuButtons.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   initAudio(); sfx.click();
   const a = b.dataset.a;
+  if (a === 'locker') { renderMenu('locker'); return; }
+  if (a.startsWith('lt:')) { lockerTab = +a.slice(3); renderMenu('locker'); return; }
+  if (a.startsWith('lk:')) { const q = a.split(':'); LOOK[q[1]] = +q[2]; saveLook(); renderMenu('locker'); return; }
   if (a === 'new' || a === 'maps') { mapPage = 0; renderMenu('maps'); }
   else if (a === 'controls') renderMenu('controls');
   else if (a === 'main') renderMenu('main');
