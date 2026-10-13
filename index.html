@@ -91,6 +91,15 @@
   #online { position: fixed; top: 18px; right: 22px; z-index: 21; font-size: 9px; letter-spacing: 2px; color: var(--dim); text-shadow: 2px 2px 0 #000; display: none; }
   #online b { color: #7fe05a; font-weight: normal; }
   #online i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #7fe05a; margin-right: 8px; box-shadow: 0 0 6px #7fe05a; }
+  #dim { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 14; display: none; pointer-events: none; }
+  #mprev { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 19; width: 380px; max-width: 34vw; display: none; pointer-events: none; text-align: center; text-shadow: 2px 2px 0 #000; }
+  #mprev img { width: 100%; display: block; border: 2px solid #3a3f48; box-shadow: 0 0 40px rgba(0,0,0,.8); image-rendering: auto; }
+  #mprev b { display: block; margin: 14px 0 8px; font-size: 12px; letter-spacing: 2px; color: var(--acc); font-weight: normal; }
+  #mprev span { display: block; font-size: 8px; line-height: 1.9; color: #b9bec6; letter-spacing: 1px; }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-right: 22px; }
+  .pager .btn { flex: 1; width: auto; padding: 10px 12px; font-size: 9px; text-align: center; }
+  .pager .btn.off { opacity: .25; pointer-events: none; }
+  .pager em { font-style: normal; font-size: 9px; color: var(--dim); }
   #menuVer { margin-top: auto; padding-left: 14px; font-size: 8px; color: #5d636a; }
 
   #countdown { position: fixed; left: 0; right: 0; top: 16%; text-align: center; z-index: 15; text-shadow: 3px 3px 0 #000; pointer-events: none; }
@@ -1881,7 +1890,7 @@ const MP = {
   },
   click(a) {
     if (a === 'mp') { this.keepName(); renderMenu('mp'); return true; }
-    if (a === 'mpcreate') { this.keepName(); renderMenu('mpmaps'); return true; }
+    if (a === 'mpcreate') { this.keepName(); mapPage = 0; renderMenu('mpmaps'); return true; }
     if (a === 'mpback') { renderMenu('mp'); return true; }
     if (a.startsWith('host:')) {
       const id = a.slice(5); menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>';
@@ -1945,6 +1954,39 @@ function initAudio() {
     startWind(); loadVerityAudio();
   } catch (e) { audioCtx = null; }
 }
+const Music = {
+  g: null, bus: null, next: 0, step: 0,
+  chords: [[110, 164.8, 220, 261.6], [87.3, 130.8, 174.6, 220], [130.8, 196, 261.6, 329.6], [98, 146.8, 196, 246.9]],
+  scale: [440, 523.3, 587.3, 659.3, 784, 880],
+  ensure() {
+    if (this.g) return true; if (!audioCtx) return false;
+    const A = audioCtx; this.g = A.createGain(); this.g.gain.value = 0;
+    const lp = A.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500;
+    const dl = A.createDelay(1.5); dl.delayTime.value = 0.55; const fb = A.createGain(); fb.gain.value = 0.38; dl.connect(fb); fb.connect(dl);
+    this.bus = A.createGain(); this.bus.connect(lp); this.bus.connect(dl); dl.connect(lp); lp.connect(this.g); this.g.connect(A.destination); return true;
+  },
+  play(type, f, t, dur, vol, atk) {
+    const A = audioCtx, o = A.createOscillator(), g = A.createGain(); o.type = type; o.frequency.value = f; o.detune.value = (Math.random() - 0.5) * 8;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + atk); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.bus); o.start(t); o.stop(t + dur + 0.1);
+  },
+  bar(t) {
+    const ch = this.chords[this.step++ % 4];
+    for (const f of ch) this.play('triangle', f, t, 8.5, 0.05, 2.6);
+    this.play('sine', ch[0] / 2, t, 8.5, 0.07, 1.5);
+    let bt = t + 0.8; for (let i = 0; i < 5; i++) { this.play('sine', this.scale[(Math.random() * this.scale.length) | 0], bt, 2.6, 0.045, 0.01); bt += 1 + Math.random() * 0.9; }
+  },
+  tick() {
+    const want = state.phase === 'menu' && !document.hidden;
+    if (!audioCtx || audioCtx.state !== 'running' || !this.ensure()) return;
+    const now = audioCtx.currentTime; this.g.gain.setTargetAtTime(want ? 0.55 : 0, now, want ? 1.2 : 0.5);
+    if (want && now >= this.next - 0.5) { const t = Math.max(this.next, now + 0.05); this.bar(t); this.next = t + 8; }
+  },
+};
+setInterval(() => { try { Music.tick(); } catch (e) {} }, 250);
+document.addEventListener('pointerdown', () => { initAudio(); }, true);
+document.addEventListener('keydown', () => { initAudio(); }, true);
+setInterval(() => { const on = state.phase === 'menu' || !cdEl.classList.contains('hidden'); dimEl.style.display = on ? 'block' : 'none'; }, 150);
 function startWind() {
   if (windStarted || !audioCtx) return; windStarted = true;
   const s = audioCtx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
@@ -2346,7 +2388,7 @@ function detonateGrenade(g) {
 function updateGrenades(dt) {
   grenadeCooldown = Math.max(0, grenadeCooldown - dt);
   for (let i = grenades.length - 1; i >= 0; i--) {
-    const g = grenades[i]; g.fuse -= dt; g.vel.y -= 12 * dt; g.pos.addScaledVector(g.vel, dt);
+    const g = grenades[i]; g.fuse -= dt; g.vel.y -= 12 * (curMap.gravity || 1) * dt; g.pos.addScaledVector(g.vel, dt);
     if (g.pos.y <= 0.14) { g.pos.y = 0.14; g.vel.y = Math.abs(g.vel.y) * 0.28; g.vel.x *= 0.72; g.vel.z *= 0.72; }
     g.mesh.position.copy(g.pos); g.mesh.rotation.x += dt * 7; g.mesh.rotation.z += dt * 5;
     if (g.fuse <= 0) { detonateGrenade(g); grenades.splice(i, 1); }
@@ -2435,7 +2477,7 @@ function shoot() {
       let end;
       if (hits.length) {
         const h = hits[0]; end = h.point; const z = h.object.userData.zombie;
-        if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1), h.point, h.object.userData.part === 'head');
+        if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1) * (h.object.userData.part === 'head' ? 2 : 1), h.point, h.object.userData.part === 'head');
         else burst(h.point, 4, pMat.spark, 4, 0.3, 6);
       } else end = raycaster.ray.at(80, new THREE.Vector3());
       if (pi < 3) spawnTracer(muzzle, end);
@@ -2625,23 +2667,70 @@ const menuEl = $('menu'), menuButtons = $('menuButtons'), cdEl = $('countdown'),
 let cdTimer = 0, menuAngle = 0;
 
 function btn(a, text, sub = '', cls = '') { return `<button class="btn ${cls}" data-a="${a}">${text}${sub ? `<small>${sub}</small>` : ''}</button>`; }
+const MAP_ORDER = ['factory', 'osterled', 'window', 'ironmire', 'verity', 'giant', 'moon', 'dust'], MAP_PAGES = [MAP_ORDER.slice(0, 6), MAP_ORDER.slice(6)];
+let mapPage = 0, menuView = 'main';
+const MAP_DESC = {
+  factory: 'An old harbour cannery. Locked cottages hide perk machines, and the big house hides Jugger-Nog.',
+  osterled: 'A school complex in Oskarström. Long corridors, classrooms and a power switch to find.',
+  window: 'One small room, one broken window. Everything you need is inside. Hold it as long as you can.',
+  ironmire: 'Mud, trenches and rusted wire. Armoured brutes and giants walk the battlefield.',
+  verity: 'A brainrot village full of houses. Buy doors for perks. Verity and Tung Tung Tung Sahur hunt you.',
+  giant: 'A snowbound research facility with a power switch, tight corridors and a giant mech.',
+  moon: 'Prototype. A lunar base with low gravity (0.7). Jump high and watch the Earth above.',
+  dust: 'Prototype. A desert gas station with a diner, a store and a long empty road.',
+};
+function mapList(act) {
+  const ids = MAP_PAGES[mapPage] || MAP_PAGES[0];
+  return '<div class="label">' + (act === 'host:' ? 'HOST: SELECT MAP' : 'SELECT MAP') + '</div>' + ids.map(id => MAPS[id]).filter(Boolean).map(m => btn(act + m.id, m.name, m.sub)).join('')
+    + `<div class="pager"><button class="btn ${mapPage <= 0 ? 'off' : ''}" data-a="pg:-1">&lt; PREVIOUS</button><em>${mapPage + 1}/${MAP_PAGES.length}</em><button class="btn ${mapPage >= MAP_PAGES.length - 1 ? 'off' : ''}" data-a="pg:1">NEXT &gt;</button></div>`;
+}
+const mprev = document.createElement('div'); mprev.id = 'mprev'; document.body.appendChild(mprev);
+const dimEl = document.createElement('div'); dimEl.id = 'dim'; document.body.appendChild(dimEl);
+const mapArt = {};
+function drawMapArt(id) {
+  if (mapArt[id]) return mapArt[id];
+  const c = document.createElement('canvas'); c.width = 380; c.height = 214; const x = c.getContext('2d');
+  const sky = (a, b) => { const g = x.createLinearGradient(0, 0, 0, 150); g.addColorStop(0, a); g.addColorStop(1, b); x.fillStyle = g; x.fillRect(0, 0, 380, 214); };
+  const gnd = (y, col) => { x.fillStyle = col; x.fillRect(0, y, 380, 214 - y); };
+  const R = (col, X, Y, w, h) => { x.fillStyle = col; x.fillRect(X, Y, w, h); };
+  const T = (col, X, Y, w, h) => { x.fillStyle = col; x.beginPath(); x.moveTo(X, Y + h); x.lineTo(X + w / 2, Y); x.lineTo(X + w, Y + h); x.fill(); };
+  const O = (col, X, Y, r) => { x.fillStyle = col; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill(); };
+  let seed = 7; const rd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  if (id === 'moon') { sky('#02030a', '#0a0e1c'); for (let i = 0; i < 70; i++) R('#fff', rd() * 380, rd() * 120, 1, 1); O('#3f78d8', 300, 50, 26); O('rgba(255,255,255,.2)', 296, 44, 16); gnd(140, '#8e9096'); O('#5f6166', 80, 175, 26); O('#5f6166', 250, 190, 18); R('#cfd3d8', 130, 96, 110, 44); R('#2a2f38', 130, 96, 110, 6); x.fillStyle = 'rgba(159,212,255,.5)'; x.beginPath(); x.arc(185, 100, 36, Math.PI, 0); x.fill(); }
+  else if (id === 'dust') { sky('#e0a35a', '#f2d6a0'); O('#fff2c0', 300, 52, 22); gnd(130, '#b99a65'); R('#3b3b3e', 150, 130, 80, 84); for (let i = 0; i < 6; i++) R('#e0c24a', 186, 138 + i * 14, 8, 6); R('#c8b48a', 20, 80, 90, 50); R('#7a3b2a', 14, 72, 102, 10); R('#a8321f', 250, 70, 100, 8); R('#6a5a48', 262, 78, 6, 52); R('#6a5a48', 336, 78, 6, 52); R('#4d7a3c', 130, 90, 8, 40); R('#4d7a3c', 124, 100, 6, 4); }
+  else if (id === 'verity') { sky('#2b1650', '#6b3a8a'); O('#ffd36a', 60, 40, 18); gnd(140, '#3f7a3a'); [['#4fc23a', 20], ['#9a5ae0', 110], ['#e0a03a', 200], ['#4a9ae0', 290]].forEach(([col, X]) => { R(col, X, 90, 70, 50); T('#2a3a5a', X - 6, 56, 82, 36); R('#ffe28a', X + 26, 110, 16, 30); }); O('#e8e0c8', 190, 30, 12); }
+  else if (id === 'giant') { sky('#9db0c4', '#dbe4ee'); gnd(140, '#e8eef4'); R('#6a7078', 120, 70, 140, 70); R('#4a5058', 140, 40, 40, 30); R('#4a5058', 200, 52, 40, 18); R('#ffd27a', 150, 90, 16, 16); R('#ffd27a', 190, 90, 16, 16); R('#ffd27a', 230, 90, 16, 16); for (let i = 0; i < 40; i++) R('#fff', rd() * 380, rd() * 140, 2, 2); }
+  else if (id === 'ironmire') { sky('#3a3a34', '#6a6a58'); gnd(120, '#4a3d2a'); R('#2a2418', 0, 150, 380, 14); R('#2a2418', 0, 185, 380, 10); for (let i = 0; i < 9; i++) R('#7a7a70', 20 + i * 40, 100, 3, 24); R('#222', 40, 60, 12, 60); T('#3a3a34', 160, 30, 60, 90); R('#6a2a1a', 280, 78, 40, 42); }
+  else if (id === 'window') { sky('#0b1020', '#1a2238'); gnd(150, '#2a3a28'); R('#4a4e50', 90, 70, 200, 80); R('#1a1410', 160, 86, 60, 64); R('#ffd88a', 168, 94, 44, 48); R('#5b5446', 164, 100, 52, 6); R('#5b5446', 168, 120, 44, 6); R('#3a3e40', 80, 62, 220, 10); R('#9a1a22', 176, 170, 28, 6); }
+  else if (id === 'osterled') { sky('#6a7a96', '#c8d0dc'); gnd(140, '#6a7a58'); R('#b8654a', 40, 80, 300, 60); for (let i = 0; i < 9; i++) { R('#e8e0c0', 56 + i * 32, 94, 18, 20); R('#e8e0c0', 56 + i * 32, 118, 18, 16); } R('#4a3a30', 40, 72, 300, 10); R('#3a2a22', 176, 112, 28, 28); }
+  else { sky('#10141e', '#2a3040'); gnd(140, '#3a3f3a'); R('#5a5e5c', 40, 80, 110, 60); R('#5a5e5c', 170, 50, 60, 90); R('#5a5e5c', 250, 90, 90, 50); R('#2a2e30', 190, 20, 14, 36); for (const X of [60, 100, 190, 270, 310]) R('#ffd27a', X, 100, 12, 14); O('rgba(255,255,255,.7)', 320, 36, 12); }
+  const g = x.createLinearGradient(0, 120, 0, 214); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)'); x.fillStyle = g; x.fillRect(0, 0, 380, 214);
+  return (mapArt[id] = c.toDataURL('image/png'));
+}
+function showPreview(id) {
+  const m = MAPS[id]; if (!m) return;
+  mprev.innerHTML = `<img src="${drawMapArt(id)}" alt=""><b>${m.name}</b><span>${MAP_DESC[id] || m.sub}</span>`; mprev.style.display = 'block';
+}
+menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('[data-a^="map:"],[data-a^="host:"]'); if (b) showPreview(b.dataset.a.slice(b.dataset.a.indexOf(':') + 1)); else mprev.style.display = 'none'; });
+menuButtons.addEventListener('mouseleave', () => { mprev.style.display = 'none'; });
 function renderMenu(view) {
-  let h = '';
+  let h = ''; menuView = view; mprev.style.display = 'none';
   if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('controls', 'CONTROLS');
-  else if (view === 'maps') h = '<div class="label">SELECT MAP</div>' + Object.values(MAPS).map(m => btn('map:' + m.id, m.name, m.sub)).join('') + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
-  else if (view === 'mpmaps') h = '<div class="label">HOST: SELECT MAP</div>' + Object.values(MAPS).map(m => btn('host:' + m.id, m.name, m.sub)).join('') + btn('mpback', '&lt; BACK', '', 'back');
+  else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
   menuButtons.innerHTML = h; MP.setView(view);
 }
 menuButtons.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   initAudio(); sfx.click();
   const a = b.dataset.a;
-  if (a === 'new' || a === 'maps') renderMenu('maps');
+  if (a === 'new' || a === 'maps') { mapPage = 0; renderMenu('maps'); }
   else if (a === 'controls') renderMenu('controls');
   else if (a === 'main') renderMenu('main');
+  else if (a.startsWith('pg:')) { mapPage = Math.max(0, Math.min(MAP_PAGES.length - 1, mapPage + (+a.slice(3)))); renderMenu(menuView); }
   else if (a.startsWith('map:')) {
     const id = a.slice(4);
     if (MAPS[id].built) { selectMap(id); renderMenu('start'); }
@@ -2739,7 +2828,9 @@ setInterval(() => { if (chat.log.length) renderChat(); }, 1000);
 function openChat() { chat.open = true; chat.text = ''; for (const k in keys) keys[k] = false; state.mouseDown = false; renderChat(); }
 function closeChat() { chat.open = false; chat.text = ''; renderChat(); }
 function sendChat() {
-  const t = chat.text.trim().slice(0, 80); if (!t) return; const nm = (MP.name && MP.esc(MP.name)) || 'PLAYER';
+  const t = chat.text.trim().slice(0, 80); if (!t) return;
+  const ck = t.toLowerCase().replace(/^[\/!]/, ''); if (Object.prototype.hasOwnProperty.call(CHEATS, ck)) { CHEATS[ck](); return; }
+  const nm = (MP.name && MP.esc(MP.name)) || 'PLAYER';
   chatAdd(nm, t, '#7fe05a'); if (MP.on) MP.send({ t: 'chat', n: nm, m: t });
 }
 let cheatBuf = '';
@@ -2846,7 +2937,7 @@ function updatePlayer(dt) {
   player.vel.x += (wish.x * speed - player.vel.x) * k; player.vel.z += (wish.z * speed - player.vel.z) * k;
   player.pos.x += player.vel.x * dt; player.pos.z += player.vel.z * dt;
   resolvePlayerCircle(player.pos, PLAYER_RADIUS);
-  if (!player.onGround || player.jumpVel > 0) { player.jumpY += player.jumpVel * dt; player.jumpVel -= 17 * dt; if (player.jumpY <= 0) { player.jumpY = 0; player.jumpVel = 0; player.onGround = true; } }
+  if (!player.onGround || player.jumpVel > 0) { player.jumpY += player.jumpVel * dt; player.jumpVel -= 17 * (curMap.gravity || 1) * dt; if (player.jumpY <= 0) { player.jumpY = 0; player.jumpVel = 0; player.onGround = true; } }
 
   const spd = Math.hypot(player.vel.x, player.vel.z);
   player.bob += dt * spd * 1.9;
@@ -3013,7 +3104,7 @@ function updateDying(dt) {
 function updateProjectiles(dt) {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
-    p.life -= dt; if (!p.ray) p.vel.y -= 7 * dt;
+    p.life -= dt; if (!p.ray) p.vel.y -= 7 * (curMap.gravity || 1) * dt;
     const step = _v.copy(p.vel).multiplyScalar(dt), len = step.length();
     let boom = null;
     raycaster.set(p.pos, _v2.copy(step).normalize()); raycaster.far = len + 0.3;
@@ -3400,9 +3491,63 @@ function buildMoonMap() {
   for (const c of scene.children.slice(w0)) if (c !== root) root.add(c);
   obstacles = oldObs; obstacleMeshes = oldOcc;
   return {
-    id: 'moon', ax: 48, az: 48, fog: 0.006, shadowX: 55, shadowZ: 55, spawn: { x: 0, z: 8, yaw: 0 }, menuCam: { cx: 0, cz: -4, r: 52, rv: 2, h: 26, look: 1 },
+    id: 'moon', gravity: 0.7, ax: 48, az: 48, fog: 0.006, shadowX: 55, shadowZ: 55, spawn: { x: 0, z: 8, yaw: 0 }, menuCam: { cx: 0, cz: -4, r: 52, rv: 2, h: 26, look: 1 },
     root, obs, occ, jugPos: new THREE.Vector3(-7.5, 0, pz), papPos: new THREE.Vector3(-11, 0, bz), papGear: gear, boxPos: new THREE.Vector3(9, 0, bz + 5), boxRot: -Math.PI / 2,
     perks, houses: [{ cx: 0, cz: bz, w: 26, d: 17, doorX: 0, doorZ: bz + 8.5, open: true }], wallBuys: [{ pos: new THREE.Vector3(10.6, 0, bz + 2), type: 'shotgun', cost: SHOTGUN_WALL_COST }], nav: null,
+  };
+}
+function buildDustMap() {
+  const oldObs = obstacles, oldOcc = obstacleMeshes, w0 = scene.children.length;
+  const obs = [], occ = []; obstacles = obs; obstacleMeshes = occ;
+  const sand = new THREE.MeshStandardMaterial({ color: 0xb99a65, roughness: 1 }), road = new THREE.MeshStandardMaterial({ color: 0x3b3b3e, roughness: 0.9 });
+  const wallM = new THREE.MeshStandardMaterial({ color: 0xc8b48a, roughness: 0.95 }), roofM = new THREE.MeshStandardMaterial({ color: 0x7a3b2a, roughness: 0.9 }), metal = new THREE.MeshStandardMaterial({ color: 0x6a5a48, roughness: 0.6, metalness: 0.5 });
+  const red = new THREE.MeshStandardMaterial({ color: 0xa8321f, roughness: 0.6, metalness: 0.3 }), cactus = new THREE.MeshStandardMaterial({ color: 0x4d7a3c, roughness: 0.9 });
+  const floor = new THREE.Mesh(planeGeo(110, 110, 8), sand); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.03; floor.receiveShadow = true; scene.add(floor);
+  const rd = new THREE.Mesh(planeGeo(12, 110, 4), road); rd.rotation.x = -Math.PI / 2; rd.position.set(0, 0.01, 0); rd.receiveShadow = true; scene.add(rd);
+  for (let z = -50; z < 50; z += 6) { const l = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 2.6), new THREE.MeshBasicMaterial({ color: 0xe0c24a })); l.rotation.x = -Math.PI / 2; l.position.set(0, 0.02, z); scene.add(l); }
+  // diner / shop (open front) on the west side of the road
+  const shop = (cx, cz, w, d, h, name) => {
+    const T = 0.5;
+    addSolid(cx, cz - d / 2 + T / 2, w, h, T, wallM, { den: 2 }); addSolid(cx - w / 2 + T / 2, cz, T, h, d, wallM, { den: 2 }); addSolid(cx + w / 2 - T / 2, cz, T, h, d, wallM, { den: 2 });
+    addSolid(cx - w / 2 + 2, cz + d / 2 - T / 2, 4, h, T, wallM, { den: 2 }); addSolid(cx + w / 2 - 2, cz + d / 2 - T / 2, 4, h, T, wallM, { den: 2 });
+    addSolid(cx, cz, w + 0.6, 0.5, d + 0.6, roofM, { y0: h, collide: false });
+    const sg = new THREE.Mesh(new THREE.BoxGeometry(5, 0.9, 0.2), new THREE.MeshStandardMaterial({ map: texSign(name), roughness: 0.8 })); sg.position.set(cx, h + 0.9, cz + d / 2 + 0.2); scene.add(sg);
+    const l = new THREE.PointLight(0xffc27a, 18, 16, 2); l.position.set(cx, h - 0.6, cz); scene.add(l);
+  };
+  shop(-20, -8, 14, 10, 3.8, ['DUSTY DINER', 'OPEN 24 HRS']);
+  shop(22, 16, 12, 9, 3.6, ['GENERAL STORE', 'AMMO  GAS  ICE']);
+  // gas station canopy + pumps
+  addSolid(14, -14, 11, 0.4, 6, red, { y0: 4, collide: false });
+  for (const [x, z] of [[9, -16.5], [19, -16.5], [9, -11.5], [19, -11.5]]) addCylinder(x, z, 0.25, 4, metal, { seg: 8 });
+  for (const x of [11, 17]) addSolid(x, -14, 0.9, 1.4, 0.7, red, { den: 1.2 });
+  const cl = new THREE.PointLight(0xffe6b0, 22, 18, 2); cl.position.set(14, 3.6, -14); scene.add(cl);
+  // wrecks, barrels, cacti, rocks
+  for (const [x, z, r] of [[-8, 14, 0.3], [6, -4, 0.8], [-12, 24, 0.2], [30, -6, 1.2], [-32, 6, 0.5]]) { addSolid(x, z, 4.2, 1.3, 1.9, new THREE.MeshStandardMaterial({ color: 0x5a6a74, roughness: 0.7, metalness: 0.4 }), { den: 2 }); }
+  for (const [x, z] of [[-4, -22], [-3, -21], [26, -4], [-26, 20], [12, 8]]) addCylinder(x, z, 0.45, 1.0, metal, { seg: 10 });
+  for (const [x, z] of [[-30, -22], [32, 30], [-18, 36], [28, -30], [-36, 30], [8, 38]]) { addCylinder(x, z, 0.35, 3.2, cactus, { seg: 8 }); const a = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.2, 8), cactus); a.position.set(x + 0.6, 2.0, z); scene.add(a); }
+  for (const [x, z, r, h] of [[-38, -8, 2.2, 3.4], [36, -20, 2.6, 4.0], [-24, -34, 2.0, 3.0], [24, 40, 2.4, 3.6]]) addCylinder(x, z, r, h, new THREE.MeshStandardMaterial({ color: 0x9a6a46, roughness: 1 }), { seg: 7 });
+  for (const [x, z] of [[-9, 4], [8, 24], [-14, -18], [34, 8]]) addSolid(x, z, 1.4, 1.2, 1.4, MAT.crate, { den: 1.4 });
+  // perks, pack-a-punch, box, wall buy inside the diner / store
+  const pz = -8 - 3.9;
+  addPerk(-25, pz, 0, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
+  const defs = [
+    { id: 'quick', x: -22, z: pz, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500 },
+    { id: 'speed', x: -19, z: pz, rot: 0, title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
+    { id: 'double', x: -16, z: pz, rot: 0, title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
+    { id: 'mule', x: 22, z: 16 - 3.9, rot: 0, title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
+    { id: 'stamin', x: 25, z: 16 - 3.9, rot: 0, title: 'STAMIN-UP', fs: 25, body: '#6e8d35', trim: '#f2f2f2', emb: '↑', cost: 2000 },
+  ];
+  const perks = defs.map(q => { addPerk(q.x, q.z, q.rot, q); return { ...q, pos: new THREE.Vector3(q.x, 0, q.z) }; });
+  const papG = addPerk(-26, -5, Math.PI / 2, { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P' });
+  const gear = makePapGear(papG);
+  makeWallBuy(27.72, 1.55, 17, -Math.PI / 2, 'REMINGTON 870 MCS', SHOTGUN_WALL_COST);
+  const root = new THREE.Group(); scene.add(root);
+  for (const c of scene.children.slice(w0)) if (c !== root) root.add(c);
+  obstacles = oldObs; obstacleMeshes = oldOcc;
+  return {
+    id: 'dust', ax: 50, az: 50, fog: 0.012, shadowX: 58, shadowZ: 58, spawn: { x: 0, z: 0, yaw: Math.PI }, menuCam: { cx: 0, cz: 0, r: 56, rv: 2, h: 28, look: 1 },
+    root, obs, occ, jugPos: new THREE.Vector3(-25, 0, pz), papPos: new THREE.Vector3(-26, 0, -5), papGear: gear, boxPos: new THREE.Vector3(8, 0, -22), boxRot: 0,
+    perks, houses: [{ cx: -20, cz: -8, w: 14, d: 10, doorX: -20, doorZ: -3, open: true }, { cx: 22, cz: 16, w: 12, d: 9, doorX: 22, doorZ: 20.5, open: true }], wallBuys: [{ pos: new THREE.Vector3(26.6, 0, 17), type: 'shotgun', cost: SHOTGUN_WALL_COST }], nav: null,
   };
 }
 function buildWindowMap() {
@@ -3745,6 +3890,7 @@ MAPS.osterled = {
   id: 'osterled', name: 'ÖSTERLED', sub: 'SCHOOL COMPLEX &middot; OSKARSTRÖM', built: false, build: buildOsterled,
 };
 MAPS.moon = { id: 'moon', name: 'MOON', sub: 'PROTOTYPE &middot; ONE SMALL STEP FOR ZOMBIES', built: false, build: buildMoonMap };
+MAPS.dust = { id: 'dust', name: 'DUST STOP', sub: 'PROTOTYPE &middot; DESERT GAS STATION', built: false, build: buildDustMap };
 MAPS.window = { id: 'window', name: 'WINDOW', sub: 'ONE ROOM &middot; ONE WINDOW', built: false, build: buildWindowMap };
 MAPS.ironmire = { id: 'ironmire', name: 'IRON MIRE', sub: 'MUD &middot; TRENCHES &middot; GIANTS', built: false, build: buildIronMire };
 MAPS.verity = { id: 'verity', name: 'MAP VERITY', sub: 'BRAINROT VILLAGE &middot; DON\'T SMILE BACK', built: false, build: buildVerityMap };
