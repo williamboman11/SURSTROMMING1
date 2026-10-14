@@ -107,6 +107,12 @@
   .lt { font-family: inherit; font-size: 8px; letter-spacing: 1px; color: var(--dim); background: rgba(255,255,255,.05); border: 1px solid #343a44; padding: 8px 9px; cursor: pointer; }
   .lt.on, .lt:hover { color: #fff; border-color: var(--acc); background: rgba(255,255,255,.12); }
   .lgrid { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 6px 14px; max-height: 46vh; overflow: auto; }
+  #coinsEl { position: fixed; right: 24px; top: 18px; z-index: 60; font-size: 11px; letter-spacing: 2px; color: #ffd84a; text-shadow: 2px 2px 0 #000; display: none; pointer-events: none; }
+  .crate { display: flex; gap: 12px; align-items: center; margin: 10px 14px; padding: 10px; border: 2px solid; background: rgba(0,0,0,.45); font-size: 9px; line-height: 1.8; }
+  .crate img { width: 56px; height: 56px; border: 2px solid #343a44; image-rendering: pixelated; }
+  .coll { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 14px; }
+  .cs { width: 26px; height: 26px; border: 2px solid #2a2f38; background: #14171c; }
+  .cs.own { box-shadow: 0 0 6px rgba(255,255,255,.2); }
   .sw { width: 38px; height: 38px; border: 2px solid #343a44; cursor: pointer; }
   .lo { font-family: inherit; font-size: 8px; letter-spacing: 1px; color: #cfd2d6; background: rgba(255,255,255,.05); border: 1px solid #343a44; padding: 10px 11px; cursor: pointer; }
   .sw.on, .lo.on { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc); color: #fff; }
@@ -1727,15 +1733,83 @@ try { best = parseInt(localStorage.getItem('surstromming_best') || '0', 10) || 0
 /* ===================================================================
    LOCKER / AVATAR LOOK
 =================================================================== */
+/* ---------- wallet, camos, shop ---------- */
+const RARITY = { c: ['COMMON', '#b8bcc4', 50], u: ['UNCOMMON', '#5fd36a', 28], r: ['RARE', '#4aa8ff', 14], e: ['EPIC', '#b36bff', 6], l: ['LEGENDARY', '#ffb53a', 2] };
+const CAMOS = [null,
+  { n: 'WOODLAND', r: 'c' }, { n: 'DESERT', r: 'c' }, { n: 'ARCTIC', r: 'c' }, { n: 'URBAN DIGITAL', r: 'c' },
+  { n: 'TIGER STRIPE', r: 'u' }, { n: 'BLUE DIGITAL', r: 'u' }, { n: 'CRIMSON', r: 'u' }, { n: 'CHECKERBOARD', r: 'u' },
+  { n: 'ZOMBIE ROT', r: 'r' }, { n: 'TOXIC HAZARD', r: 'r', glow: 0.25 }, { n: 'NEON GRID', r: 'r', glow: 0.8 },
+  { n: 'MOLTEN LAVA', r: 'e', glow: 0.9 }, { n: 'GALAXY', r: 'e', glow: 0.6 },
+  { n: 'SOLID GOLD', r: 'l', metal: 1 }, { n: 'DIAMOND', r: 'l', metal: 1, glow: 0.35 }, { n: 'RAINBOW FLOW', r: 'l', glow: 0.5 },
+];
+const KFX = [null, { n: 'SMOKE PUFF', cost: 150, d: 'a grey cloud where they fall' }, { n: 'SPARKS', cost: 200, d: 'a shower of hot sparks' }, { n: 'CONFETTI', cost: 250, d: 'party time on every kill' }];
+const WALLET = { coins: 0, owned: [], sel: {}, last: 0, opening: false, fx: [], fxSel: 0 };
+try { const s = JSON.parse(localStorage.getItem('zmb_wallet') || 'null'); if (s) { WALLET.coins = Math.max(0, s.coins | 0); WALLET.owned = (s.owned || []).map(Number).filter(n => CAMOS[n]); WALLET.fx = (s.fx || []).map(Number).filter(n => KFX[n]); WALLET.fxSel = WALLET.fx.includes(+s.fxSel) ? +s.fxSel : 0; for (const k in (s.sel || {})) if (CAMOS[+s.sel[k]] && WALLET.owned.includes(+s.sel[k])) WALLET.sel[k] = +s.sel[k]; } } catch (e) {}
+function saveWallet() { try { localStorage.setItem('zmb_wallet', JSON.stringify({ coins: WALLET.coins, owned: WALLET.owned, sel: WALLET.sel, fx: WALLET.fx, fxSel: WALLET.fxSel })); } catch (e) {} }
+function drawCamo(id, S = 128) {
+  const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); let sd = id * 7919 + 13;
+  const rnd = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+  const fill = col => { x.fillStyle = col; x.fillRect(0, 0, S, S); };
+  const blobs = (cols, n, rmin, rmax) => { for (let i = 0; i < n; i++) { x.fillStyle = cols[(rnd() * cols.length) | 0]; const cx = rnd() * S, cy = rnd() * S, r = rmin + rnd() * (rmax - rmin); for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) { x.beginPath(); x.ellipse(cx + ox, cy + oy, r, r * (0.5 + rnd() * 0.6), rnd() * 3, 0, 7); x.fill(); } } };
+  const pixels = (cols, cell) => { for (let i = 0; i < S; i += cell) for (let j = 0; j < S; j += cell) { x.fillStyle = cols[(rnd() * cols.length) | 0]; x.fillRect(i, j, cell, cell); } };
+  switch (id) {
+    case 1: fill('#4b5a2f'); blobs(['#2f3a1e', '#6b5a35', '#1c2212', '#7a8a4a'], 34, 8, 20); break;
+    case 2: fill('#c9ad74'); blobs(['#a98a55', '#e0c896', '#8a6c3c', '#b89a64'], 30, 8, 22); break;
+    case 3: fill('#e6edf2'); blobs(['#b9c6d2', '#9fb0c0', '#f7fbff', '#7e91a6'], 30, 8, 20); break;
+    case 4: fill('#6a6f74'); pixels(['#6a6f74', '#4b4f54', '#8b9095', '#31353a', '#5a5f64'], 8); break;
+    case 5: fill('#d98a2b'); x.strokeStyle = '#1a1208'; x.lineWidth = 7; x.lineCap = 'round'; for (let i = -S; i < 2 * S; i += 22) { x.beginPath(); x.moveTo(i, 0); for (let y = 0; y <= S; y += 16) x.lineTo(i + y * 0.6 + Math.sin(y * 0.2 + i) * 6, y); x.stroke(); } break;
+    case 6: fill('#1d3f78'); pixels(['#1d3f78', '#2f66b8', '#0d213f', '#5a98e6', '#18305c'], 8); break;
+    case 7: fill('#5a0f14'); blobs(['#c02a2a', '#1a0507', '#8a1a1e', '#e04a3a'], 28, 8, 20); break;
+    case 8: for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { x.fillStyle = (i + j) % 2 ? '#111' : '#f2f2f2'; x.fillRect(i * S / 8, j * S / 8, S / 8, S / 8); } break;
+    case 9: fill('#3b5a2a'); blobs(['#5f2a6e', '#2a3f1c', '#7a9a3a', '#40224a'], 30, 7, 19); for (let i = 0; i < 24; i++) { x.fillStyle = '#c8ff5a'; x.beginPath(); x.arc(rnd() * S, rnd() * S, 2 + rnd() * 3, 0, 7); x.fill(); } break;
+    case 10: fill('#f2c80f'); x.fillStyle = '#111'; for (let i = -S; i < 2 * S; i += 32) { x.beginPath(); x.moveTo(i, S); x.lineTo(i + 16, S); x.lineTo(i + 16 + S, 0); x.lineTo(i + S, 0); x.fill(); } break;
+    case 11: fill('#06080f'); x.strokeStyle = '#19f0ff'; x.lineWidth = 2; for (let i = 0; i <= S; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, S); x.moveTo(0, i); x.lineTo(S, i); x.stroke(); } x.fillStyle = '#ff2fd0'; for (let i = 0; i < 10; i++) x.fillRect(((rnd() * 8) | 0) * 16 + 4, ((rnd() * 8) | 0) * 16 + 4, 8, 8); break;
+    case 12: fill('#140806'); x.strokeStyle = '#ff6a00'; x.lineWidth = 3; x.lineCap = 'round'; for (let k = 0; k < 14; k++) { let px = rnd() * S, py = rnd() * S; x.beginPath(); x.moveTo(px, py); for (let s = 0; s < 6; s++) { px += (rnd() - 0.5) * 40; py += (rnd() - 0.5) * 40; x.lineTo(px, py); } x.stroke(); } x.strokeStyle = '#ffd23a'; x.lineWidth = 1; for (let k = 0; k < 8; k++) { let px = rnd() * S, py = rnd() * S; x.beginPath(); x.moveTo(px, py); for (let s = 0; s < 4; s++) { px += (rnd() - 0.5) * 30; py += (rnd() - 0.5) * 30; x.lineTo(px, py); } x.stroke(); } break;
+    case 13: { const g = x.createLinearGradient(0, 0, S, S); g.addColorStop(0, '#0b0630'); g.addColorStop(0.5, '#4a1a8a'); g.addColorStop(1, '#0a2a6a'); x.fillStyle = g; x.fillRect(0, 0, S, S); blobs(['rgba(255,80,200,.25)', 'rgba(80,160,255,.25)', 'rgba(160,80,255,.3)'], 14, 14, 30); x.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const r = rnd() * 1.6; x.fillRect(rnd() * S, rnd() * S, r + 0.6, r + 0.6); } break; }
+    case 14: { const g = x.createLinearGradient(0, 0, S, S); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, i % 2 ? '#fff2a0' : '#b8860b'); x.fillStyle = g; x.fillRect(0, 0, S, S); x.strokeStyle = 'rgba(120,80,0,.35)'; x.lineWidth = 2; for (let i = 0; i < S; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + S, S); x.stroke(); } break; }
+    case 15: fill('#9fe8ff'); for (let i = 0; i < 26; i++) { x.fillStyle = ['#e8fbff', '#6fd0f0', '#bff2ff', '#3aa8d8'][(rnd() * 4) | 0]; const cx = rnd() * S, cy = rnd() * S, r = 10 + rnd() * 18; x.beginPath(); x.moveTo(cx, cy - r); x.lineTo(cx + r, cy); x.lineTo(cx, cy + r); x.lineTo(cx - r, cy); x.fill(); } x.fillStyle = '#fff'; for (let i = 0; i < 12; i++) x.fillRect(rnd() * S, rnd() * S, 3, 3); break;
+    case 16: for (let i = 0; i < S; i++) { x.fillStyle = `hsl(${(i / S * 360) | 0},90%,55%)`; x.fillRect(i, 0, 1.5, S); } x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 4; for (let k = 0; k < 6; k++) { x.beginPath(); for (let i = 0; i <= S; i += 6) x.lineTo(i, k * 22 + Math.sin(i * 0.12 + k) * 8); x.stroke(); } break;
+  }
+  return c;
+}
+const _ctex = new Map(), _cmat = new Map(), _cimg = new Map();
+function camoImg(id) { let u = _cimg.get(id); if (!u) { u = drawCamo(id, 64).toDataURL('image/png'); _cimg.set(id, u); } return u; }
+function camoTex(id) { let t = _ctex.get(id); if (!t) { t = new THREE.CanvasTexture(drawCamo(id)); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.5, 1.5); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; _ctex.set(id, t); } return t; }
+const CAMO_BASE = new Set([WM.blued, WM.poly, WM.walnut, WM.dark, WM.mid, WM.wood]);
+function camoMat(id, orig) {
+  const k = id + ':' + orig.uuid; let m = _cmat.get(k); if (m) return m;
+  const def = CAMOS[id]; m = orig.clone(); m.map = camoTex(id); m.color.set(0xffffff);
+  m.metalness = def.metal ? 0.65 : 0.25; m.roughness = def.metal ? 0.28 : 0.6;
+  if (def.glow) { m.emissive = new THREE.Color(0xffffff); m.emissiveMap = m.map; m.emissiveIntensity = def.glow; }
+  m.needsUpdate = true; _cmat.set(k, m); return m;
+}
+function applyCamo(model, id) {
+  if (!model) return; id = CAMOS[id] ? id : 0;
+  model.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    if (o.userData.camoOrig === undefined) o.userData.camoOrig = CAMO_BASE.has(o.material) ? o.material : null;
+    if (o.userData.camoOrig) o.material = id ? camoMat(id, o.userData.camoOrig) : o.userData.camoOrig;
+  });
+}
+function applyAllCamos() { for (const k in vm) applyCamo(vm[k], WALLET.sel[k] || 0); }
+applyAllCamos();
+function rollCamo() { let t = Math.random() * Object.values(RARITY).reduce((a, r) => a + r[2], 0), pick = 'c'; for (const k in RARITY) { t -= RARITY[k][2]; if (t <= 0) { pick = k; break; } } const pool = []; CAMOS.forEach((c, i) => { if (c && c.r === pick) pool.push(i); }); return pool[(Math.random() * pool.length) | 0]; }
+const CRATE_COST = 50, DUPE_REFUND = 15;
+function addCoins(n, why) { WALLET.coins += n; saveWallet(); notice(`+${n} COINS${why ? ' - ' + why : ''}`, 3200); sfx.chime(); }
 const LOOK_SHIRTS = ['#3b6ea5', '#a5503b', '#4f9a52', '#a58f3b', '#8a4fa5', '#3ba5a0', '#d9d9d9', '#222428', '#c93a3a', '#e8a33a', '#e86aa8', '#6b4a2f'];
 const LOOK_SKIN = ['#f3d2b0', '#e0b48c', '#c68f64', '#a06a42', '#7a4a2a', '#4d2f1c', '#cfe0b0', '#9fb7d6'];
 const LOOK_HAIRC = ['#17140f', '#4a2f1a', '#d6b25a', '#a23a1c', '#d8d8d8', '#2f6fd6', '#e86aa8', '#3ab05a'];
 const LOOK_HAIR = ['BALD', 'SHORT', 'LONG', 'MOHAWK', 'SPIKY'];
 const LOOK_HATS = ['NONE', 'CAP', 'BEANIE', 'COWBOY', 'TOP HAT', 'HELMET', 'CROWN', 'PARTY', 'VIKING', 'CHEF', 'SANTA', 'CONE', 'WIZARD', 'BUCKET'];
-const LOOK_KEYS = ['shirt', 'skin', 'hair', 'hc', 'hat'], LOOK_MAX = [LOOK_SHIRTS.length, LOOK_SKIN.length, LOOK_HAIR.length, LOOK_HAIRC.length, LOOK_HATS.length];
+const LOOK_PANTS = ['#2a2d33', '#3b4a6a', '#4a5a3a', '#6b5a3a', '#7a2a2a', '#d9d9d9', '#111111', '#5a3a7a', '#2a6a6a', '#c9a23a'];
+const LOOK_SHOES = ['#15161a', '#f2f2f2', '#c93a3a', '#3b6ea5', '#6b4a2f', '#e8a33a', '#3ab05a', '#e86aa8'];
+const LOOK_FACE = ['NONE', 'SHADES', 'ROUND GLASSES', 'EYEPATCH', 'SURGICAL MASK', 'GAS MASK', 'BANDANA', 'CLOWN NOSE', 'MUSTACHE'];
+const LOOK_BACK = ['NONE', 'BACKPACK', 'CAPE', 'WINGS', 'JETPACK', 'SWORD'];
+const LOOK_STYLE = ['PLAIN', 'STRIPES', 'TACTICAL VEST', 'HOODIE', 'SUSPENDERS'];
+const LOOK_KEYS = ['shirt', 'skin', 'hair', 'hc', 'hat', 'pants', 'shoes', 'face', 'back', 'style'], LOOK_MAX = [LOOK_SHIRTS.length, LOOK_SKIN.length, LOOK_HAIR.length, LOOK_HAIRC.length, LOOK_HATS.length, LOOK_PANTS.length, LOOK_SHOES.length, LOOK_FACE.length, LOOK_BACK.length, LOOK_STYLE.length];
 const lookStr = l => LOOK_KEYS.map(k => l[k]).join('.');
 function parseLook(str, fallbackShirt = 0) {
-  const l = { shirt: fallbackShirt % LOOK_SHIRTS.length, skin: 1, hair: 1, hc: 0, hat: 0 };
+  const l = { shirt: fallbackShirt % LOOK_SHIRTS.length, skin: 1, hair: 1, hc: 0, hat: 0, pants: 0, shoes: 0, face: 0, back: 0, style: 0 };
   if (typeof str === 'string') { const a = str.split('.').map(Number); LOOK_KEYS.forEach((k, i) => { if (Number.isInteger(a[i]) && a[i] >= 0 && a[i] < LOOK_MAX[i]) l[k] = a[i]; }); }
   return l;
 }
@@ -1765,7 +1839,7 @@ function addHat(head, id) {
 }
 function buildAvatar(name, look) {
   const g = new THREE.Group(); g.rotation.order = 'YXZ';
-  const shirt = lmat(LOOK_SHIRTS[look.shirt]), skin = lmat(LOOK_SKIN[look.skin]), dk = lmat('#2a2d33'), hairM = lmat(LOOK_HAIRC[look.hc]);
+  const shirt = lmat(LOOK_SHIRTS[look.shirt]), skin = lmat(LOOK_SKIN[look.skin]), dk = lmat('#2a2d33'), pantsM = lmat(LOOK_PANTS[look.pants || 0]), shoeM = lmat(LOOK_SHOES[look.shoes || 0]), hairM = lmat(LOOK_HAIRC[look.hc]);
   const bx = (w, h, d, m, x, y, z, par = g) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; par.add(b); return b; };
   bx(0.5, 0.62, 0.28, shirt, 0, 1.15, 0);
   const head = new THREE.Group(); head.position.set(0, 1.55, 0); g.add(head); bx(0.28, 0.28, 0.28, skin, 0, 0.14, 0, head);
@@ -1777,9 +1851,33 @@ function buildAvatar(name, look) {
     case 4: for (let i = 0; i < 7; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.14, 5), hairM); c.position.set(((i % 3) - 1) * 0.09, 0.34, (Math.floor(i / 3) - 1) * 0.09); head.add(c); } bx(0.3, 0.05, 0.3, hairM, 0, 0.28, 0, head); break;
   }
   if (look.hat) addHat(head, look.hat);
-  const mkLeg = x => { const l = new THREE.Group(); l.position.set(x, 0.84, 0); g.add(l); bx(0.2, 0.84, 0.22, dk, 0, -0.42, 0, l); return l; };
+  const mkLeg = x => { const l = new THREE.Group(); l.position.set(x, 0.84, 0); g.add(l); bx(0.2, 0.84, 0.22, pantsM, 0, -0.42, 0, l); bx(0.22, 0.12, 0.31, shoeM, 0, -0.8, -0.04, l); return l; };
   g.userData = { head, lL: mkLeg(-0.13), lR: mkLeg(0.13) };
   bx(0.14, 0.55, 0.14, shirt, -0.34, 1.12, -0.05); bx(0.14, 0.14, 0.55, shirt, 0.34, 1.3, -0.25); bx(0.09, 0.1, 0.1, skin, 0.34, 1.3, -0.56);
+  // clothing style, face items, back items
+  { const wh = lmat('#f0f0f0'), vest = lmat('#2e3a2a'), pk = lmat('#232d20');
+    if (look.style === 1) for (const y of [0.95, 1.12, 1.29]) bx(0.51, 0.06, 0.29, wh, 0, y, 0);
+    else if (look.style === 2) { bx(0.52, 0.5, 0.3, vest, 0, 1.18, 0); for (const sx of [-0.14, 0.14]) bx(0.15, 0.14, 0.06, pk, sx, 1.05, -0.17); bx(0.1, 0.1, 0.05, pk, 0, 1.3, -0.16); }
+    else if (look.style === 3) { bx(0.52, 0.64, 0.3, shirt, 0, 1.15, 0); bx(0.3, 0.2, 0.12, shirt, 0, 1.52, 0.16); bx(0.34, 0.14, 0.04, lmat('#1a1a1a'), 0, 0.98, -0.16); }
+    else if (look.style === 4) for (const sx of [-0.14, 0.14]) bx(0.05, 0.62, 0.3, lmat('#a82a2a'), sx, 1.15, 0); }
+  { const blk = lmat('#101114'), hd = g.userData.head;
+    switch (look.face) {
+      case 1: bx(0.31, 0.06, 0.03, blk, 0, 0.17, -0.15, hd); bx(0.02, 0.04, 0.2, blk, -0.15, 0.17, -0.06, hd); bx(0.02, 0.04, 0.2, blk, 0.15, 0.17, -0.06, hd); break;
+      case 2: for (const sx of [-0.07, 0.07]) { bx(0.1, 0.01, 0.02, blk, sx, 0.225, -0.152, hd); bx(0.1, 0.01, 0.02, blk, sx, 0.115, -0.152, hd); bx(0.01, 0.11, 0.02, blk, sx - 0.05, 0.17, -0.152, hd); bx(0.01, 0.11, 0.02, blk, sx + 0.05, 0.17, -0.152, hd); } bx(0.04, 0.01, 0.02, blk, 0, 0.17, -0.152, hd); break;
+      case 3: bx(0.1, 0.09, 0.03, blk, -0.07, 0.17, -0.15, hd); bx(0.3, 0.015, 0.29, blk, 0, 0.23, 0, hd); break;
+      case 4: bx(0.29, 0.11, 0.03, lmat('#9fd6e8'), 0, 0.06, -0.15, hd); break;
+      case 5: bx(0.3, 0.16, 0.05, lmat('#3a4034'), 0, 0.08, -0.16, hd); for (const sx of [-0.06, 0.06]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.06, 8), lmat('#1c1f1a')); c.rotation.x = Math.PI / 2; c.position.set(sx, 0.05, -0.2); hd.add(c); } bx(0.3, 0.05, 0.03, lmat('#222'), 0, 0.17, -0.155, hd); break;
+      case 6: bx(0.3, 0.1, 0.3, lmat('#c93a3a'), 0, 0.045, 0, hd); bx(0.07, 0.07, 0.05, lmat('#c93a3a'), 0.12, 0.03, 0.16, hd); break;
+      case 7: { const n = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), lmat('#e03030')); n.position.set(0, 0.11, -0.16); hd.add(n); break; }
+      case 8: bx(0.14, 0.03, 0.03, lmat('#2a1a10'), 0, 0.09, -0.155, hd); bx(0.04, 0.03, 0.03, lmat('#2a1a10'), -0.08, 0.075, -0.155, hd); bx(0.04, 0.03, 0.03, lmat('#2a1a10'), 0.08, 0.075, -0.155, hd); break;
+    }
+    switch (look.back) {
+      case 1: bx(0.36, 0.46, 0.18, lmat('#4a5a3a'), 0, 1.18, 0.23); bx(0.3, 0.14, 0.06, lmat('#3a4a2c'), 0, 1.0, 0.34); for (const sx of [-0.15, 0.15]) bx(0.05, 0.5, 0.03, lmat('#2a2a2a'), sx, 1.2, -0.15); break;
+      case 2: { const c = bx(0.5, 0.95, 0.04, lmat('#b0202a'), 0, 1.02, 0.2); c.rotation.x = -0.12; bx(0.56, 0.06, 0.1, lmat('#e8c23a'), 0, 1.45, 0.16); break; }
+      case 3: for (const sd of [-1, 1]) { const w = bx(0.08, 0.6, 0.5, lmat('#f4f4f8'), sd * 0.38, 1.35, 0.3); w.rotation.z = -sd * 0.5; w.rotation.y = sd * 0.4; const w2 = bx(0.06, 0.4, 0.38, lmat('#dcdce8'), sd * 0.52, 1.12, 0.32); w2.rotation.z = -sd * 0.7; w2.rotation.y = sd * 0.4; } break;
+      case 4: for (const sx of [-0.12, 0.12]) { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.5, 10), lmat('#8a9096')); t.position.set(sx, 1.15, 0.24); g.add(t); const f = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 8), lmat('#ff7a1a')); f.rotation.x = Math.PI; f.position.set(sx, 0.83, 0.24); g.add(f); } break;
+      case 5: { const s = bx(0.04, 0.9, 0.08, lmat('#c9ced4'), 0.1, 1.3, 0.2); s.rotation.z = 0.7; bx(0.04, 0.12, 0.24, lmat('#6b4a2f'), -0.14, 0.98, 0.22).rotation.z = 0.7; break; }
+    } }
   if (name) {
     const c = document.createElement('canvas'); c.width = 256; c.height = 48; const x = c.getContext('2d'); x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 5; x.strokeText(name, 128, 34); x.fillText(name, 128, 34);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.3, 1); sp.position.y = 2.25; sp.renderOrder = 9; g.add(sp);
@@ -1791,10 +1889,17 @@ function buildAvatar(name, look) {
 let lockerTab = 0;
 const lockerBox = document.createElement('div'); lockerBox.id = 'lockerView'; lockerBox.innerHTML = '<canvas></canvas><b>YOUR CHARACTER</b>'; document.body.appendChild(lockerBox);
 const L3 = { r: null, scene: null, cam: null, av: null, timer: 0, ry: 0.6 };
+let lockerGun = 'ak', shopShow = 0;
 function lockerRebuild() {
   if (!L3.scene) return;
   if (L3.av) L3.scene.remove(L3.av);
-  L3.av = buildAvatar(null, LOOK); L3.av.rotation.y = L3.ry; L3.scene.add(L3.av);
+  const weaponMode = menuView === 'shop' || (menuView === 'locker' && lockerTab === LOCKER_TABS.length - 1);
+  if (weaponMode) {
+    const gid = menuView === 'shop' ? 'ak' : lockerGun, g = new THREE.Group();
+    try { const m = WBUILD[gid](); const del = []; m.traverse(o => { if (o.userData && o.userData.hand) del.push(o); }); for (const o of del) if (o.parent) o.parent.remove(o); m.scale.setScalar(2.1); m.position.set(0, 0, 0.9); applyCamo(m, menuView === 'shop' ? shopShow : (WALLET.sel[gid] || 0)); g.add(m); } catch (e) {}
+    g.position.y = 1.0; L3.av = g; L3.weapon = true;
+  } else { L3.av = buildAvatar(null, LOOK); L3.weapon = false; }
+  L3.av.rotation.y = L3.ry; L3.scene.add(L3.av);
 }
 function lockerShow(on) {
   lockerBox.style.display = on ? 'block' : 'none';
@@ -1809,48 +1914,72 @@ function lockerShow(on) {
     } catch (e) { L3.r = null; lockerBox.style.display = 'none'; return; }
   }
   lockerRebuild();
-  if (!L3.timer) L3.timer = setInterval(() => { if (!L3.av) return; L3.ry += 0.02; L3.av.rotation.y = L3.ry; L3.r.render(L3.scene, L3.cam); }, 33);
+  if (!L3.timer) L3.timer = setInterval(() => { if (!L3.av) return; L3.ry += 0.02; L3.av.rotation.y = L3.weapon ? L3.ry + 1.1 : L3.ry; L3.r.render(L3.scene, L3.cam); }, 33);
 }
+const LOCKER_TABS = [['shirt', 'SHIRT'], ['style', 'STYLE'], ['pants', 'PANTS'], ['shoes', 'SHOES'], ['skin', 'SKIN'], ['hair', 'HAIR'], ['hc', 'HAIR COLOR'], ['hat', 'HATS'], ['face', 'FACE'], ['back', 'BACK'], ['fx', 'KILL EFFECT'], ['camo', 'WEAPON CAMOS']];
 function lockerHTML() {
-  const tabs = [['shirt', 'SHIRT'], ['skin', 'SKIN'], ['hair', 'HAIR'], ['hc', 'HAIR COLOR'], ['hat', 'HATS']];
+  const tabs = LOCKER_TABS;
   let h = '<div class="label">LOCKER</div><div class="ltabs">' + tabs.map((t, i) => `<button class="lt ${i === lockerTab ? 'on' : ''}" data-a="lt:${i}">${t[1]}</button>`).join('') + '</div><div class="lgrid">';
-  const key = tabs[lockerTab][0], cur = LOOK[key];
-  const cols = { shirt: LOOK_SHIRTS, skin: LOOK_SKIN, hc: LOOK_HAIRC }[key];
+  const key = tabs[lockerTab][0];
+  if (key === 'camo') {
+    h += Object.keys(WBUILD).map(k => `<button class="lo ${k === lockerGun ? 'on' : ''}" data-a="cg:${k}">${WEAPONS[k] ? WEAPONS[k].name : k}${WALLET.sel[k] ? ' &#9679;' : ''}</button>`).join('');
+    const cur = WALLET.sel[lockerGun] || 0;
+    h += '</div><div class="label" style="margin:10px 14px 6px">CAMO FOR ' + (WEAPONS[lockerGun] ? WEAPONS[lockerGun].name : lockerGun) + ' &middot; OWNED ' + WALLET.owned.length + '/' + (CAMOS.length - 1) + '</div><div class="lgrid">';
+    h += `<button class="lo ${cur === 0 ? 'on' : ''}" data-a="cs:0">DEFAULT</button>`;
+    h += WALLET.owned.slice().sort((a, b) => a - b).map(i => `<button class="sw ${i === cur ? 'on' : ''}" data-a="cs:${i}" title="${CAMOS[i].n}" style="background:url(${camoImg(i)}) center/cover;border-color:${i === cur ? '' : RARITY[CAMOS[i].r][1]}"></button>`).join('');
+    h += '</div>' + (cur ? `<div class="label" style="margin:6px 14px;color:${RARITY[CAMOS[cur].r][1]}">${CAMOS[cur].n} &middot; ${RARITY[CAMOS[cur].r][0]}</div>` : '');
+    h += '<div style="padding:4px 14px"><button class="lo" data-a="ca:1">USE THIS CAMO ON ALL GUNS</button> <button class="lo" data-a="ca:0">CLEAR ALL</button></div>';
+    return h + '<div class="label" style="margin:10px 14px 0">GET CAMOS FROM THE CRATE IN THE SHOP</div>';
+  }
+  if (key === 'fx') {
+    h += `<button class="lo ${!WALLET.fxSel ? 'on' : ''}" data-a="fs:0">NONE</button>` + WALLET.fx.map(i => `<button class="lo ${WALLET.fxSel === i ? 'on' : ''}" data-a="fs:${i}">${KFX[i].n}</button>`).join('');
+    return h + '</div><div class="label" style="margin:12px 14px 0">' + (WALLET.fx.length ? 'PLAYS WHERE YOUR KILLS FALL &middot; OTHER PLAYERS SEE IT' : 'BUY KILL EFFECTS IN THE SHOP') + '</div>';
+  }
+  const cur = LOOK[key];
+  const cols = { shirt: LOOK_SHIRTS, skin: LOOK_SKIN, hc: LOOK_HAIRC, pants: LOOK_PANTS, shoes: LOOK_SHOES }[key];
   if (cols) h += cols.map((c, i) => `<button class="sw ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}" style="background:${c}"></button>`).join('');
-  else h += (key === 'hair' ? LOOK_HAIR : LOOK_HATS).map((n, i) => `<button class="lo ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}">${n}</button>`).join('');
+  else h += { hair: LOOK_HAIR, hat: LOOK_HATS, face: LOOK_FACE, back: LOOK_BACK, style: LOOK_STYLE }[key].map((n, i) => `<button class="lo ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}">${n}</button>`).join('');
   return h + '</div><div class="label" style="margin-top:12px">YOUR LOOK IS SHOWN TO PLAYERS IN MULTIPLAYER</div>';
 }
 const WBUILD = { pistol: buildPistol, ak: buildAK, crossbow: buildCrossbow, raygun: buildRay, shotgun: buildShotgun, raygun2: buildRay2, smg: buildSMG, galil: buildGalil, rpg: buildRPG, revolver: buildRevolver, sniper: buildSniper, minigun: buildMinigun, dbl: buildDouble, thumper: buildThumper };
 /* ---------- voice chat (WebRTC mesh, signalled over the game's MQTT topic) ---------- */
 const Voice = {
   pcs: new Map(), stream: null, track: null, on: false, busy: false, ctx: null, level: new Map(), talking: new Set(), err: '', lastLvl: 0,
-  CFG: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] },
+  CFG: { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:global.stun.twilio.com:3478'] }, { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }] },
   sig(to, k, d) { MP.send({ t: 'vs', to, k, d }); },
   ensure(id) {
     if (this.pcs.has(id) || typeof RTCPeerConnection === 'undefined') return this.pcs.get(id);
-    const pc = new RTCPeerConnection(this.CFG), e = { pc, audio: null, an: null, q: [], polite: MP.id > id };
+    const pc = new RTCPeerConnection(this.CFG), e = { pc, audio: null, an: null, q: [], polite: MP.id > id, sender: null, t0: performance.now(), lastOffer: 0 };
     this.pcs.set(id, e);
-    const tr = pc.addTransceiver('audio', { direction: 'sendrecv' }); e.sender = tr.sender;
-    if (this.track) tr.sender.replaceTrack(this.track).catch(() => {});
     pc.onicecandidate = ev => { if (ev.candidate) this.sig(id, 'c', ev.candidate.toJSON()); };
-    pc.ontrack = ev => {
-      const a = e.audio = e.audio || document.createElement('audio'); a.autoplay = true; a.srcObject = ev.streams[0] || new MediaStream([ev.track]); a.volume = 1; a.play().catch(() => {});
-      try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); const src = this.ctx.createMediaStreamSource(a.srcObject), an = this.ctx.createAnalyser(); an.fftSize = 256; src.connect(an); e.an = an; e.buf = new Uint8Array(an.fftSize); } catch (x) {}
-    };
-    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') { this.drop(id); } };
-    if (!e.polite) this.offer(id);   // the peer with the smaller id starts the call
+    pc.ontrack = ev => { if (!e.audio) this.hook(e, ev.transceiver); };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed' || pc.connectionState === 'closed') { e.dead = true; } };
+    if (!e.polite) { this.hook(e, pc.addTransceiver('audio', { direction: 'sendrecv' })); this.offer(id, false); }   // the peer with the smaller id starts the call; the other answers
     return e;
   },
-  async offer(id) { const e = this.pcs.get(id); if (!e) return; try { await e.pc.setLocalDescription(await e.pc.createOffer()); this.sig(id, 'o', e.pc.localDescription.toJSON()); } catch (x) {} },
+  // wire a negotiated audio transceiver: play what it receives, send our mic through it
+  hook(e, tr) {
+    e.sender = tr.sender; if (this.track) tr.sender.replaceTrack(this.track).catch(() => {});
+    const stream = new MediaStream([tr.receiver.track]), a = e.audio = document.createElement('audio'); a.autoplay = true; a.srcObject = stream; a.play().catch(() => { e.blocked = true; });
+    try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); const src = this.ctx.createMediaStreamSource(stream), an = this.ctx.createAnalyser(); an.fftSize = 256; src.connect(an); e.an = an; e.buf = new Uint8Array(an.fftSize); } catch (x) {}
+  },
+  async offer(id, restart) { const e = this.pcs.get(id); if (!e || e.polite) return; e.lastOffer = performance.now(); try { await e.pc.setLocalDescription(await e.pc.createOffer(restart ? { iceRestart: true } : undefined)); this.sig(id, 'o', e.pc.localDescription.toJSON()); } catch (x) {} },
   async rx(m) {
     const id = m.i, e = this.ensure(id); if (!e) return; const pc = e.pc;
     try {
-      if (m.k === 'o') { await pc.setRemoteDescription(m.d); await pc.setLocalDescription(await pc.createAnswer()); this.sig(id, 'a', pc.localDescription.toJSON()); for (const c of e.q.splice(0)) pc.addIceCandidate(c).catch(() => {}); }
+      if (m.k === 'o') {
+        if (!e.polite) return;
+        await pc.setRemoteDescription(m.d);
+        const tr = pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'audio'); if (!tr) return;
+        tr.direction = 'sendrecv'; if (!e.audio) this.hook(e, tr);
+        await pc.setLocalDescription(await pc.createAnswer()); this.sig(id, 'a', pc.localDescription.toJSON());
+        for (const c of e.q.splice(0)) pc.addIceCandidate(c).catch(() => {});
+      }
       else if (m.k === 'a') { if (pc.signalingState === 'have-local-offer') { await pc.setRemoteDescription(m.d); for (const c of e.q.splice(0)) pc.addIceCandidate(c).catch(() => {}); } }
       else if (m.k === 'c') { if (pc.remoteDescription) pc.addIceCandidate(m.d).catch(() => {}); else e.q.push(m.d); }
     } catch (x) {}
   },
-  drop(id) { const e = this.pcs.get(id); if (!e) return; try { e.pc.close(); } catch (x) {} if (e.audio) { e.audio.srcObject = null; } this.pcs.delete(id); this.talking.delete(id); },
+  drop(id) { const e = this.pcs.get(id); if (!e) return; if (e.audio) e.audio.pause(); try { e.pc.close(); } catch (x) {} if (e.audio) { e.audio.srcObject = null; } this.pcs.delete(id); this.talking.delete(id); },
   async toggle() {
     if (!MP.on || this.busy) return;
     if (this.on) { this.setOn(false); return; }
@@ -1869,6 +1998,12 @@ const Voice = {
   tick(dt) {
     if (!MP.on) { if (this.pcs.size || this.stream) this.stop(); return; }
     for (const id of MP.peers.keys()) this.ensure(id);
+    const nw = performance.now();
+    for (const [id, e] of [...this.pcs]) {
+      if (e.dead) { this.drop(id); continue; }   // will be re-created on the next tick
+      if (!e.polite && e.pc.connectionState !== 'connected' && nw - e.lastOffer > 7000) this.offer(id, e.lastOffer > 0);   // offer/answer got lost - try again
+      if (e.blocked && this.ctx && this.ctx.state === 'running' && e.audio) { e.audio.play().then(() => { e.blocked = false; }).catch(() => {}); }
+    }
     for (const id of [...this.pcs.keys()]) if (!MP.peers.has(id)) this.drop(id);
     this.lastLvl -= dt; if (this.lastLvl > 0) return; this.lastLvl = 0.15;
     for (const [id, e] of this.pcs) { if (!e.an) continue; e.an.getByteTimeDomainData(e.buf); let mx = 0; for (let i = 0; i < e.buf.length; i++) mx = Math.max(mx, Math.abs(e.buf[i] - 128)); if (mx > 10) this.talking.add(id); else this.talking.delete(id); }
@@ -1943,14 +2078,15 @@ const MP = {
       case 'p': {
         if (this.host && !this.peers.has(m.i)) break;
         let p = this.peers.get(m.i); if (!p) { p = { n: '', x: m.x, y: 0, z: m.z, seen: now }; this.peers.set(m.i, p); }
-        Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, lk: m.lk, hid: m.hid, seen: now }); break; }
+        Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, lk: m.lk, cm: m.cm | 0, hid: m.hid, seen: now }); break; }
       case 'vs': Voice.rx(m); break;
       case 'chat': chatAdd(this.esc(m.n) || 'PLAYER', String(m.m).slice(0, 80)); break;
       case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); Voice.drop(m.i); this.beat(); break; }
       case 's': if (this.client) this.sync(m); break;
       case 'hit': if (this.host) this.onHit(m); break;
       case 'hurt': hurtPlayer(m.d); break;
-      case 'aw': if (m.dk && boughtExtraPerks.has('vulture') && Math.random() < 0.2) spawnCloud(m.x, m.z); state.score += m.ds; state.kills += m.dk; if (m.dk) { popPoints('+' + m.ds, m.h); sfx.kill(); } else if (m.ds) popPoints('+' + m.ds, false); updateHUD(); break;
+      case 'fx': if (KFX[m.f] && Number.isFinite(m.x) && Number.isFinite(m.z)) killFx(m.x, m.z, m.f); break;
+      case 'aw': if (m.dk && Number.isFinite(m.x)) myKillFx(m.x, m.z); if (m.dk && boughtExtraPerks.has('vulture') && Math.random() < 0.2) spawnCloud(m.x, m.z); state.score += m.ds; state.kills += m.dk; if (m.dk) { popPoints('+' + m.ds, m.h); sfx.kill(); } else if (m.ds) popPoints('+' + m.ds, false); updateHUD(); break;
       case 'rev': this.revive(); break;
       case 'over': state.wave = m.w; gameOver(); this.leave(); break;
       case 'pj': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; const w = WEAPONS[m.w]; if (w && m.a && m.d) spawnProj(m.w, w, new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.d[0], m.d[1], m.d[2]), true); break; }
@@ -2002,17 +2138,17 @@ const MP = {
   showGun(p) {
     const gun = p.g.userData.gun; if (!gun) return;
     while (gun.children.length) gun.remove(gun.children[0]);
-    p.fl3 = null; const b = WBUILD[p.w]; p.wShown = p.w; if (!b) return;
+    p.fl3 = null; const b = WBUILD[p.w]; p.wShown = p.w; p.cmShown = p.cm; if (!b) return;
     let m; try { m = b(); } catch (e) { return; }
     const del = []; m.traverse(o => { if (o.userData && o.userData.hand) del.push(o); }); for (const o of del) if (o.parent) o.parent.remove(o);
-    m.scale.setScalar(0.85); m.position.set(0, 0, 0); gun.add(m);
+    m.scale.setScalar(0.85); m.position.set(0, 0, 0); if (p.cm) applyCamo(m, p.cm); gun.add(m);
     const mz = (m.userData && m.userData.muzzle) ? m.userData.muzzle.clone().multiplyScalar(0.85) : new THREE.Vector3(0, 0, -0.7);
     const fl = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     fl.position.copy(mz); fl.visible = false; gun.add(fl); p.fl3 = fl;
   },
   tick(dt) {
     if (!this.on) return; const now = performance.now();
-    this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name, lk: lookStr(LOOK), hid: gasClouds.length && playerHidden() ? 1 : 0 }); }
+    this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name, lk: lookStr(LOOK), cm: WALLET.sel[player.cur] || 0, hid: gasClouds.length && playerHidden() ? 1 : 0 }); }
     if (this.host) {
       this.ts -= dt; if (this.ts <= 0) { this.ts = 0.1; this.send({ t: 's', w: state.wave, z: zombies.map(z => [z.mid, +z.root.position.x.toFixed(2), +z.root.position.z.toFixed(2), (z.boss ? 1 : 0) | (z.warlord ? 2 : 0) | (z.hound ? 4 : 0) | (z.runner ? 8 : 0) | (z.kind === 'verity' ? 16 : 0) | (z.kind === 'tung' ? 32 : 0) | (z.kind === 'vboss' ? 64 : 0), +z.speed.toFixed(2)]) }); }
       this.tb -= dt; if (this.tb <= 0) { this.tb = 4; this.beat(); }
@@ -2028,14 +2164,14 @@ const MP = {
       p.g.position.set(p.x, p.ty || 0, p.z); p.g.rotation.y = p.yaw; u.head.rotation.x = p.pt;
       u.lL.rotation.x = Math.sin(p.ph) * Math.min(1, sp / 4) * 0.8; u.lR.rotation.x = -u.lL.rotation.x;
       p.g.rotation.x = p.d ? -1.45 : 0; if (p.d) p.g.position.y += 0.25;
-      if (p.wShown !== p.w) this.showGun(p);
+      if (p.wShown !== p.w || p.cmShown !== p.cm) this.showGun(p);
       if (p.g.userData.gun) p.g.userData.gun.rotation.x = p.pt || 0;
       if (p.fl > 0) p.fl -= dt; if (p.fl3) p.fl3.visible = p.fl > 0;
     }
     if (this.client) for (const z of zombies) if (z.tx !== undefined && z.spawnT >= 0.9) { const g = z.root.position, k = Math.min(1, dt * 5); if (Math.hypot(z.tx - g.x, z.tz - g.z) > 5) { g.x = z.tx; g.z = z.tz; } else { g.x += (z.tx - g.x) * k; g.z += (z.tz - g.z) * k; } }
     if (!this.hud) { this.hud = document.createElement('div'); this.hud.style.cssText = 'position:absolute;right:24px;top:22px;font-size:9px;line-height:1.9;text-align:right;color:#cfd3d8'; $('hud').appendChild(this.hud); }
     this.hud.style.display = 'block'; this.th -= dt; Voice.tick(dt);
-    if (this.th <= 0) { this.th = 0.5; this.hud.innerHTML = [[this.name, state.health | 0, this.down, Voice.on]].concat([...this.peers.entries()].map(([id, p]) => [p.n, p.h, p.d, Voice.talking.has(id)])).map(r => `${r[3] ? '<span style="color:#7fe05a">&#9679;</span> ' : ''}${r[0]} <span style="color:${r[2] ? '#e0453a' : '#7fe05a'}">${r[2] ? 'DOWN' : Math.max(0, r[1] | 0)}</span>`).join('<br>') + `<br><span style="color:${Voice.on ? '#7fe05a' : '#888'};cursor:pointer;pointer-events:auto" id="micbtn">[M] MIC ${Voice.on ? 'ON' : 'OFF'}</span>`; const mb = document.getElementById('micbtn'); if (mb) mb.onclick = () => Voice.toggle(); }
+    if (this.th <= 0) { this.th = 0.5; this.hud.innerHTML = [[this.name, state.health | 0, this.down, Voice.on]].concat([...this.peers.entries()].map(([id, p]) => [p.n, p.h, p.d, Voice.talking.has(id)])).map(r => `${r[3] ? '<span style="color:#7fe05a">&#9679;</span> ' : ''}${r[0]} <span style="color:${r[2] ? '#e0453a' : '#7fe05a'}">${r[2] ? 'DOWN' : Math.max(0, r[1] | 0)}</span>`).join('<br>') + `<br><span style="color:${Voice.on ? '#7fe05a' : '#888'};cursor:pointer;pointer-events:auto" id="micbtn">[B] MIC ${Voice.on ? 'ON' : 'OFF'}</span>`; const mb = document.getElementById('micbtn'); if (mb) mb.onclick = () => Voice.toggle(); }
   },
   /* ---- menu UI ---- */
   panelHide() { if (this.panel) this.panel.style.display = 'none'; },
@@ -2294,6 +2430,20 @@ function burst(point, count, mat, speed, life, grav = 14) {
     particles.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * speed, Math.random() * speed * 0.9, (Math.random() - 0.5) * speed), life: life * (0.6 + Math.random() * 0.6), grav });
   }
 }
+const _confMats = ['#ff4a6a', '#ffd23a', '#4ad8ff', '#6aff6a', '#c26aff', '#ff8a2a', '#ffffff'].map(c => new THREE.MeshBasicMaterial({ color: new THREE.Color(c) }));
+function fxBurst(point, count, mats, speed, life, grav, scale, up = 0.9) {
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(pGeo, Array.isArray(mats) ? mats[(Math.random() * mats.length) | 0] : mats); m.position.copy(point); m.scale.setScalar(scale * (0.6 + Math.random() * 0.8)); scene.add(m);
+    particles.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * speed, Math.random() * speed * up, (Math.random() - 0.5) * speed), life: life * (0.6 + Math.random() * 0.6), grav });
+  }
+}
+function killFx(x, z, id) {
+  const pt = new THREE.Vector3(x, 1.1, z);
+  if (id === 1) { fxBurst(pt, 14, pMat.smoke, 3.2, 1.8, -1.2, 3.2, 0.5); fxBurst(pt, 8, pMat.dirt, 2.2, 1.4, -0.8, 2.2, 0.4); }
+  else if (id === 2) { fxBurst(pt, 34, pMat.spark, 15, 0.55, 9, 0.7); fxBurst(pt, 8, pMat.fire, 8, 0.4, 5, 1.0); }
+  else if (id === 3) fxBurst(pt, 46, _confMats, 9, 1.9, 5.5, 1.3, 1.5);
+}
+function myKillFx(x, z) { const id = WALLET.fxSel; if (!id) return; killFx(x, z, id); if (MP.on) MP.send({ t: 'fx', f: id, x: +x.toFixed(1), z: +z.toFixed(1) }); }
 function spawnTracer(from, to) {
   if (MP.on && !MP.rx) MP.sendTr(from, to);
   const dir = new THREE.Vector3().subVectors(to, from), len = dir.length();
@@ -2385,6 +2535,7 @@ function killZombie(z, point, head, knife = false) {
   const i = zombies.indexOf(z); if (i >= 0) zombies.splice(i, 1);
   disposeBar(z); z.deadT = 0; dying.push(z);
   burst(point, 14, pMat.blood, 7, 0.9); burst(point, 6, pMat.green, 5, 0.9);
+  if (!MP.silent) myKillFx(z.root.position.x, z.root.position.z);
   if (boughtExtraPerks.has('vulture') && !MP.silent && Math.random() < 0.2) spawnCloud(z.root.position.x, z.root.position.z, curMap.decks ? (z.gy || 0) : 0);
   const pts = noPts ? 0 : z.boss ? 1500 : knife ? KNIFE_KILL_POINTS : head ? HEADSHOT_POINTS : KILL_POINTS;
   addScore(pts); state.kills++;
@@ -2813,7 +2964,7 @@ function resetWorld() {
   for (const e of explosions) scene.remove(e.m); explosions.length = 0;
   Object.assign(state, {
     time: 0, score: START_POINTS, kills: 0, wave: 0, health: 100, lastHurt: -10, roundState: 'intermission', interT: 3, roundTotal: 0, spawned: 0, spawnT: 0,
-    fireCd: 0, clickBuf: 0, mouseDown: false, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 100, ads: 0, rmb: false, god: false,
+    fireCd: 0, clickBuf: 0, mouseDown: false, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 100, ads: 0, rmb: false, god: false, cheated: false, coinNext: 10,
   });
   camera.fov = 75; camera.updateProjectionMatrix();
   player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
@@ -2844,10 +2995,12 @@ function endRound() {
   sfx.roundEnd();
 }
 
+const coinsEl = document.createElement('div'); coinsEl.id = 'coinsEl';
 const menuEl = $('menu'), menuButtons = $('menuButtons'), cdEl = $('countdown'), pauseEl = $('pauseScreen'), goEl = $('gameOverScreen');
 let cdTimer = 0, menuAngle = 0;
 
 function btn(a, text, sub = '', cls = '') { return `<button class="btn ${cls}" data-a="${a}">${text}${sub ? `<small>${sub}</small>` : ''}</button>`; }
+menuEl.appendChild(coinsEl);
 const MAP_ORDER = ['factory', 'osterled', 'window', 'ironmire', 'verity', 'giant', 'moon', 'dust'], MAP_PAGES = [MAP_ORDER.slice(0, 6), MAP_ORDER.slice(6)];
 let mapPage = 0, menuView = 'main';
 const MAP_DESC = {
@@ -2896,20 +3049,48 @@ menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('[da
 menuButtons.addEventListener('mouseleave', () => { mprev.style.display = 'none'; });
 function renderMenu(view) {
   let h = ''; menuView = view; mprev.style.display = 'none';
-  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character') + btn('controls', 'CONTROLS');
+  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + btn('controls', 'CONTROLS');
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
+  else if (view === 'shop') {
+    const last = WALLET.last, d = last && CAMOS[last];
+    h = `<div class="label">SHOP &middot; COINS: <span style="color:#ffd84a">${WALLET.coins}</span></div>` +
+      btn('crate', WALLET.opening ? 'OPENING...' : 'CAMO CRATE', CRATE_COST + ' coins &middot; random weapon camo') +
+      (d ? `<div class="crate" style="border-color:${RARITY[d.r][1]}"><img src="${camoImg(last)}" alt=""><div><b style="color:${RARITY[d.r][1]}">${d.n}</b><br>${RARITY[d.r][0]}${WALLET.lastDupe ? ' &middot; DUPLICATE +' + DUPE_REFUND + ' COINS' : ' &middot; NEW!'}</div></div>` : '') +
+      '<div class="label" style="margin:10px 0 4px">COLLECTION ' + WALLET.owned.length + '/' + (CAMOS.length - 1) + '</div><div class="coll">' + CAMOS.map((c, i) => c ? `<span class="cs ${WALLET.owned.includes(i) ? 'own' : ''}" title="${WALLET.owned.includes(i) ? c.n : '???'}" style="${WALLET.owned.includes(i) ? 'background:url(' + camoImg(i) + ') center/cover;border-color:' + RARITY[c.r][1] : ''}"></span>` : '').join('') + '</div>' +
+      '<div class="label" style="margin:10px 0 4px">KILL EFFECTS</div>' + KFX.map((f, i) => f ? btn('buyfx:' + i, f.n, WALLET.fx.includes(i) ? 'OWNED &middot; equip in Locker' : f.cost + ' coins &middot; ' + f.d) : '').join('') +
+      '<div class="label" style="margin:10px 0 4px">EARN 100 COINS EVERY 10 ROUNDS YOU REACH (CHEATS DISABLE COINS)</div>' + btn('main', '&lt; BACK', '', 'back');
+  }
   else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
-  else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>M</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
-  menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker');
+  menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker' || view === 'shop'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
 }
 menuButtons.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   initAudio(); sfx.click();
   const a = b.dataset.a;
   if (a === 'locker') { renderMenu('locker'); return; }
+  if (a === 'shop') { WALLET.last = 0; renderMenu('shop'); return; }
+  if (a === 'crate') {
+    if (WALLET.opening) return;
+    if (WALLET.coins < CRATE_COST) { sfx.deny(); coinsEl.textContent = 'NEED ' + CRATE_COST + ' COINS'; setTimeout(() => { coinsEl.textContent = 'COINS ' + WALLET.coins; }, 1400); return; }
+    WALLET.coins -= CRATE_COST; WALLET.opening = true; WALLET.last = 0; saveWallet(); renderMenu('shop');
+    setTimeout(() => {
+      const id = rollCamo(), dupe = WALLET.owned.includes(id); if (dupe) WALLET.coins += DUPE_REFUND; else WALLET.owned.push(id);
+      WALLET.last = id; WALLET.lastDupe = dupe; WALLET.opening = false; shopShow = id; saveWallet(); sfx.chime(); if (menuView === 'shop') renderMenu('shop');
+    }, 1100); return;
+  }
+  if (a.startsWith('buyfx:')) {
+    const i = +a.slice(6), f = KFX[i]; if (!f || WALLET.fx.includes(i)) return;
+    if (WALLET.coins < f.cost) { sfx.deny(); coinsEl.textContent = 'NEED ' + f.cost + ' COINS'; setTimeout(() => { coinsEl.textContent = 'COINS ' + WALLET.coins; }, 1400); return; }
+    WALLET.coins -= f.cost; WALLET.fx.push(i); WALLET.fxSel = i; saveWallet(); sfx.chime(); renderMenu('shop'); return;
+  }
+  if (a.startsWith('fs:')) { WALLET.fxSel = +a.slice(3); saveWallet(); renderMenu('locker'); return; }
+  if (a.startsWith('cg:')) { lockerGun = a.slice(3); renderMenu('locker'); return; }
+  if (a.startsWith('cs:')) { const id = +a.slice(3); if (id) WALLET.sel[lockerGun] = id; else delete WALLET.sel[lockerGun]; saveWallet(); applyAllCamos(); renderMenu('locker'); return; }
+  if (a.startsWith('ca:')) { const id = WALLET.sel[lockerGun] || 0; for (const k in WBUILD) { if (a === 'ca:1' && id) WALLET.sel[k] = id; else delete WALLET.sel[k]; } saveWallet(); applyAllCamos(); renderMenu('locker'); return; }
   if (a.startsWith('lt:')) { lockerTab = +a.slice(3); renderMenu('locker'); return; }
   if (a.startsWith('lk:')) { const q = a.split(':'); LOOK[q[1]] = +q[2]; saveLook(); renderMenu('locker'); return; }
   if (a === 'new' || a === 'maps') { mapPage = 0; renderMenu('maps'); }
@@ -3038,6 +3219,7 @@ const CHEATS = {
   gun: () => { const t = pick(['ak', 'smg', 'galil', 'crossbow', 'shotgun', 'raygun', 'raygun2', 'rpg', 'revolver', 'sniper', 'minigun', 'dbl', 'thumper']); giveWeapon(t); sfx.swap(); notice('CHEAT: ' + WEAPONS[t].name, 2600); },
   money: () => { state.score += 10000; notice('CHEAT: +10000 POINTS', 2600); sfx.chime(); },
 };
+for (const k of Object.keys(CHEATS)) { const f = CHEATS[k]; CHEATS[k] = () => { if (!state.cheated) { state.cheated = true; setTimeout(() => notice('CHEATS USED - NO COINS THIS RUN', 3000), 2700); } f(); }; }
 document.addEventListener('keydown', e => {
   if (chat.open) {
     e.preventDefault();
@@ -3048,7 +3230,7 @@ document.addEventListener('keydown', e => {
     e.stopImmediatePropagation(); return;
   }
   if (state.phase !== 'playing' || e.repeat) return;
-  if (e.code === 'KeyM' && MP.on) { e.preventDefault(); e.stopImmediatePropagation(); Voice.toggle(); MP.th = 0; return; }
+  if (e.code === 'KeyB' && MP.on) { e.preventDefault(); e.stopImmediatePropagation(); Voice.toggle(); MP.th = 0; return; }
   if (e.code === 'KeyT' && (locked || MP.on)) { e.preventDefault(); e.stopImmediatePropagation(); openChat(); return; }
   if (e.key.length === 1 && /[a-z]/i.test(e.key)) { cheatBuf = (cheatBuf + e.key.toLowerCase()).slice(-12); for (const k in CHEATS) if (cheatBuf.endsWith(k)) { cheatBuf = ''; CHEATS[k](); break; } }
 }, true);
@@ -3416,6 +3598,7 @@ function updateInteractions() {
 
 function update(dt) {
   state.time += dt;
+  if (state.phase === 'playing' && !state.cheated) { while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
   if (!MP.down) { updatePlayer(dt); updateCombat(dt); }
   MP.tick(dt);
   if (!MP.client) updateRounds(dt);
