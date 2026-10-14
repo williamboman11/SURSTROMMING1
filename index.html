@@ -1806,16 +1806,31 @@ const LOOK_SHOES = ['#15161a', '#f2f2f2', '#c93a3a', '#3b6ea5', '#6b4a2f', '#e8a
 const LOOK_FACE = ['NONE', 'SHADES', 'ROUND GLASSES', 'EYEPATCH', 'SURGICAL MASK', 'GAS MASK', 'BANDANA', 'CLOWN NOSE', 'MUSTACHE'];
 const LOOK_BACK = ['NONE', 'BACKPACK', 'CAPE', 'WINGS', 'JETPACK', 'SWORD'];
 const LOOK_STYLE = ['PLAIN', 'STRIPES', 'TACTICAL VEST', 'HOODIE', 'SUSPENDERS'];
-const LOOK_KEYS = ['shirt', 'skin', 'hair', 'hc', 'hat', 'pants', 'shoes', 'face', 'back', 'style'], LOOK_MAX = [LOOK_SHIRTS.length, LOOK_SKIN.length, LOOK_HAIR.length, LOOK_HAIRC.length, LOOK_HATS.length, LOOK_PANTS.length, LOOK_SHOES.length, LOOK_FACE.length, LOOK_BACK.length, LOOK_STYLE.length];
+const LOOK_PRINT = ['NONE', 'IQ TOO LOW?', 'IQ TOO HIGH?'];
+const LOOK_KEYS = ['shirt', 'skin', 'hair', 'hc', 'hat', 'pants', 'shoes', 'face', 'back', 'style', 'print'], LOOK_MAX = [LOOK_SHIRTS.length, LOOK_SKIN.length, LOOK_HAIR.length, LOOK_HAIRC.length, LOOK_HATS.length, LOOK_PANTS.length, LOOK_SHOES.length, LOOK_FACE.length, LOOK_BACK.length, LOOK_STYLE.length, LOOK_PRINT.length];
 const lookStr = l => LOOK_KEYS.map(k => l[k]).join('.');
 function parseLook(str, fallbackShirt = 0) {
-  const l = { shirt: fallbackShirt % LOOK_SHIRTS.length, skin: 1, hair: 1, hc: 0, hat: 0, pants: 0, shoes: 0, face: 0, back: 0, style: 0 };
+  const l = { shirt: fallbackShirt % LOOK_SHIRTS.length, skin: 1, hair: 1, hc: 0, hat: 0, pants: 0, shoes: 0, face: 0, back: 0, style: 0, print: 0 };
   if (typeof str === 'string') { const a = str.split('.').map(Number); LOOK_KEYS.forEach((k, i) => { if (Number.isInteger(a[i]) && a[i] >= 0 && a[i] < LOOK_MAX[i]) l[k] = a[i]; }); }
   return l;
 }
 let LOOK = parseLook(null, 0);
 try { const sv = localStorage.getItem('zmb_look'); if (sv) LOOK = parseLook(sv); } catch (e) {}
 function saveLook() { try { localStorage.setItem('zmb_look', lookStr(LOOK)); } catch (e) {} }
+const _ptex = new Map();
+function printTex(id) {   // original crow + joke caption, drawn in code
+  let t = _ptex.get(id); if (t) return t;
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 256, 256); g.addColorStop(0, '#0b1220'); g.addColorStop(1, '#25324a'); x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  x.fillStyle = 'rgba(190,210,240,.28)'; x.font = '15px serif'; x.fillText('x\u00b2 + \u00bd', 18, 40); x.fillText('\u221a(1/300)', 120, 70); x.fillText('f(x)= x/3 + 5', 20, 120); x.fillText('\u03c0r\u00b2', 190, 30);
+  x.fillStyle = '#07080b'; x.beginPath(); x.moveTo(256, 40); x.bezierCurveTo(215, 38, 190, 60, 175, 82); x.lineTo(112, 92); x.lineTo(176, 102); x.bezierCurveTo(186, 140, 215, 160, 256, 168); x.closePath(); x.fill();
+  x.fillStyle = '#3a4252'; x.beginPath(); x.moveTo(176, 82); x.lineTo(112, 92); x.lineTo(176, 102); x.closePath(); x.fill();
+  x.fillStyle = '#e8eef8'; x.beginPath(); x.arc(205, 84, 6, 0, 7); x.fill(); x.fillStyle = '#000'; x.beginPath(); x.arc(206, 84, 3, 0, 7); x.fill();
+  x.textAlign = 'left'; x.font = 'bold 38px Arial'; x.lineWidth = 5; x.strokeStyle = '#000';
+  x.strokeText('AN IQ', 12, 196); x.fillStyle = '#fff'; x.fillText('AN IQ', 12, 196);
+  x.strokeText(id === 1 ? 'TOO LOW?' : 'TOO HIGH?', 12, 238); x.fillStyle = id === 1 ? '#e8402a' : '#ffd23a'; x.fillText(id === 1 ? 'TOO LOW?' : 'TOO HIGH?', 12, 238);
+  t = new THREE.CanvasTexture(c); if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; _ptex.set(id, t); return t;
+}
 const _lm = new Map();
 const lmat = c => { let m = _lm.get(c); if (!m) { m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 }); _lm.set(c, m); } return m; };
 function addHat(head, id) {
@@ -1860,6 +1875,7 @@ function buildAvatar(name, look) {
     else if (look.style === 2) { bx(0.52, 0.5, 0.3, vest, 0, 1.18, 0); for (const sx of [-0.14, 0.14]) bx(0.15, 0.14, 0.06, pk, sx, 1.05, -0.17); bx(0.1, 0.1, 0.05, pk, 0, 1.3, -0.16); }
     else if (look.style === 3) { bx(0.52, 0.64, 0.3, shirt, 0, 1.15, 0); bx(0.3, 0.2, 0.12, shirt, 0, 1.52, 0.16); bx(0.34, 0.14, 0.04, lmat('#1a1a1a'), 0, 0.98, -0.16); }
     else if (look.style === 4) for (const sx of [-0.14, 0.14]) bx(0.05, 0.62, 0.3, lmat('#a82a2a'), sx, 1.15, 0); }
+  if (look.print) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), new THREE.MeshStandardMaterial({ map: printTex(look.print), roughness: 0.85 })); pl.rotation.y = Math.PI; pl.position.set(0, 1.15, -0.172); g.add(pl); }
   { const blk = lmat('#101114'), hd = g.userData.head;
     switch (look.face) {
       case 1: bx(0.31, 0.06, 0.03, blk, 0, 0.17, -0.15, hd); bx(0.02, 0.04, 0.2, blk, -0.15, 0.17, -0.06, hd); bx(0.02, 0.04, 0.2, blk, 0.15, 0.17, -0.06, hd); break;
@@ -1882,7 +1898,7 @@ function buildAvatar(name, look) {
     const c = document.createElement('canvas'); c.width = 256; c.height = 48; const x = c.getContext('2d'); x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 5; x.strokeText(name, 128, 34); x.fillText(name, 128, 34);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.3, 1); sp.position.y = 2.25; sp.renderOrder = 9; g.add(sp);
   }
-  const gun = new THREE.Group(); gun.position.set(0.34, 1.3, -0.3); g.add(gun); g.userData.gun = gun;
+  const gun = new THREE.Group(); gun.position.set(0.34, 1.42, -0.5); g.add(gun); g.userData.gun = gun;
   return g;
 }
 /* locker UI (second small renderer in the middle of the menu) */
@@ -1916,7 +1932,7 @@ function lockerShow(on) {
   lockerRebuild();
   if (!L3.timer) L3.timer = setInterval(() => { if (!L3.av) return; L3.ry += 0.02; L3.av.rotation.y = L3.weapon ? L3.ry + 1.1 : L3.ry; L3.r.render(L3.scene, L3.cam); }, 33);
 }
-const LOCKER_TABS = [['shirt', 'SHIRT'], ['style', 'STYLE'], ['pants', 'PANTS'], ['shoes', 'SHOES'], ['skin', 'SKIN'], ['hair', 'HAIR'], ['hc', 'HAIR COLOR'], ['hat', 'HATS'], ['face', 'FACE'], ['back', 'BACK'], ['fx', 'KILL EFFECT'], ['camo', 'WEAPON CAMOS']];
+const LOCKER_TABS = [['shirt', 'SHIRT'], ['style', 'STYLE'], ['print', 'PRINTS'], ['pants', 'PANTS'], ['shoes', 'SHOES'], ['skin', 'SKIN'], ['hair', 'HAIR'], ['hc', 'HAIR COLOR'], ['hat', 'HATS'], ['face', 'FACE'], ['back', 'BACK'], ['fx', 'KILL EFFECT'], ['camo', 'WEAPON CAMOS']];
 function lockerHTML() {
   const tabs = LOCKER_TABS;
   let h = '<div class="label">LOCKER</div><div class="ltabs">' + tabs.map((t, i) => `<button class="lt ${i === lockerTab ? 'on' : ''}" data-a="lt:${i}">${t[1]}</button>`).join('') + '</div><div class="lgrid">';
@@ -1938,7 +1954,7 @@ function lockerHTML() {
   const cur = LOOK[key];
   const cols = { shirt: LOOK_SHIRTS, skin: LOOK_SKIN, hc: LOOK_HAIRC, pants: LOOK_PANTS, shoes: LOOK_SHOES }[key];
   if (cols) h += cols.map((c, i) => `<button class="sw ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}" style="background:${c}"></button>`).join('');
-  else h += { hair: LOOK_HAIR, hat: LOOK_HATS, face: LOOK_FACE, back: LOOK_BACK, style: LOOK_STYLE }[key].map((n, i) => `<button class="lo ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}">${n}</button>`).join('');
+  else h += { hair: LOOK_HAIR, hat: LOOK_HATS, face: LOOK_FACE, back: LOOK_BACK, style: LOOK_STYLE, print: LOOK_PRINT }[key].map((n, i) => `<button class="lo ${i === cur ? 'on' : ''}" data-a="lk:${key}:${i}">${n}</button>`).join('');
   return h + '</div><div class="label" style="margin-top:12px">YOUR LOOK IS SHOWN TO PLAYERS IN MULTIPLAYER</div>';
 }
 const WBUILD = { pistol: buildPistol, ak: buildAK, crossbow: buildCrossbow, raygun: buildRay, shotgun: buildShotgun, raygun2: buildRay2, smg: buildSMG, galil: buildGalil, rpg: buildRPG, revolver: buildRevolver, sniper: buildSniper, minigun: buildMinigun, dbl: buildDouble, thumper: buildThumper };
@@ -2141,8 +2157,8 @@ const MP = {
     p.fl3 = null; const b = WBUILD[p.w]; p.wShown = p.w; p.cmShown = p.cm; if (!b) return;
     let m; try { m = b(); } catch (e) { return; }
     const del = []; m.traverse(o => { if (o.userData && o.userData.hand) del.push(o); }); for (const o of del) if (o.parent) o.parent.remove(o);
-    m.scale.setScalar(0.85); m.position.set(0, 0, 0); if (p.cm) applyCamo(m, p.cm); gun.add(m);
-    const mz = (m.userData && m.userData.muzzle) ? m.userData.muzzle.clone().multiplyScalar(0.85) : new THREE.Vector3(0, 0, -0.7);
+    m.scale.setScalar(1.45); m.position.set(0, 0.03, 0.25); if (p.cm) applyCamo(m, p.cm); gun.add(m);
+    const mz = (m.userData && m.userData.muzzle) ? m.userData.muzzle.clone().multiplyScalar(1.45).add(new THREE.Vector3(0, 0.03, 0.25)) : new THREE.Vector3(0, 0, -0.7);
     const fl = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     fl.position.copy(mz); fl.visible = false; gun.add(fl); p.fl3 = fl;
   },
