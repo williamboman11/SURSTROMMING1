@@ -1821,6 +1821,61 @@ function lockerHTML() {
   return h + '</div><div class="label" style="margin-top:12px">YOUR LOOK IS SHOWN TO PLAYERS IN MULTIPLAYER</div>';
 }
 const WBUILD = { pistol: buildPistol, ak: buildAK, crossbow: buildCrossbow, raygun: buildRay, shotgun: buildShotgun, raygun2: buildRay2, smg: buildSMG, galil: buildGalil, rpg: buildRPG, revolver: buildRevolver, sniper: buildSniper, minigun: buildMinigun, dbl: buildDouble, thumper: buildThumper };
+/* ---------- voice chat (WebRTC mesh, signalled over the game's MQTT topic) ---------- */
+const Voice = {
+  pcs: new Map(), stream: null, track: null, on: false, busy: false, ctx: null, level: new Map(), talking: new Set(), err: '', lastLvl: 0,
+  CFG: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] },
+  sig(to, k, d) { MP.send({ t: 'vs', to, k, d }); },
+  ensure(id) {
+    if (this.pcs.has(id) || typeof RTCPeerConnection === 'undefined') return this.pcs.get(id);
+    const pc = new RTCPeerConnection(this.CFG), e = { pc, audio: null, an: null, q: [], polite: MP.id > id };
+    this.pcs.set(id, e);
+    const tr = pc.addTransceiver('audio', { direction: 'sendrecv' }); e.sender = tr.sender;
+    if (this.track) tr.sender.replaceTrack(this.track).catch(() => {});
+    pc.onicecandidate = ev => { if (ev.candidate) this.sig(id, 'c', ev.candidate.toJSON()); };
+    pc.ontrack = ev => {
+      const a = e.audio = e.audio || document.createElement('audio'); a.autoplay = true; a.srcObject = ev.streams[0] || new MediaStream([ev.track]); a.volume = 1; a.play().catch(() => {});
+      try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); const src = this.ctx.createMediaStreamSource(a.srcObject), an = this.ctx.createAnalyser(); an.fftSize = 256; src.connect(an); e.an = an; e.buf = new Uint8Array(an.fftSize); } catch (x) {}
+    };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') { this.drop(id); } };
+    if (!e.polite) this.offer(id);   // the peer with the smaller id starts the call
+    return e;
+  },
+  async offer(id) { const e = this.pcs.get(id); if (!e) return; try { await e.pc.setLocalDescription(await e.pc.createOffer()); this.sig(id, 'o', e.pc.localDescription.toJSON()); } catch (x) {} },
+  async rx(m) {
+    const id = m.i, e = this.ensure(id); if (!e) return; const pc = e.pc;
+    try {
+      if (m.k === 'o') { await pc.setRemoteDescription(m.d); await pc.setLocalDescription(await pc.createAnswer()); this.sig(id, 'a', pc.localDescription.toJSON()); for (const c of e.q.splice(0)) pc.addIceCandidate(c).catch(() => {}); }
+      else if (m.k === 'a') { if (pc.signalingState === 'have-local-offer') { await pc.setRemoteDescription(m.d); for (const c of e.q.splice(0)) pc.addIceCandidate(c).catch(() => {}); } }
+      else if (m.k === 'c') { if (pc.remoteDescription) pc.addIceCandidate(m.d).catch(() => {}); else e.q.push(m.d); }
+    } catch (x) {}
+  },
+  drop(id) { const e = this.pcs.get(id); if (!e) return; try { e.pc.close(); } catch (x) {} if (e.audio) { e.audio.srcObject = null; } this.pcs.delete(id); this.talking.delete(id); },
+  async toggle() {
+    if (!MP.on || this.busy) return;
+    if (this.on) { this.setOn(false); return; }
+    if (!this.stream) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.err = 'MIC NOT SUPPORTED HERE'; notice(this.err, 2500); return; }
+      this.busy = true;
+      try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); this.track = this.stream.getAudioTracks()[0]; }
+      catch (x) { this.busy = false; this.err = 'MIC BLOCKED - ALLOW IT IN BROWSER'; notice(this.err, 3500); return; }
+      this.busy = false;
+      for (const e of this.pcs.values()) e.sender.replaceTrack(this.track).catch(() => {});
+    }
+    this.setOn(true);
+  },
+  setOn(v) { this.on = v; if (this.track) this.track.enabled = v; notice(v ? 'MIC ON' : 'MIC OFF', 1200); },
+  stop() { for (const id of [...this.pcs.keys()]) this.drop(id); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = this.track = null; this.on = false; this.talking.clear(); },
+  tick(dt) {
+    if (!MP.on) { if (this.pcs.size || this.stream) this.stop(); return; }
+    for (const id of MP.peers.keys()) this.ensure(id);
+    for (const id of [...this.pcs.keys()]) if (!MP.peers.has(id)) this.drop(id);
+    this.lastLvl -= dt; if (this.lastLvl > 0) return; this.lastLvl = 0.15;
+    for (const [id, e] of this.pcs) { if (!e.an) continue; e.an.getByteTimeDomainData(e.buf); let mx = 0; for (let i = 0; i < e.buf.length; i++) mx = Math.max(mx, Math.abs(e.buf[i] - 128)); if (mx > 10) this.talking.add(id); else this.talking.delete(id); }
+    // quieter with distance so you hear people near you best
+    for (const [id, e] of this.pcs) { const p = MP.peers.get(id); if (p && e.audio && p.x !== undefined) e.audio.volume = Math.max(0.35, Math.min(1, 1.2 - Math.hypot(p.x - player.pos.x, p.z - player.pos.z) / 90)); }
+  },
+};
 const MP = {
   on: false, host: false, client: false, down: false, silent: false, rx: false, zid: 0,
   id: Math.random().toString(36).slice(2, 8), name: '', status: '', topic: '', map: '', view: '',
@@ -1857,7 +1912,7 @@ const MP = {
   leave() {
     if (this.on && this.c) { this.send({ t: 'bye' }); try { this.c.unsubscribe(this.topic); } catch (e) {} if (this.host) this.c.publish(this.PRE + 'list/' + this.id, '', { retain: true }); }
     for (const p of this.peers.values()) if (p.g) scene.remove(p.g);
-    this.peers.clear(); this.zmap.clear(); this.on = this.host = this.client = this.down = false; this.topic = ''; this.joined = false;
+    Voice.stop(); this.peers.clear(); this.zmap.clear(); this.on = this.host = this.client = this.down = false; this.topic = ''; this.joined = false;
     if (this.hud) this.hud.style.display = 'none';
   },
   msg(t, s) {
@@ -1889,8 +1944,9 @@ const MP = {
         if (this.host && !this.peers.has(m.i)) break;
         let p = this.peers.get(m.i); if (!p) { p = { n: '', x: m.x, y: 0, z: m.z, seen: now }; this.peers.set(m.i, p); }
         Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, lk: m.lk, hid: m.hid, seen: now }); break; }
+      case 'vs': Voice.rx(m); break;
       case 'chat': chatAdd(this.esc(m.n) || 'PLAYER', String(m.m).slice(0, 80)); break;
-      case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); this.beat(); break; }
+      case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); Voice.drop(m.i); this.beat(); break; }
       case 's': if (this.client) this.sync(m); break;
       case 'hit': if (this.host) this.onHit(m); break;
       case 'hurt': hurtPlayer(m.d); break;
@@ -1963,7 +2019,7 @@ const MP = {
       if (this.down && [...this.peers.values()].every(p => p.d)) this.over();
     } else if (now - this.lastS > 9000) { notice('HOST LEFT THE GAME'); showMenu('mp'); return; }
     for (const [id, p] of this.peers) {
-      if (now - p.seen > 7000) { if (p.g) scene.remove(p.g); this.peers.delete(id); continue; }
+      if (now - p.seen > 7000) { if (p.g) scene.remove(p.g); this.peers.delete(id); Voice.drop(id); continue; }
       if (p.tx === undefined) continue;
       if (p.g && p.lkShown !== p.lk) { scene.remove(p.g); p.g = null; p.wShown = undefined; }
       if (!p.g) { p.g = this.avatar(p.n || 'PLAYER', p.lk, this.peers.size); p.lkShown = p.lk; }
@@ -1978,8 +2034,8 @@ const MP = {
     }
     if (this.client) for (const z of zombies) if (z.tx !== undefined && z.spawnT >= 0.9) { const g = z.root.position, k = Math.min(1, dt * 5); if (Math.hypot(z.tx - g.x, z.tz - g.z) > 5) { g.x = z.tx; g.z = z.tz; } else { g.x += (z.tx - g.x) * k; g.z += (z.tz - g.z) * k; } }
     if (!this.hud) { this.hud = document.createElement('div'); this.hud.style.cssText = 'position:absolute;right:24px;top:22px;font-size:9px;line-height:1.9;text-align:right;color:#cfd3d8'; $('hud').appendChild(this.hud); }
-    this.hud.style.display = 'block'; this.th -= dt;
-    if (this.th <= 0) { this.th = 0.5; this.hud.innerHTML = [[this.name, state.health | 0, this.down]].concat([...this.peers.values()].map(p => [p.n, p.h, p.d])).map(r => `${r[0]} <span style="color:${r[2] ? '#e0453a' : '#7fe05a'}">${r[2] ? 'DOWN' : Math.max(0, r[1] | 0)}</span>`).join('<br>'); }
+    this.hud.style.display = 'block'; this.th -= dt; Voice.tick(dt);
+    if (this.th <= 0) { this.th = 0.5; this.hud.innerHTML = [[this.name, state.health | 0, this.down, Voice.on]].concat([...this.peers.entries()].map(([id, p]) => [p.n, p.h, p.d, Voice.talking.has(id)])).map(r => `${r[3] ? '<span style="color:#7fe05a">&#9679;</span> ' : ''}${r[0]} <span style="color:${r[2] ? '#e0453a' : '#7fe05a'}">${r[2] ? 'DOWN' : Math.max(0, r[1] | 0)}</span>`).join('<br>') + `<br><span style="color:${Voice.on ? '#7fe05a' : '#888'};cursor:pointer;pointer-events:auto" id="micbtn">[M] MIC ${Voice.on ? 'ON' : 'OFF'}</span>`; const mb = document.getElementById('micbtn'); if (mb) mb.onclick = () => Voice.toggle(); }
   },
   /* ---- menu UI ---- */
   panelHide() { if (this.panel) this.panel.style.display = 'none'; },
@@ -2844,7 +2900,7 @@ function renderMenu(view) {
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
   else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
-  else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>M</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
   menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker');
@@ -2992,6 +3048,7 @@ document.addEventListener('keydown', e => {
     e.stopImmediatePropagation(); return;
   }
   if (state.phase !== 'playing' || e.repeat) return;
+  if (e.code === 'KeyM' && MP.on) { e.preventDefault(); e.stopImmediatePropagation(); Voice.toggle(); MP.th = 0; return; }
   if (e.code === 'KeyT' && (locked || MP.on)) { e.preventDefault(); e.stopImmediatePropagation(); openChat(); return; }
   if (e.key.length === 1 && /[a-z]/i.test(e.key)) { cheatBuf = (cheatBuf + e.key.toLowerCase()).slice(-12); for (const k in CHEATS) if (cheatBuf.endsWith(k)) { cheatBuf = ''; CHEATS[k](); break; } }
 }, true);
