@@ -1819,10 +1819,31 @@ const KFX = [null,
   { n: 'FIREWORKS', cost: 700, d: 'a rocket and a big burst', cat: 'party', c: ['#ff4a4a', '#ffd23a', '#4aff9a'] },
   { n: 'DISCO', cost: 500, d: 'rainbow lights spin', cat: 'party', c: ['#ff4a4a', '#4aff4a', '#4a4aff'] },
   { n: 'RAINBOW', cost: 550, d: 'a rainbow column', cat: 'party', c: ['#ff4a4a', '#ffd23a', '#4aff4a', '#4a8aff'] },
+  { n: 'PETAL STORM', cost: 350, d: 'pink petals flutter down', cat: 'party', c: ['#ffb0d0', '#ff7aa8'] },
+  { n: 'METEOR SHOWER', cost: 650, d: 'fireballs rain from the sky', cat: 'cosmic', c: ['#ff8a2a', '#ffd23a', '#ff3a1a'] },
+  { n: 'SUPERNOVA', cost: 800, d: 'a blinding star explodes', cat: 'cosmic', c: ['#ffffff', '#ffe28a', '#ff8ad8'] },
+  { n: 'FIRE TORNADO', cost: 600, d: 'a spiral of flame', cat: 'elem', c: ['#ff3a1a', '#ff9a2a', '#ffd23a'] },
+  { n: 'ACID RAIN', cost: 400, d: 'toxic drops fall from above', cat: 'elem', c: ['#9aff3a', '#4a9a1a'] },
+  { n: 'SHADOW WISPS', cost: 500, d: 'dark spirits rise away', cat: 'cosmic', c: ['#1a0a2a', '#6a2aaa', '#a86aff'] },
+  { n: 'SNOWFALL', cost: 350, d: 'soft snow where they fell', cat: 'elem', c: ['#ffffff', '#cfe8ff'] },
+  { n: 'STORM STRIKE', cost: 700, d: 'three lightning bolts at once', cat: 'elem', c: ['#fffbd0', '#6a9aff'] },
+  { n: 'GALAXY SWIRL', cost: 750, d: 'a spinning galaxy of stars', cat: 'cosmic', c: ['#ffffff', '#9a6aff', '#4ac8ff'] },
+  { n: 'CASH BLAST', cost: 450, d: 'green bills fly everywhere', cat: 'party', c: ['#4aff6a', '#1a8a3a'] },
+  { n: 'NEON LASER', cost: 300, d: 'a glowing cyan beam follows your shot', cat: 'trail', trail: 1, c: ['#3affff', '#ffffff'] },
+  { n: 'FIRE TRAIL', cost: 400, d: 'embers burn along the bullet path', cat: 'trail', trail: 1, c: ['#ff5a1a', '#ffb02a'] },
+  { n: 'FROST TRAIL', cost: 400, d: 'icy sparkles behind each shot', cat: 'trail', trail: 1, c: ['#bff2ff', '#4ab8ff'] },
+  { n: 'RAINBOW TRAIL', cost: 550, d: 'a colourful ribbon of light', cat: 'trail', trail: 1, c: ['#ff4a4a', '#ffd23a', '#4aff4a', '#4a8aff'] },
+  { n: 'TOXIC TRAIL', cost: 350, d: 'green goo drips off your bullets', cat: 'trail', trail: 1, c: ['#7aff3a', '#3a8a1a'] },
+  { n: 'STARDUST TRAIL', cost: 500, d: 'twinkling stars follow the bullet', cat: 'trail', trail: 1, c: ['#ffffff', '#ffe28a', '#9ad8ff'] },
+  { n: 'THUNDER TRAIL', cost: 450, d: 'crackling sparks along the shot', cat: 'trail', trail: 1, c: ['#fffbd0', '#8ab8ff'] },
+  { n: 'LOVE TRAIL', cost: 400, d: 'hearts float behind the bullet', cat: 'trail', trail: 1, c: ['#ff6aa8', '#ff2a6a'] },
+  { n: 'SMOKE TRAIL', cost: 250, d: 'a grey smoke line', cat: 'trail', trail: 1, c: ['#aaa', '#666'] },
+  { n: 'SOUL TRAIL', cost: 500, d: 'blue souls follow your bullets', cat: 'trail', trail: 1, c: ['#cfe8ff', '#6aa8ff'] },
+  { n: 'GOLD TRAIL', cost: 600, d: 'golden glitter on every shot', cat: 'trail', trail: 1, c: ['#fff0a0', '#ffd23a'] },
 ];
-const WALLET = { coins: 0, owned: [], sel: {}, last: 0, opening: false, fx: [], fxSel: 0 };
-try { const s = JSON.parse(localStorage.getItem('zmb_wallet') || 'null'); if (s) { WALLET.coins = Math.max(0, s.coins | 0); WALLET.owned = (s.owned || []).map(Number).filter(n => CAMOS[n]); WALLET.fx = (s.fx || []).map(Number).filter(n => KFX[n]); WALLET.fxSel = WALLET.fx.includes(+s.fxSel) ? +s.fxSel : 0; for (const k in (s.sel || {})) if (CAMOS[+s.sel[k]] && WALLET.owned.includes(+s.sel[k])) WALLET.sel[k] = +s.sel[k]; } } catch (e) {}
-function saveWallet() { try { localStorage.setItem('zmb_wallet', JSON.stringify({ coins: WALLET.coins, owned: WALLET.owned, sel: WALLET.sel, fx: WALLET.fx, fxSel: WALLET.fxSel })); } catch (e) {} }
+const WALLET = { coins: 0, owned: [], sel: {}, last: 0, opening: false, fx: [], fxSel: 0, trSel: 0 };
+try { const s = JSON.parse(localStorage.getItem('zmb_wallet') || 'null'); if (s) { WALLET.coins = Math.max(0, s.coins | 0); WALLET.owned = (s.owned || []).map(Number).filter(n => CAMOS[n]); WALLET.fx = (s.fx || []).map(Number).filter(n => KFX[n]); WALLET.fxSel = WALLET.fx.includes(+s.fxSel) && !KFX[+s.fxSel].trail ? +s.fxSel : 0; WALLET.trSel = WALLET.fx.includes(+s.trSel) && KFX[+s.trSel].trail ? +s.trSel : 0; for (const k in (s.sel || {})) if (CAMOS[+s.sel[k]] && WALLET.owned.includes(+s.sel[k])) WALLET.sel[k] = +s.sel[k]; } } catch (e) {}
+function saveWallet() { try { localStorage.setItem('zmb_wallet', JSON.stringify({ coins: WALLET.coins, owned: WALLET.owned, sel: WALLET.sel, fx: WALLET.fx, fxSel: WALLET.fxSel, trSel: WALLET.trSel })); } catch (e) {} }
 function drawCamo(id, S = 128) {
   const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); let sd = id * 7919 + 13;
   const rnd = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
@@ -1871,7 +1892,7 @@ function applyCamo(model, id) {
 function applyAllCamos() { for (const k in vm) applyCamo(vm[k], WALLET.sel[k] || 0); }
 applyAllCamos();
 function rollCamo() { let t = Math.random() * Object.values(RARITY).reduce((a, r) => a + r[2], 0), pick = 'c'; for (const k in RARITY) { t -= RARITY[k][2]; if (t <= 0) { pick = k; break; } } const pool = []; CAMOS.forEach((c, i) => { if (c && c.r === pick) pool.push(i); }); return pool[(Math.random() * pool.length) | 0]; }
-const CRATE_COST = 50, DUPE_REFUND = 15;
+const CRATE_COST = 50, DUPE_REFUND = 15, FXCRATE_COST = 100, FXDUPE_REFUND = 30;
 function addCoins(n, why) { WALLET.coins += n; saveWallet(); notice(`+${n} COINS${why ? ' - ' + why : ''}`, 3200); sfx.chime(); }
 const LOOK_SHIRTS = ['#3b6ea5', '#a5503b', '#4f9a52', '#a58f3b', '#8a4fa5', '#3ba5a0', '#d9d9d9', '#222428', '#c93a3a', '#e8a33a', '#e86aa8', '#6b4a2f'];
 const LOOK_SKIN = ['#f3d2b0', '#e0b48c', '#c68f64', '#a06a42', '#7a4a2a', '#4d2f1c', '#cfe0b0', '#9fb7d6'];
@@ -2025,7 +2046,7 @@ function lockerHTML() {
     return h + '<div class="label" style="margin:10px 14px 0">GET CAMOS FROM THE CRATE IN THE SHOP</div>';
   }
   if (key === 'fx') {
-    h += `<button class="lo ${!WALLET.fxSel ? 'on' : ''}" data-a="fs:0">NONE</button>` + WALLET.fx.map(i => `<button class="lo ${WALLET.fxSel === i ? 'on' : ''}" data-a="fs:${i}">${KFX[i].n}</button>`).join('');
+    h += `<button class="lo ${!WALLET.fxSel ? 'on' : ''}" data-a="fs:0">NONE</button>` + WALLET.fx.filter(i => !KFX[i].trail).map(i => `<button class="lo ${WALLET.fxSel === i ? 'on' : ''}" data-a="fs:${i}">${KFX[i].n}</button>`).join('');
     return h + '</div><div class="label" style="margin:12px 14px 0">' + (WALLET.fx.length ? 'PLAYS WHERE YOUR KILLS FALL &middot; OTHER PLAYERS SEE IT' : 'BUY KILL EFFECTS IN THE SHOP') + '</div>';
   }
   const cur = LOOK[key];
@@ -2193,7 +2214,7 @@ const MP = {
       case 'door': if (state.phase === 'playing') applyDoor(m.id, false); else (this.pend = this.pend || {}).dr = ((this.pend.dr) || []).concat([m.id]); break;
       case 'box': boxRx(m); break;
       case 'pw': if (state.phase === 'playing') applyPower(m.id); else (this.pend = this.pend || {}).pw = ((this.pend.pw) || []).concat([m.id]); break;
-      case 'tr': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; } this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2])); this.rx = false; break;
+      case 'tr': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; } this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2]), m.k); this.rx = false; break;
     }
   },
   sync(m) {
@@ -2217,7 +2238,7 @@ const MP = {
     if (ds || dk) this.send({ t: 'aw', to: m.i, ds, dk, h: !!m.h, x: +z.root.position.x.toFixed(1), z: +z.root.position.z.toFixed(1) });
   },
   sendHit(z, d, h, k) { this.send({ t: 'hit', id: z.mid, d: Math.round(d), h: h ? 1 : 0, k: k ? 1 : 0 }); },
-  sendTr(a, b) { if (this.tn && performance.now() - this.tn < 40) return; this.tn = performance.now(); const r = v => [+v.x.toFixed(1), +v.y.toFixed(1), +v.z.toFixed(1)]; this.send({ t: 'tr', a: r(a), b: r(b) }); },
+  sendTr(a, b) { if (this.tn && performance.now() - this.tn < 40) return; this.tn = performance.now(); const r = v => [+v.x.toFixed(1), +v.y.toFixed(1), +v.z.toFixed(1)]; this.send({ t: 'tr', k: WALLET.trSel, a: r(a), b: r(b) }); },
   zHit(z, tp) {
     if (!this.on) { hurtPlayer(z.dmg || ZOMBIE_DAMAGE); return; }
     if (!this.host) return;
@@ -2612,13 +2633,46 @@ function killFx(x, z, id) {
   else if (id === 18) { fxGeo(fxSphere, pt, 4, pMat.spark, 0.6, 0.5, -6, 0.8, 3.5); setTimeout(() => { const top = V3(x, 5.6, z); fxBurst(top, 56, [...FXM.rainbow, ...FXM.coin], 13, 1.4, 4, 1.0, 1.0); }, 480); }
   else if (id === 19) { for (let k = 0; k < 2; k++) setTimeout(() => { const m = new THREE.Mesh(fxRing, fxRingMats[k]); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.14, z); scene.add(m); particles.push({ m, v: V3(0, 0, 0), life: 0.7, grav: 0, grow: 3.4 }); }, k * 90); fxBurst(pt, 30, FXM.rainbow, 10, 1.0, 3, 1.0, 0.8); }
   else if (id === 20) { for (let i = 0; i < 30; i++) { const m = new THREE.Mesh(pGeo, FXM.rainbow[i % 6]), a = Math.random() * 6.28; m.position.set(x + Math.cos(a) * 0.35, 0.2, z + Math.sin(a) * 0.35); m.scale.setScalar(1.3); scene.add(m); particles.push({ m, v: V3(0, 3.4 + Math.random() * 1.4, 0), life: 1.1, grav: -1 }); } }
+  else if (id === 21) { fxGeo(fxSphere, V3(x, 2.6, z), 34, FXM.heart, 3.5, 2.6, 1.0, 1.0, 0.3); }
+  else if (id === 22) { for (let i = 0; i < 9; i++) setTimeout(() => { const m = new THREE.Mesh(fxSphere, FXM.ember[i % 3]); m.position.set(x + (Math.random() - 0.5) * 3, 7, z + (Math.random() - 0.5) * 3); m.scale.setScalar(2.2); scene.add(m); particles.push({ m, v: V3(0, -14, 0), life: 0.5, grav: 0 }); setTimeout(() => fxBurst(V3(m.position.x, 0.3, m.position.z), 8, FXM.ember, 6, 0.6, 8, 0.9), 480); }, i * 90); }
+  else if (id === 23) { fxGeo(fxSphere, pt, 8, _fm('#ffffff'), 0.5, 0.5, 0, 6, 0.2, 2.5); fxBurst(pt, 50, FXM.star, 15, 1.1, 1, 1.1, 1.0); for (let k = 0; k < 2; k++) { const m = new THREE.Mesh(fxRing, fxRingMats[k]); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.2, z); scene.add(m); particles.push({ m, v: V3(0, 0.4, 0), life: 0.8, grav: 0, grow: 5 + k * 2 }); } explLight.position.copy(pt); explLight.intensity = 70; explLightT = 0.2; }
+  else if (id === 24) { for (let i = 0; i < 40; i++) { const a = i * 0.55, h = i * 0.09, r = 0.4 + h * 0.35, m = new THREE.Mesh(pGeo, FXM.ember[i % 3]); m.position.set(x + Math.cos(a) * r, 0.1 + h * 0.5, z + Math.sin(a) * r); m.scale.setScalar(1.4); scene.add(m); particles.push({ m, v: V3(-Math.sin(a) * 2.6, 3, Math.cos(a) * 2.6), life: 0.9 + h * 0.2, grav: -1 }); } }
+  else if (id === 25) { for (let i = 0; i < 40; i++) { const m = new THREE.Mesh(pGeo, FXM.toxic[i % 3]); m.position.set(x + (Math.random() - 0.5) * 3, 5 + Math.random() * 2, z + (Math.random() - 0.5) * 3); m.scale.setScalar(0.7); scene.add(m); particles.push({ m, v: V3(0, -9, 0), life: 0.7 + Math.random() * 0.2, grav: 0 }); } fxBurst(V3(x, 0.2, z), 16, FXM.toxic, 4, 0.9, 7, 0.8, 1.0); }
+  else if (id === 26) { fxGeo(fxSphere, pt, 22, FXM.dark, 1.6, 2.2, -2.2, 1.7, 1.2, 0.2); }
+  else if (id === 27) { fxGeo(fxSphere, V3(x, 3.2, z), 40, _fm('#ffffff'), 3.4, 3.0, 0.7, 0.8, 0.2); }
+  else if (id === 28) { for (let k = 0; k < 3; k++) setTimeout(() => { const bx = x + (k - 1) * 1.6, b = new THREE.Mesh(fxBolt, FXM.bolt); b.position.set(bx, 6.1, z + (k % 2 ? 0.7 : -0.7)); scene.add(b); particles.push({ m: b, v: V3(0, 0, 0), life: 0.18, grav: 0 }); fxBurst(V3(bx, 0.4, z), 14, FXM.bolt, 9, 0.35, 6, 0.6); explLight.position.set(bx, 1, z); explLight.intensity = 55; explLightT = 0.1; }, k * 110); }
+  else if (id === 29) { for (let i = 0; i < 50; i++) { const a = i * 0.5, r = 0.2 + i * 0.05, m = new THREE.Mesh(pGeo, [_fm('#ffffff'), _fm('#9a6aff'), _fm('#4ac8ff')][i % 3]); m.position.set(x + Math.cos(a) * r, 0.6 + i * 0.03, z + Math.sin(a) * r); m.scale.setScalar(1.1); scene.add(m); particles.push({ m, v: V3(-Math.sin(a) * 2.2 + Math.cos(a) * 0.8, 0.8, Math.cos(a) * 2.2 + Math.sin(a) * 0.8), life: 1.5, grav: 0 }); } }
+  else if (id === 30) { fxBurst(pt, 36, [_fm('#4aff6a'), _fm('#1a8a3a'), _fm('#8affa0')], 9, 1.8, 3.5, 1.5, 1.4); fxGeo(fxCoin, pt, 10, FXM.coin, 5, 1.2, 8, 1.6, 1.2); }
+}
+const TRL = {
+  31: { line: 0x3affff, life: 0.4, mats: [_fm('#3affff'), _fm('#ffffff')], geo: fxSphere, s: 0.35, ttl: 0.4, grav: 0, jit: 0.2 },
+  32: { mats: FXM.ember, geo: fxSphere, s: 0.7, ttl: 0.8, grav: -1.5, jit: 0.6 },
+  33: { mats: FXM.ice, geo: fxSphere, s: 0.55, ttl: 0.9, grav: 2, jit: 0.5 },
+  34: { mats: FXM.rainbow, geo: fxSphere, s: 0.7, ttl: 0.9, grav: 0, jit: 0.2 },
+  35: { mats: FXM.toxic, geo: fxSphere, s: 0.65, ttl: 0.9, grav: 4, jit: 0.4 },
+  36: { mats: FXM.star, geo: fxSphere, s: 0.5, ttl: 1.3, grav: 1, jit: 0.8 },
+  37: { mats: [FXM.bolt, _fm('#8ab8ff')], geo: fxSphere, s: 0.4, ttl: 0.3, grav: 0, jit: 1.6 },
+  38: { mats: FXM.heart, geo: fxSphere, s: 0.9, ttl: 1.2, grav: -1.2, jit: 0.4 },
+  39: { mats: pMat.smoke, geo: fxSphere, s: 1.2, ttl: 1.2, grav: -0.6, jit: 0.3 },
+  40: { mats: FXM.soul, geo: fxSphere, s: 0.7, ttl: 1.4, grav: -1.6, jit: 0.4 },
+  41: { mats: FXM.gold, geo: fxSphere, s: 0.45, ttl: 1.0, grav: 2.5, jit: 0.9 },
+};
+function trailPuff(pos, T) {
+  const m = new THREE.Mesh(T.geo, T.mats[(Math.random() * T.mats.length) | 0]); m.position.copy(pos); m.scale.setScalar(T.s * (0.7 + Math.random() * 0.6)); scene.add(m);
+  particles.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * T.jit, (Math.random() - 0.3) * T.jit, (Math.random() - 0.5) * T.jit), life: T.ttl * (0.7 + Math.random() * 0.6), grav: T.grav });
+}
+function trailAlong(from, to, T) {
+  const dir = new THREE.Vector3().subVectors(to, from), len = dir.length(), n = Math.min(26, Math.max(2, Math.ceil(len / 1.4)));
+  for (let i = 0; i < n; i++) { const p = from.clone().addScaledVector(dir, i / n); setTimeout(() => { if (state.phase === 'playing') trailPuff(p, T); }, (len * i / n) / 150 * 1000); }
 }
 function myKillFx(x, z) { const id = WALLET.fxSel; if (!id) return; killFx(x, z, id); if (MP.on) MP.send({ t: 'fx', f: id, x: +x.toFixed(1), z: +z.toFixed(1) }); }
-function spawnTracer(from, to) {
+function spawnTracer(from, to, tid) {
   if (MP.on && !MP.rx) MP.sendTr(from, to);
-  const dir = new THREE.Vector3().subVectors(to, from), len = dir.length();
-  const m = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, len), new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0.8, fog: false }));
-  m.position.copy(from).addScaledVector(dir, 0.5); m.lookAt(to); scene.add(m); tracers.push({ m, life: 0.06 });
+  const T = TRL[MP.rx ? (tid | 0) : WALLET.trSel], dir = new THREE.Vector3().subVectors(to, from), len = dir.length();
+  const lf = T && T.line ? T.life : 0.06;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(T && T.line ? 0.03 : 0.012, T && T.line ? 0.03 : 0.012, len), new THREE.MeshBasicMaterial({ color: T && T.line ? T.line : 0xffe2a0, transparent: true, opacity: 0.8, fog: false }));
+  m.position.copy(from).addScaledVector(dir, 0.5); m.lookAt(to); scene.add(m); tracers.push({ m, life: lf, l0: lf });
+  if (T) trailAlong(from, to, T);
 }
 const explLight = new THREE.PointLight(0xff8a30, 0, 24, 2); scene.add(explLight);
 let explLightT = 0;
@@ -3319,9 +3373,9 @@ function showPreview(id) {
 menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('[data-a^="map:"],[data-a^="host:"]'); if (b) showPreview(b.dataset.a.slice(b.dataset.a.indexOf(':') + 1)); else mprev.style.display = 'none'; });
 menuButtons.addEventListener('mouseleave', () => { mprev.style.display = 'none'; });
 let shopTab = 'crate';
-const SHOP_TABS = [['crate', 'CAMO CRATES'], ['basic', 'BASIC FX'], ['elem', 'ELEMENTAL'], ['cosmic', 'COSMIC'], ['party', 'PARTY'], ['coll', 'COLLECTION']];
+const SHOP_TABS = [['crate', 'CAMO CRATE'], ['fxcrate', 'FX CRATE'], ['trail', 'BULLET TRAILS'], ['basic', 'BASIC FX'], ['elem', 'ELEMENTAL'], ['cosmic', 'COSMIC'], ['party', 'PARTY'], ['coll', 'COLLECTION']];
 function fxCard(i) {
-  const f = KFX[i], own = WALLET.fx.includes(i), eq = WALLET.fxSel === i, sw = f.c.map(c => `<i style="background:${c}"></i>`).join('');
+  const f = KFX[i], own = WALLET.fx.includes(i), eq = (f.trail ? WALLET.trSel : WALLET.fxSel) === i, sw = f.c.map(c => `<i style="background:${c}"></i>`).join('');
   return `<div class="sc ${eq ? 'eq' : ''}"><div class="sw3">${sw}</div><b>${f.n}</b><span>${f.d}</span>` +
     (own ? `<button class="sb ${eq ? 'on' : ''}" data-a="eqfx:${i}">${eq ? 'EQUIPPED' : 'EQUIP'}</button>` : `<button class="sb buy ${WALLET.coins < f.cost ? 'poor' : ''}" data-a="buyfx:${i}">BUY &middot; ${f.cost}</button>`) + '</div>';
 }
@@ -3332,10 +3386,15 @@ function shopGuiHTML() {
     body = `<div class="crateBox"><div class="bigcrate">${WALLET.opening ? '...' : '?'}</div><div><b>CAMO CRATE</b><span>a random weapon camo, from common to mythic. duplicates refund ${DUPE_REFUND} coins.</span><button class="sb buy ${WALLET.coins < CRATE_COST ? 'poor' : ''}" data-a="crate">${WALLET.opening ? 'OPENING...' : 'OPEN &middot; ' + CRATE_COST}</button></div></div>` +
       (d ? `<div class="crate" style="border-color:${RARITY[d.r][1]}"><img src="${camoImg(last)}" alt=""><div><b style="color:${RARITY[d.r][1]}">${d.n}</b><br>${RARITY[d.r][0]}${WALLET.lastDupe ? ' &middot; DUPLICATE +' + DUPE_REFUND + ' COINS' : ' &middot; NEW!'}</div></div>` : '') +
       '<div class="note">Equip camos on any gun in the Locker.</div>';
+  } else if (shopTab === 'fxcrate') {
+    const lf = WALLET.lastFx && KFX[WALLET.lastFx];
+    body = `<div class="crateBox"><div class="bigcrate">${WALLET.opening ? '...' : '?'}</div><div><b>KILL EFFECT CRATE</b><span>a random kill effect or bullet trail. duplicates refund ${FXDUPE_REFUND} coins.</span><button class="sb buy ${WALLET.coins < FXCRATE_COST ? 'poor' : ''}" data-a="fxcrate">${WALLET.opening ? 'OPENING...' : 'OPEN &middot; ' + FXCRATE_COST}</button></div></div>` +
+      (lf ? `<div class="crate"><div class="sw3">${lf.c.map(c => `<i style="background:${c}"></i>`).join('')}</div><div><b>${lf.n}</b><br>${lf.trail ? 'BULLET TRAIL' : 'KILL EFFECT'}${WALLET.lastFxDupe ? ' &middot; DUPLICATE +' + FXDUPE_REFUND + ' COINS' : ' &middot; NEW! EQUIPPED'}</div></div>` : '') +
+      '<div class="note">Everything you unlock is equipped automatically. Change it in the shop tabs.</div>';
   } else if (shopTab === 'coll') {
     body = '<div class="note">COLLECTION ' + WALLET.owned.length + '/' + (CAMOS.length - 1) + '</div><div class="coll" style="padding:0">' + CAMOS.map((c, i) => c ? `<span class="cs ${WALLET.owned.includes(i) ? 'own' : ''}" title="${WALLET.owned.includes(i) ? c.n : '???'}" style="${WALLET.owned.includes(i) ? 'background:url(' + camoImg(i) + ') center/cover;border-color:' + RARITY[c.r][1] : ''}"></span>` : '').join('') + '</div>';
   } else {
-    body = '<div class="sgrid">' + KFX.map((f, i) => f && f.cat === shopTab ? fxCard(i) : '').join('') + '</div><div class="note">Kill effects play where your kills fall, and other players see them.</div>';
+    body = '<div class="sgrid">' + KFX.map((f, i) => f && f.cat === shopTab ? fxCard(i) : '').join('') + '</div><div class="note">Effects are seen by other players too.</div>';
   }
   return `<div id="shopGui"><div class="sgHead"><span>SHOP</span><em>COINS <b>${WALLET.coins}</b></em></div><div class="sgTabs">` + SHOP_TABS.map(t => `<button class="stab ${t[0] === shopTab ? 'on' : ''}" data-a="st:${t[0]}">${t[1]}</button>`).join('') + `</div><div class="sgBody">${body}</div><div class="sgFoot">EARN 100 COINS EVERY 10 ROUNDS YOU REACH &middot; CHEATS DISABLE COINS</div></div>`;
 }
@@ -3366,12 +3425,23 @@ menuButtons.addEventListener('click', e => {
       WALLET.last = id; WALLET.lastDupe = dupe; WALLET.opening = false; shopShow = id; saveWallet(); sfx.chime(); if (menuView === 'shop') renderMenu('shop');
     }, 1100); return;
   }
+  if (a === 'fxcrate') {
+    if (WALLET.opening) return;
+    if (WALLET.coins < FXCRATE_COST) { sfx.deny(); coinsEl.textContent = 'NEED ' + FXCRATE_COST + ' COINS'; setTimeout(() => { coinsEl.textContent = 'COINS ' + WALLET.coins; }, 1400); return; }
+    WALLET.coins -= FXCRATE_COST; WALLET.opening = true; WALLET.lastFx = 0; saveWallet(); renderMenu('shop');
+    setTimeout(() => {
+      const ids = []; KFX.forEach((f, i) => { if (f) ids.push(i); }); let t = ids.reduce((a, i) => a + 1 / KFX[i].cost, 0) * Math.random(), id = ids[0];
+      for (const i of ids) { t -= 1 / KFX[i].cost; if (t <= 0) { id = i; break; } }
+      const dupe = WALLET.fx.includes(id); if (dupe) WALLET.coins += FXDUPE_REFUND; else { WALLET.fx.push(id); if (KFX[id].trail) WALLET.trSel = id; else WALLET.fxSel = id; }
+      WALLET.lastFx = id; WALLET.lastFxDupe = dupe; WALLET.opening = false; saveWallet(); sfx.chime(); if (menuView === 'shop') renderMenu('shop');
+    }, 1100); return;
+  }
   if (a.startsWith('st:')) { shopTab = a.slice(3); renderMenu('shop'); return; }
-  if (a.startsWith('eqfx:')) { const i = +a.slice(5); if (WALLET.fx.includes(i)) { WALLET.fxSel = WALLET.fxSel === i ? 0 : i; saveWallet(); renderMenu('shop'); } return; }
+  if (a.startsWith('eqfx:')) { const i = +a.slice(5); if (WALLET.fx.includes(i)) { if (KFX[i].trail) WALLET.trSel = WALLET.trSel === i ? 0 : i; else WALLET.fxSel = WALLET.fxSel === i ? 0 : i; saveWallet(); renderMenu('shop'); } return; }
   if (a.startsWith('buyfx:')) {
     const i = +a.slice(6), f = KFX[i]; if (!f || WALLET.fx.includes(i)) return;
     if (WALLET.coins < f.cost) { sfx.deny(); coinsEl.textContent = 'NEED ' + f.cost + ' COINS'; setTimeout(() => { coinsEl.textContent = 'COINS ' + WALLET.coins; }, 1400); return; }
-    WALLET.coins -= f.cost; WALLET.fx.push(i); WALLET.fxSel = i; saveWallet(); sfx.chime(); renderMenu('shop'); return;
+    WALLET.coins -= f.cost; WALLET.fx.push(i); if (f.trail) WALLET.trSel = i; else WALLET.fxSel = i; saveWallet(); sfx.chime(); renderMenu('shop'); return;
   }
   if (a.startsWith('fs:')) { WALLET.fxSel = +a.slice(3); saveWallet(); renderMenu('locker'); return; }
   if (a.startsWith('cg:')) { lockerGun = a.slice(3); renderMenu('locker'); return; }
@@ -3781,6 +3851,7 @@ function updateProjectiles(dt) {
     if (boom) { scene.remove(p.mesh); projectiles.splice(i, 1); explode(boom, p.ray, p.wt, p.vis); continue; }
     p.pos.add(step); p.mesh.position.copy(p.pos);
     p.mesh.lookAt(_v2.copy(p.pos).add(p.vel));
+    if (!p.vis && WALLET.trSel && TRL[WALLET.trSel] && Math.random() < dt * 40) trailPuff(p.pos, TRL[WALLET.trSel]);
     p.trail -= dt; if (p.trail <= 0) { p.trail = 0.03; burst(p.pos, 1, p.ray ? pMat.green : pMat.smoke, 0.6, 0.5, -0.5); }
   }
 }
@@ -3793,7 +3864,7 @@ function updateEffects(dt) {
     if (p.life <= 0) { scene.remove(p.m); particles.splice(i, 1); }
   }
   for (let i = tracers.length - 1; i >= 0; i--) {
-    const t = tracers[i]; t.life -= dt; t.m.material.opacity = Math.max(0, t.life / 0.06) * 0.8;
+    const t = tracers[i]; t.life -= dt; t.m.material.opacity = Math.max(0, t.life / (t.l0 || 0.06)) * 0.8;
     if (t.life <= 0) { scene.remove(t.m); t.m.geometry.dispose(); t.m.material.dispose(); tracers.splice(i, 1); }
   }
   for (let i = explosions.length - 1; i >= 0; i--) {
