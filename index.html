@@ -287,7 +287,7 @@ WEAPONS.rpg = { name: 'SURSTRÖMMING RPG', dmg: 500, delay: 1.6, auto: false, ma
 WEAPONS.shotgun = { name: 'REMINGTON 870 MCS', dmg: 45, pellets: 8, delay: 0.85, auto: false, mag: 6, reserve: 36, reload: 2.6, kind: 'hitscan', spread: 0.05, kick: 0.16, rot: 0.2, vm: [0.22, -0.24, -0.5], ads: [0, -0.095, -0.3] };
 WEAPONS.raygun2 = { name: 'RAY GUN MARK II', dmg: 200, delay: 0.55, auto: false, mag: 24, reserve: 120, reload: 3.0, kind: 'ray', burst: 2, spread: 0, kick: 0.07, rot: 0.1, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
 WEAPONS.para = { name: 'PARALYZER', dmg: 0, delay: 0.05, auto: true, mag: Infinity, reserve: Infinity, reload: 0, kind: 'beam', spread: 0, kick: 0.025, rot: 0.02, vm: [0.25, -0.27, -0.55], ads: [0.02, -0.15, -0.42] };
-const PARA = { heatShot: 0.0068, cool: 0.3, coolDelay: 0.25, resume: 0.25, range: 17, linger: 4, need: 1.4, dotFrac: 0.17, dotMin: 35, bossFrac: 0.012, slow: 0.14, slowBoss: 0.5 };
+const PARA = { heatShot: 0.0068, cool: 0.3, coolDelay: 0.25, resume: 0.25, range: 17, linger: 4, need: 0.7, dotFrac: 0.45, dotMin: 90, bossFrac: 0.012, slow: 0.14, slowBoss: 0.5 };
 WEAPONS.raygun = { name: 'RAY GUN', dmg: 250, delay: 0.32, auto: false, mag: 20, reserve: 160, reload: 2.8, kind: 'ray', spread: 0, kick: 0.06, rot: 0.08, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
 
 /* ===================================================================
@@ -2185,9 +2185,10 @@ const MP = {
       case 'fx': if (KFX[m.f] && Number.isFinite(m.x) && Number.isFinite(m.z)) killFx(m.x, m.z, m.f); break;
       case 'aw': if (m.dk && Number.isFinite(m.x)) myKillFx(m.x, m.z); if (m.dk && boughtExtraPerks.has('vulture') && Math.random() < 0.2) spawnCloud(m.x, m.z); state.score += m.ds; state.kills += m.dk; if (m.dk) { popPoints('+' + m.ds, m.h); sfx.kill(); } else if (m.ds) popPoints('+' + m.ds, false); updateHUD(); break;
       case 'rev': this.revive(); break;
+      case 'rv': this.revive(); break;
       case 'over': state.wave = m.w; gameOver(); this.leave(); break;
       case 'pj': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; const w = WEAPONS[m.w]; if (w && m.a && m.d) spawnProj(m.w, w, new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.d[0], m.d[1], m.d[2]), true); break; }
-      case 'pz': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; if (Array.isArray(m.a) && Array.isArray(m.d)) paraFog(new THREE.Vector3(+m.a[0] || 0, +m.a[1] || 0, +m.a[2] || 0), new THREE.Vector3(+m.d[0] || 0, +m.d[1] || 0, +m.d[2] || 0), 1); if (this.host && Array.isArray(m.z)) for (const id of m.z) { const z = zombies.find(q => q.mid === id); if (z) applyPara(z, m.i); } break; }
+      case 'pz': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; if (Array.isArray(m.a) && Array.isArray(m.d)) paraFog(new THREE.Vector3(+m.a[0] || 0, +m.a[1] || 0, +m.a[2] || 0), new THREE.Vector3(+m.d[0] || 0, +m.d[1] || 0, +m.d[2] || 0), 1, !!m.g); if (this.host && Array.isArray(m.z)) for (const id of m.z) { const z = zombies.find(q => q.mid === id); if (z) applyPara(z, m.i); } break; }
       case 'gr': if (m.a && m.v) spawnGrenade(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.v[0], m.v[1], m.v[2]), true); break;
       case 'door': if (state.phase === 'playing') applyDoor(m.id, false); else (this.pend = this.pend || {}).dr = ((this.pend.dr) || []).concat([m.id]); break;
       case 'box': boxRx(m); break;
@@ -2274,6 +2275,8 @@ const MP = {
       if (p.g.userData.gun) p.g.userData.gun.rotation.x = p.pt || 0;
       if (p.fl > 0) p.fl -= dt; if (p.fl3) p.fl3.visible = p.fl > 0;
     }
+    { let near = null; if (!this.down && state.phase === 'playing') for (const [id, p] of this.peers) if (p.d && p.tx !== undefined && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 2.2) { near = id; break; }
+      if (near) { this.rt = (this.rt || 0) + dt * (boughtExtraPerks.has('quick') ? 2 : 1); if (this.rt >= 3) { this.send({ t: 'rv', to: near }); const p = this.peers.get(near); if (p) p.d = 0; this.rt = 0; notice('REVIVED TEAMMATE', 1800); sfx.chime(); } } else this.rt = 0; }
     if (this.client) for (const z of zombies) if (z.tx !== undefined && z.spawnT >= 0.9) { const g = z.root.position, k = Math.min(1, dt * 5); if (Math.hypot(z.tx - g.x, z.tz - g.z) > 5) { g.x = z.tx; g.z = z.tz; } else { g.x += (z.tx - g.x) * k; g.z += (z.tz - g.z) * k; } }
     if (!this.hud) { this.hud = document.createElement('div'); this.hud.style.cssText = 'position:absolute;right:24px;top:22px;font-size:9px;line-height:1.9;text-align:right;color:#cfd3d8'; $('hud').appendChild(this.hud); }
     this.hud.style.display = 'block'; this.th -= dt; Voice.tick(dt);
@@ -2342,7 +2345,7 @@ function updateHUD() {
   const PERKC = { jug: ['#d6242c', 'J', 'JUGGER-NOG'], quick: ['#2b86e6', 'Q', 'QUICK REVIVE'], speed: ['#33b05a', 'S', 'SPEED COLA'], double: ['#e0b52a', '2', 'DOUBLE TAP'], stamin: ['#8fb43a', '↑', 'STAMIN-UP'], mule: ['#d4631f', 'M', 'MULE KICK'], vulture: ['#5aa02a', 'V', 'VULTURE AID'], lunar: ['#7a8cff', 'L', 'LUNAR LEGS'], head: ['#d6242c', 'H', 'HEADHUNTER'], cash: ['#e0b52a', '$', 'CASHBACK COLA'] };
   setHTML(el.perks, [jug.bought ? 'jug' : null, ...boughtExtraPerks].filter(Boolean).map(k => `<i class="pk" style="--c:${PERKC[k][0]}" title="${PERKC[k][2]}"><u>${PERKC[k][1]}</u></i>`).join(''));
   setHTML(puHud, (instaT > 0 ? `<span>INSTA-KILL ${Math.ceil(instaT)}</span>` : '') + (doubleT > 0 ? `<span>2X POINTS ${Math.ceil(doubleT)}</span>` : '') + (gasClouds.length && playerHidden() ? '<span>HIDDEN IN GAS</span>' : ''));
-  const hv = Math.max(house.hold / 0.7, cdHold / 0.7, swHold / 4); el.hold.style.display = hv > 0.02 ? 'block' : 'none'; el.hold.firstChild.style.width = Math.min(100, hv * 100) + '%';
+  const hv = Math.max(house.hold / 0.7, cdHold / 0.7, swHold / 4, (MP.rt || 0) / 3); el.hold.style.display = hv > 0.02 ? 'block' : 'none'; el.hold.firstChild.style.width = Math.min(100, hv * 100) + '%';
 }
 let noticeTimer = 0;
 function notice(text, ms = 2600) { el.notice.textContent = text; el.notice.classList.add('on'); clearTimeout(noticeTimer); noticeTimer = setTimeout(() => el.notice.classList.remove('on'), ms); }
@@ -2785,7 +2788,7 @@ function collectPowerup(type, remote) {
     const f = $('flash'); f.style.transition = 'none'; f.style.background = '#fff'; f.style.opacity = 1;
     setTimeout(() => { f.style.transition = 'opacity .7s'; f.style.opacity = 0; setTimeout(() => { f.style.background = ''; f.style.transition = ''; }, 800); }, 500);
   } else if (type === 'ammo') {
-    for (const k of [player.slot1, player.slot2, player.slot3]) if (k) { const w = WEAPONS[k], a = player.ammo[k]; a.mag = w.mag; a.res = w.reserve; }
+    for (const k of [player.slot1, player.slot2, player.slot3]) if (k) { const a = player.ammo[k]; a.mag = magOf(k); a.res = resOf(k); }
     state.reloading = false; notice('MAX AMMO', 2400); sfx.reload();
   } else if (type === 'insta') { instaT = 20; notice('INSTA-KILL!', 2400); }
   else { doubleT = 20; notice('DOUBLE POINTS!', 2400); }
@@ -2901,13 +2904,16 @@ function hurtPlayer(dmg) {
   state.health -= dmg; state.lastHurt = state.time;
   const v = $('vignette'); v.style.opacity = 1; setTimeout(() => { v.style.opacity = 0; }, 160);
   sfx.hurt(); state.shake = Math.max(state.shake, 0.25);
+  if (state.health <= 0 && boughtExtraPerks.has('quick')) { boughtExtraPerks.delete('quick'); state.health = state.maxHealth; state.lastHurt = state.time; notice('QUICK REVIVE SAVED YOU!', 3000); sfx.chime(); return; }
   if (state.health <= 0) { if (MP.on) MP.goDown(); else gameOver(); }
 }
 
 /* ===================================================================
    WEAPONS
 =================================================================== */
-const dmgOf = t => WEAPONS[t].dmg * (player.pap[t] ? 4 : 1) * (boughtExtraPerks.has('double') ? 2 : 1);
+const magOf = t => WEAPONS[t].mag * (player.pap[t] ? 2 : 1), resOf = t => WEAPONS[t].reserve * (player.pap[t] ? 2 : 1);
+const dmgOf = t => WEAPONS[t].dmg * (player.pap[t] ? 2 : 1) * (boughtExtraPerks.has('double') ? 2 : 1);
+const headMul = t => player.pap[t] ? 4 : (boughtExtraPerks.has('head') ? 3 : 2);
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
@@ -2933,12 +2939,12 @@ function switchWeapon(type) {
 }
 function startReload() {
   const w = WEAPONS[player.cur], a = player.ammo[player.cur];
-  if (state.reloading || a.mag >= w.mag || a.res <= 0) return;
+  if (state.reloading || a.mag >= magOf(player.cur) || a.res <= 0) return;
   state.reloading = true; state.reloadT = w.reload * (boughtExtraPerks.has('speed') ? 0.65 : 1) * (player.pap[player.cur] ? 0.7 : 1); sfx.reload();
 }
 function giveWeapon(type) {
   const w = WEAPONS[type], a = player.ammo[type], had = player.slot1 === type || player.slot2 === type || player.slot3 === type;
-  a.mag = w.mag; a.res = w.reserve; if (!had) player.pap[type] = false;
+  if (!had) player.pap[type] = false; a.mag = magOf(type); a.res = resOf(type);
   if (!had) { if (!player.slot2) player.slot2 = type; else if (!player.slot3 && boughtExtraPerks.has('mule')) player.slot3 = type; else if (player.cur === player.slot1) player.slot1 = type; else if (player.cur === player.slot3) player.slot3 = type; else player.slot2 = type; }
   player.cur = type; state.reloading = false; state.swapT = 0.25; sfx.swap(); setViewmodels();
 }
@@ -2979,7 +2985,7 @@ function shoot() {
       let end;
       if (hits.length) {
         const h = hits[0]; end = h.point; const z = h.object.userData.zombie;
-        if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1) * (h.object.userData.part === 'head' ? (boughtExtraPerks.has('head') ? 3 : 2) : 1), h.point, h.object.userData.part === 'head');
+        if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1) * (h.object.userData.part === 'head' ? headMul(player.cur) : 1), h.point, h.object.userData.part === 'head');
         else burst(h.point, 4, pMat.spark, 4, 0.3, 6);
       } else end = raycaster.ray.at(80, new THREE.Vector3());
       if (pi < 3) spawnTracer(muzzle, end);
@@ -2989,17 +2995,20 @@ function shoot() {
 }
 /* ---------- PARALYZER (Buried wonder weapon) ---------- */
 pMat.pfog = new THREE.MeshBasicMaterial({ color: 0xa66bff, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+pMat.pfogG = new THREE.MeshBasicMaterial({ color: 0x4dff6a, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+pMat.psparkG = new THREE.MeshBasicMaterial({ color: 0xb8ffc4 });
 pMat.pspark = new THREE.MeshBasicMaterial({ color: 0xd9b8ff });
 pMat.steam = new THREE.MeshBasicMaterial({ color: 0xb8b0c4, transparent: true, opacity: 0.35, depthWrite: false });
 const pfGeo = new THREE.SphereGeometry(0.2, 8, 6), auraGeo = new THREE.SphereGeometry(0.8, 12, 8);
+const auraMatG = new THREE.MeshBasicMaterial({ color: 0x4dff6a, transparent: true, opacity: 0.24, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
 const auraMat = new THREE.MeshBasicMaterial({ color: 0xa060ff, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
 const paraLight = new THREE.PointLight(0xa060ff, 0, 14, 2); paraLight.position.set(0.2, -0.05, -1.1); camera.add(paraLight);
-function paraFog(p, dir, n = 2) {
+function paraFog(p, dir, n = 2, green = false) {
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(pfGeo, pMat.pfog); m.position.copy(p).addScaledVector(dir, rnd(0, 1.2)); m.scale.setScalar(rnd(0.6, 1.2)); scene.add(m);
+    const m = new THREE.Mesh(pfGeo, green ? pMat.pfogG : pMat.pfog); m.position.copy(p).addScaledVector(dir, rnd(0, 1.2)); m.scale.setScalar(rnd(0.6, 1.2)); scene.add(m);
     particles.push({ m, v: new THREE.Vector3(dir.x * rnd(2, 6) + rnd(-0.8, 0.8), dir.y * rnd(2, 6) + rnd(-0.3, 0.9), dir.z * rnd(2, 6) + rnd(-0.8, 0.8)), life: rnd(0.9, 1.5), grav: -0.3, grow: rnd(1.4, 2.4) });
   }
-  if (Math.random() < 0.5) fxBurst(p.clone().addScaledVector(dir, 0.6), 1, pMat.pspark, 3, 0.5, 2, 0.5);
+  if (Math.random() < 0.5) fxBurst(p.clone().addScaledVector(dir, 0.6), 1, green ? pMat.psparkG : pMat.pspark, 3, 0.5, 2, 0.5);
 }
 function applyPara(z, by) {
   if (z.dead) return;
@@ -3030,25 +3039,25 @@ function paraTick() {
   }
   if (hit.length) hitmarker(false);
   const r = v => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)], st = _pc.clone().addScaledVector(_pd, 0.7);
-  if (MP.client) { if (hit.length || MP.on) MP.send({ t: 'pz', a: r(st), d: r(_pd), z: hit.map(z => z.mid) }); for (const z of hit) { z.para = PARA.linger; } }
-  else { for (const z of hit) applyPara(z, null); if (MP.on) MP.send({ t: 'pz', a: r(st), d: r(_pd), z: [] }); }
+  if (MP.client) { if (hit.length || MP.on) MP.send({ t: 'pz', g: player.pap.para ? 1 : 0, a: r(st), d: r(_pd), z: hit.map(z => z.mid) }); for (const z of hit) { z.para = PARA.linger; } }
+  else { for (const z of hit) applyPara(z, null); if (MP.on) MP.send({ t: 'pz', g: player.pap.para ? 1 : 0, a: r(st), d: r(_pd), z: [] }); }
 }
 function shootPara() {
   if (state.over) { if (state.fireCd <= 0) { sfx.empty(); state.fireCd = 0.3; } return; }
-  state.fireCd = WEAPONS.para.delay; state.heat = Math.min(1, state.heat + PARA.heatShot); state.heatIdle = 0; state.recoil = 0.3; state.paraT = 0.12;
+  state.fireCd = WEAPONS.para.delay; state.heat = Math.min(1, state.heat + PARA.heatShot * (player.pap.para ? 0.5 : 1)); state.heatIdle = 0; state.recoil = 0.3; state.paraT = 0.12;
   sfx.para();
   camera.getWorldDirection(_v); const st = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(_v, 0.8); st.y -= 0.1;
-  paraFog(st, _v, 2);
+  paraFog(st, _v, 2, !!player.pap.para);
   state.paraTick -= WEAPONS.para.delay; if (state.paraTick <= 0) { state.paraTick = 0.1; paraTick(); }
   if (state.heat >= 1) { state.over = true; notice('PARALYZER OVERHEATED', 1800); sfx.overheat(); for (let i = 0; i < 8; i++) fxBurst(st, 1, pMat.steam, 2.5, 1.2, -1.4, 3, 0.9); }
 }
 function updateParaWeapon(dt) {
   state.paraT = Math.max(0, state.paraT - dt); state.heatIdle += dt;
-  if (state.heatIdle > PARA.coolDelay && state.heat > 0) { state.heat = Math.max(0, state.heat - PARA.cool * dt); if (state.over && state.heat <= PARA.resume) { state.over = false; notice('PARALYZER READY', 900); } }
+  if (state.heatIdle > PARA.coolDelay && state.heat > 0) { state.heat = Math.max(0, state.heat - PARA.cool * (player.pap.para ? 2 : 1) * dt); if (state.over && state.heat <= PARA.resume) { state.over = false; notice('PARALYZER READY', 900); } }
   const m = vm.para, U = m.userData, on = player.cur === 'para' && state.paraT > 0;
-  U.cone.visible = on && state.knifeT <= 0; U.cone.material.opacity = 0.05 + Math.random() * 0.05; paraLight.intensity = on ? 7 + Math.random() * 4 : 0;
+  U.cone.visible = on && state.knifeT <= 0; U.cone.material.opacity = 0.05 + Math.random() * 0.05; paraLight.intensity = on ? 7 + Math.random() * 4 : 0; { const ch = player.pap.para ? 0x4dff6a : 0xa060ff; if (U.cone.material.color.getHex() !== ch) { U.cone.material.color.setHex(ch); paraLight.color.setHex(ch); } }
   const lit = Math.round(state.heat * 8);
-  for (let i = 0; i < 8; i++) { const hot = i >= 5, c = i < lit ? (state.over ? 0xff3010 : hot ? 0xff9a2a : 0xb070ff) : 0x000000; if (U.segs[i].emissive.getHex() !== c) U.segs[i].emissive.setHex(c); }
+  for (let i = 0; i < 8; i++) { const hot = i >= 5, c = i < lit ? (state.over ? 0xff3010 : hot ? 0xff9a2a : (player.pap.para ? 0x4dff6a : 0xb070ff)) : 0x000000; if (U.segs[i].emissive.getHex() !== c) U.segs[i].emissive.setHex(c); }
   U.core.material.emissiveIntensity = 2.2; U.halo.material.opacity = 0.2 + (on ? 0.25 : 0) + Math.sin(state.time * 5) * 0.05;
   U.halo.scale.setScalar(on ? 1.25 + Math.random() * 0.2 : 1);
   for (let i = 0; i < U.coils.length; i++) U.coils[i].scale.setScalar(on ? 1 + Math.sin(state.time * 40 - i * 1.4) * 0.12 : 1);
@@ -3059,11 +3068,13 @@ function updatePara(dt) {
     if (z.dead) continue;
     if (!MP.client) {   // once a zombie has soaked up enough beam it keeps rotting until it dies
       if (!z.paraDot && z.para > 0 && (z.paraExp || 0) >= (z.paraPap ? PARA.need * 0.5 : PARA.need)) z.paraDot = true;
-      if (z.paraDot) { paraHurt(z, Math.max(PARA.dotMin, z.maxHp * (z.boss ? PARA.bossFrac : PARA.dotFrac * (z.paraPap ? 1.6 : 1))) * dt); if (z.dead) continue; }
+      if (z.paraDot) { z.paraPt = (z.paraPt || 0) + dt; if (z.paraPt >= 0.4) { z.paraPt = 0; if (!z.paraBy) { addScore(10); popPoints('+10', false); } else if (MP.on && MP.host) MP.send({ t: 'aw', to: z.paraBy, ds: 10, dk: 0, h: false, x: +z.root.position.x.toFixed(1), z: +z.root.position.z.toFixed(1) }); }
+        paraHurt(z, Math.max(PARA.dotMin, z.maxHp * (z.boss ? PARA.bossFrac : PARA.dotFrac * (z.paraPap ? 1.6 : 1))) * dt); if (z.dead) continue; }
     }
     if (z.para > 0) {
       z.para -= dt;
-      if (!z.aura) { z.aura = new THREE.Mesh(auraGeo, auraMat); z.aura.position.y = 1.05; z.aura.scale.set(1, 1.35, 1); z.root.add(z.aura); }
+      if (!z.aura) { z.aura = new THREE.Mesh(auraGeo, z.paraPap ? auraMatG : auraMat); z.aura.position.y = 1.05; z.aura.scale.set(1, 1.35, 1); z.root.add(z.aura); }
+      if (z.aura.material !== (z.paraPap ? auraMatG : auraMat)) z.aura.material = z.paraPap ? auraMatG : auraMat;
       z.aura.visible = true; z.aura.scale.setScalar(0.95 + Math.sin(state.time * 6 + z.phase) * 0.08); z.aura.scale.y *= 1.3;
       if (Math.random() < dt * 5) { _pt.set(z.root.position.x, 0.5 + Math.random() * 1.4, z.root.position.z); fxBurst(_pt, 1, pMat.pfog, 0.6, 1.0, -0.4, 2.2, 1.0); }
     } else { if (z.aura && z.aura.visible) z.aura.visible = false; if (z.paraExp) z.paraExp = Math.max(0, z.paraExp - dt * 0.6); }
@@ -3487,7 +3498,7 @@ const CHEATS = {
   round: () => cheatRound(10),
   perk: () => { for (const k of ['quick', 'speed', 'double', 'stamin', 'mule', 'vulture', 'lunar', 'head', 'cash']) boughtExtraPerks.add(k); if (!jug.bought) { jug.bought = true; state.maxHealth = 200; } state.health = state.maxHealth; notice('CHEAT: ALL PERKS', 2600); sfx.chime(); sfx.heal(); },
   power: () => { state.powerAll = !state.powerAll; notice(state.powerAll ? 'CHEAT: ALL ZOMBIES DROP POWER-UPS' : 'CHEAT: POWER-UP DROPS OFF', 2600); sfx.chime(); },
-  ammo: () => { for (const t in player.ammo) { const w = WEAPONS[t], a = player.ammo[t]; if (w && a) { a.mag = w.mag; a.res = w.reserve; } } state.reloading = false; notice('CHEAT: FULL AMMO', 2600); sfx.chime(); },
+  ammo: () => { for (const t in player.ammo) { const w = WEAPONS[t], a = player.ammo[t]; if (w && a) { a.mag = magOf(t); a.res = resOf(t); } } state.reloading = false; notice('CHEAT: FULL AMMO', 2600); sfx.chime(); },
   nuke: () => { if (MP.client) { notice('ONLY THE HOST CAN NUKE'); return; } for (const z of [...zombies]) damageZombie(z, 1e7, new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), false); notice('CHEAT: NUKE', 2600); sfx.explode(); },
   insta: () => { state.insta = !state.insta; notice(state.insta ? 'CHEAT: INSTA-KILL ON' : 'CHEAT: INSTA-KILL OFF', 2600); sfx.chime(); },
   fast: () => { state.fast = !state.fast; notice(state.fast ? 'CHEAT: SUPER SPEED ON' : 'CHEAT: SUPER SPEED OFF', 2600); sfx.chime(); },
@@ -3607,7 +3618,7 @@ function updateCombat(dt) {
     state.reloadT -= dt;
     if (state.reloadT <= 0) {
       state.reloading = false;
-      const a = player.ammo[player.cur], need = w.mag - a.mag, take = a.res === Infinity ? need : Math.min(need, a.res);
+      const a = player.ammo[player.cur], need = magOf(player.cur) - a.mag, take = a.res === Infinity ? need : Math.min(need, a.res);
       a.mag += take; if (a.res !== Infinity) a.res -= take;
       if (player.cur === 'crossbow') vm.crossbow.userData.bolt.visible = a.mag > 0;
     }
@@ -3838,8 +3849,8 @@ function buyPap() {
   const t = player.cur;
   if (player.pap[t]) { notice('ALREADY PACKED'); sfx.deny(); return; }
   if (state.score < PAP_COST) { notice(`NEED ${PAP_COST} POINTS`); sfx.deny(); return; }
-  state.score -= PAP_COST; player.pap[t] = true; const w = WEAPONS[t], a = player.ammo[t]; a.mag = w.mag; a.res = w.reserve; state.reloading = false;
-  sfx.buy(); sfx.chime(); setViewmodels(); notice(`${w.name} PACK-A-PUNCHED! DAMAGE x4`, 3000);
+  state.score -= PAP_COST; player.pap[t] = true; const w = WEAPONS[t], a = player.ammo[t]; a.mag = magOf(t); a.res = resOf(t); state.reloading = false;
+  sfx.buy(); sfx.chime(); setViewmodels(); notice(`${w.name} PACK-A-PUNCHED! HEADSHOTS x4, DOUBLE AMMO, FAST RELOAD`, 3000);
 }
 function updatePerks(dt) {
   if (doorNear() && keys['KeyE']) {
