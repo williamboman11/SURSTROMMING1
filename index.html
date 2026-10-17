@@ -2585,7 +2585,7 @@ const SND_B64 = {r1:'SUQzBAAAAAAmT1RYWFgAAAAZAAADeWVhcgAxMDFzb3VuZGJvYXJkcy5jb20
 const SND = {};
 function loadSnds() {
   if (!audioCtx) return;
-  for (const k in SND_B64) { if (SND[k] !== undefined) continue; SND[k] = null; try { const bin = atob(SND_B64[k]), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); audioCtx.decodeAudioData(u.buffer, b => { SND[k] = b; }, () => {}); } catch (e) {} }
+  for (const k in SND_B64) { if (SND[k] !== undefined) continue; SND[k] = null; try { const bin = atob(SND_B64[k]), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); audioCtx.decodeAudioData(u.buffer, b => { if (!(k === 'jingle' && boxJingleCustom)) SND[k] = b; }, () => {}); } catch (e) {} }
 }
 function playSnd(name, vol = 1, pan = 0, fade = 0) {
   if (!audioCtx) return null; loadSnds(); const b = SND[name]; if (!b) return null;
@@ -2595,6 +2595,9 @@ function playSnd(name, vol = 1, pan = 0, fade = 0) {
   src.start(); return { src, g };
 }
 let goSnd = null;
+function startJingle(vol) { stopJingle(); mbox.jg = playSnd('jingle', vol); mbox.rollDur = SND.jingle ? SND.jingle.duration : 5.5; }   // the box rolls for exactly as long as the jingle plays
+let boxJingleCustom = false;
+function loadBoxJingleFile() { try { fetch('mystery box jingle.mp3').then(r => r.ok ? r.arrayBuffer() : null).then(ab => { if (ab && audioCtx) audioCtx.decodeAudioData(ab, b => { SND.jingle = b; boxJingleCustom = true; }, () => {}); }).catch(() => {}); } catch (e) {} }
 function stopJingle() { const j = mbox.jg; mbox.jg = null; if (j) { try { j.g.gain.cancelScheduledValues(0); j.g.gain.setValueAtTime(j.g.gain.value, audioCtx.currentTime); j.g.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3); j.src.stop(audioCtx.currentTime + 0.35); } catch (e) {} } }
 function stopGoSnd() { if (goSnd) { try { goSnd.g.gain.cancelScheduledValues(0); goSnd.g.gain.setValueAtTime(goSnd.g.gain.value, audioCtx.currentTime); goSnd.g.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4); goSnd.src.stop(audioCtx.currentTime + 0.45); } catch (e) {} goSnd = null; } }
 let lastGroan = -1;
@@ -2605,7 +2608,7 @@ function initAudio() {
     noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    startWind(); loadSnds(); loadVerityAudio(); loadRoundAudio(); loadAlarmAudio(); playEndMp3();
+    startWind(); loadSnds(); loadBoxJingleFile(); loadVerityAudio(); loadRoundAudio(); loadAlarmAudio(); playEndMp3();
   } catch (e) { audioCtx = null; }
 }
 const Music = {
@@ -2916,7 +2919,7 @@ const barFg = new THREE.MeshBasicMaterial({ color: 0x7fe05a, depthWrite: false }
 
 function createZombie(x, z, opt = {}) {
   const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
-  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(1.0, 1.1) : boss ? 1.75 : hound ? 1 : rnd(1.12, 1.24); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.88, 1.04), s * rnd(0.97, 1.05), s * rnd(0.9, 1.04));
+  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.9, 0.98) : boss ? 1.75 : hound ? 1 : rnd(0.95, 1.03); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.92, 1.06), s * rnd(0.98, 1.04), s * rnd(0.92, 1.06));
   const G = (par, px, py, pz) => { const g = new THREE.Group(); g.position.set(px, py, pz); par.add(g); return g; };
   const M = (geo, par, part, cast = true) => { const m = new THREE.Mesh(geo, zMat); m.castShadow = cast; par.add(m); m.userData.part = part; return m; };
   const upper = G(root, 0, hound ? 0.62 : 0.9, 0), torso = M(v.torso, upper, 'body'), headP = G(upper, 0, hound ? 0.14 : 0.74, hound ? 0.66 : 0), head = M(v.head, headP, 'head');
@@ -2931,15 +2934,15 @@ function createZombie(x, z, opt = {}) {
   const runner = !boss && !hound && wave >= 3 && Math.random() < Math.min(0.7, 0.12 + (wave - 3) * 0.07);
   let hp = ZOMBIE_BASE_HP + HP_PER_ROUND * (wave - 1);
   let speed = runner ? Math.min(4.0 + wave * 0.05 + Math.random() * 0.7, 5.4) : Math.min(1.25 + wave * 0.09 + Math.random() * 0.5, 2.5);
-  if (boss) { hp = opt.warlord ? 3000 + 1500 * (wave / 8 - 1) : 2000 + 1000 * (wave / 10 - 1); speed = opt.warlord ? 5.0 : 3.1; }
+  if (boss) { hp = 2 * (opt.warlord ? 3000 + 1500 * (wave / 8 - 1) : 2000 + 1000 * (wave / 10 - 1)); speed = 5.0; }
   if (kind === 'verity') hp = Math.round(hp * 1.1);
   if (kind === 'tung') { hp = Math.round(hp * 1.25); speed = Math.min(speed * 1.25 + 0.4, 5.6); }
-  if (kind === 'vboss') { hp = 2500 + 1500 * (wave / 10 - 1); speed = 3.4; }
+  if (kind === 'vboss') { hp = 2 * (2500 + 1500 * (wave / 10 - 1)); speed = 5.0; }
   if (hound) { hp = 60 + wave * 25; speed = Math.min(6.2 + wave * 0.05 + Math.random() * 0.6, 8); }
   const zb = {
     root, upper, head: headP, torso, armL: aL.a, armR: aR.a, eL: aL.e, eR: aR.e, legL: lL.l, legR: lR.l, kL: lL.k, kR: lR.k,
     meshes: [torso, head, aL.u, aL.f, aR.u, aR.f, lL.t, lL.sh, lR.t, lR.sh], s, style: (Math.random() * 3) | 0, limp: Math.random() < 0.4,
-    hp, maxHp: hp, speed, kind, boss, warlord: !!opt.warlord, runner: runner || !!opt.warlord, hound, reach: boss ? 2.3 : hound ? 1.5 : 1.2, dmg: boss ? (opt.warlord ? 55 : 60) : hound ? 25 : ZOMBIE_DAMAGE, throwT: 0, canCd: 3,
+    hp, maxHp: hp, speed, kind, boss, warlord: !!opt.warlord, runner: runner || !!opt.warlord || boss, hound, reach: boss ? 2.3 : hound ? 1.5 : 1.2, dmg: boss ? (opt.warlord ? 55 : 60) : hound ? 25 : ZOMBIE_DAMAGE, throwT: 0, canCd: 3,
     phase: Math.random() * 10, attackCd: 0, spawnT: 0, growlT: rnd(0.5, 3), stagger: 0, stuck: 0, side: Math.random() < 0.5 ? 1 : -1, dead: false, bar: null, deadT: 0, fd: 1,
   };
   zb.meshes.forEach(m => { m.userData.zombie = zb; });
@@ -3430,7 +3433,7 @@ function interact() {
     mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2', 'rpg', 'rpg', 'revolver', 'sniper', 'minigun', 'dbl', 'thumper', 'pistol', ...(curMap.id === 'buried' ? ['para', 'para', 'para'] : [])]);
     mbox.display.visible = true; mbox.display.position.y = 0.9;
     if (MP.on) MP.send({ t: 'box', a: 'open', r: mbox.result, u: mbox.uses || 0 });
-    stopJingle(); mbox.jg = playSnd('jingle', 0.85); if (!mbox.jg) [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach(i => { setTimeout(() => { if (mbox.state === 'rolling') tone('triangle', [523, 659, 784, 659][i % 4], [523, 659, 784, 659][i % 4], 0.15, 0.1); }, i * 200); });
+    startJingle(0.85);
   } else if (mbox.state === 'ready') {
     if (mbox.result === 'teddy') return;
     if (MP.on && mbox.owner && mbox.owner !== MP.id) { notice('THIS WEAPON IS SOMEONE ELSE\'S', 1500); sfx.deny(); return; }
@@ -3453,7 +3456,7 @@ function moveBox() {
 }
 function boxRx(m) {
   const b = mbox;
-  if (m.a === 'open') { if (b.state !== 'closed') return; b.state = 'rolling'; b.t = 0; b.cycleT = 0; b.result = m.r; b.owner = m.i; b.uses = m.u || 0; b.display.visible = true; b.display.position.y = 0.9; stopJingle(); b.jg = playSnd('jingle', 0.7); }
+  if (m.a === 'open') { if (b.state !== 'closed') return; b.state = 'rolling'; b.t = 0; b.cycleT = 0; b.result = m.r; b.owner = m.i; b.uses = m.u || 0; b.display.visible = true; b.display.position.y = 0.9; startJingle(0.7); }
   else if (m.a === 'take') { stopJingle(); b.state = 'closed'; b.display.visible = false; b.uses = m.u || 0; b.owner = null; }
   else if (m.a === 'move') { placeBox(m.x, m.z, m.r); b.state = 'closed'; b.group.visible = true; b.display.visible = false; b.uses = 0; b.owner = null; }
 }
@@ -3476,9 +3479,9 @@ function updateBox(dt) {
   b.light.intensity = b.state === 'closed' ? 14 : 30;
   if (b.state === 'rolling') {
     b.t += dt; b.cycleT -= dt;
-    b.display.position.y = 0.9 + Math.min(1, b.t / 5.5) * 0.9;
+    b.display.position.y = 0.9 + Math.min(1, b.t / (b.rollDur || 5.5)) * 0.9;
     if (b.cycleT <= 0) { b.cycleT = 0.16; const ks = Object.keys(b.models).filter(k => k !== 'teddy' && (k !== 'para' || curMap.id === 'buried')); b.ci = ((b.ci || 0) + 1) % ks.length; ks.forEach((k, i) => { b.models[k].visible = i === b.ci; }); }
-    if (b.t >= 5.5) { b.state = 'ready'; if (b.result === 'teddy') stopJingle(); b.readyT = 10; b.tt = 0; for (const k in b.models) b.models[k].visible = k === b.result; if (b.result === 'teddy') { if (!playSnd('teddy', 1)) sfx.chime(); } else sfx.chime(); }
+    if (b.t >= (b.rollDur || 5.5)) { b.state = 'ready'; if (b.result === 'teddy') stopJingle(); b.readyT = 10; b.tt = 0; for (const k in b.models) b.models[k].visible = k === b.result; if (b.result === 'teddy') { if (!playSnd('teddy', 1)) sfx.chime(); } }
   } else if (b.state === 'ready') {
     b.readyT -= dt;
     if (b.result === 'teddy') {
@@ -3487,7 +3490,11 @@ function updateBox(dt) {
     } else
     if (b.readyT <= 0) { b.state = 'closed'; b.display.visible = false; }
   }
-  if (b.display.visible) { b.display.rotation.y += dt * 1.6; b.display.position.y += Math.sin(state.time * 3) * 0.002; }
+  if (b.display.visible) {
+    if (b.state === 'rolling') b.display.rotation.y += dt * 1.6;   // spins only while the jingle plays, then settles
+    else { const tr = Math.round(b.display.rotation.y / (Math.PI * 2)) * Math.PI * 2; b.display.rotation.y += (tr - b.display.rotation.y) * Math.min(1, dt * 6); }
+    b.display.position.y += Math.sin(state.time * 3) * 0.002;
+  }
 }
 function updateCan(dt) {
   if (can.used) return;
@@ -3536,9 +3543,10 @@ function startRound() {
   state.houndRound = state.wave >= 7 && state.wave % 7 === 0 && state.wave % 10 !== 0;
   if (state.houndRound) { state.roundTotal = 8 + Math.floor(state.wave * 0.7); playSnd('hound', 1); }
   if (!state.houndRound) sfx.round();
-  if (curMap.id === 'verity') { if (state.wave % 10 === 0) spawnBoss(false, 'vboss'); }
-  else if ((curMap.id === 'factory' || curMap.id === 'osterled') && state.wave % 10 === 0) spawnBoss();
-  else if (curMap.id === 'ironmire') { if (state.wave % 8 === 0) spawnBoss(true); if (state.wave % 5 === 0) spawnGiant(); }
+  const nB10 = Math.floor(state.wave / 10), nB8 = Math.floor(state.wave / 8);   // one more boss every time the boss round comes round again
+  if (curMap.id === 'verity') { if (state.wave % 10 === 0) for (let i = 0; i < nB10; i++) spawnBoss(false, 'vboss'); }
+  else if ((curMap.id === 'factory' || curMap.id === 'osterled') && state.wave % 10 === 0) for (let i = 0; i < nB10; i++) spawnBoss();
+  else if (curMap.id === 'ironmire') { if (state.wave % 8 === 0) for (let i = 0; i < nB8; i++) spawnBoss(true); if (state.wave % 5 === 0) spawnGiant(); }
 }
 function endRound() {
   state.roundState = 'intermission'; state.interT = 7;
@@ -4030,7 +4038,7 @@ function updateZombies(dt) {
       if (z.throwT > 0) { z.throwT -= dt; z.armR.rotation.x = -3.0 + (0.55 - z.throwT) * 3.2; z.eR.rotation.x = -0.3; }
       if (z.canCd <= 0 && dist > 6 && dist < 34) { z.canCd = 3.2 + Math.random() * 2; z.throwT = 0.55; throwCan(gp, z.s); }
     }
-    if (z.runner) { z.armL.rotation.x = -0.5 + sw * 1.1; z.armR.rotation.x = -0.5 - sw * 1.1; z.eL.rotation.x = -1.1; z.eR.rotation.x = -1.1; }
+    if (z.runner && !(z.throwT > 0)) { z.armL.rotation.x = -0.5 + sw * 1.1; z.armR.rotation.x = -0.5 - sw * 1.1; z.eL.rotation.x = -1.1; z.eR.rotation.x = -1.1; }
 
     if (z.kind === 'tung') {   // bat swing, thin limbs
       z.head.rotation.set(0, 0, 0); const swg = attacking ? Math.abs(Math.sin(t * 9)) : 0;
