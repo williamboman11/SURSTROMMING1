@@ -1648,11 +1648,34 @@ function buildVariant() {
   const m = a => mergeGeometries(a);
   return { torso: m(t), head: m(h), eyes, ua: m(ua), fa: m(fa), th: m(th), sh: m(sh) };
 }
+/* ---- zombie detail helpers: value-noise grime / blood baked into vertex colours ---- */
+function vnoise(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
+  const h = (a, b, c) => { const n = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453; return n - Math.floor(n); };
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf), l = (a, b, t) => a + (b - a) * t;
+  return l(l(l(h(xi, yi, zi), h(xi + 1, yi, zi), u), l(h(xi, yi + 1, zi), h(xi + 1, yi + 1, zi), u), v),
+           l(l(h(xi, yi, zi + 1), h(xi + 1, yi, zi + 1), u), l(h(xi, yi + 1, zi + 1), h(xi + 1, yi + 1, zi + 1), u), v), w);
+}
+function grimeGeo(g, seed = 0, bloodAmt = 1, dirt = 1) {
+  const p = g.attributes.position, nr = g.attributes.normal, c = g.attributes.color, n = p.count;
+  for (let i = 0; i < n; i++) {
+    const x = p.getX(i) + seed * 3.1, y = p.getY(i), z = p.getZ(i) - seed * 2.3, ny = nr ? nr.getY(i) : 0;
+    const a = vnoise(x * 11, y * 11, z * 11), b = vnoise(x * 38 + 7, y * 38, z * 38), s = vnoise(x * 5 + 3, y * 5 + 9, z * 5);
+    const k = (0.66 + 0.5 * a + 0.24 * (b - 0.5) - 0.2 * Math.max(0, -ny)) * (1 - 0.18 * dirt * Math.max(0, 0.5 - a));
+    let r = c.getX(i) * k, gg = c.getY(i) * k, bl = c.getZ(i) * k;
+    const bm = (s - 0.6) * 4.2;
+    if (bm > 0) { const m = Math.min(0.82, bm) * bloodAmt; r = r * (1 - m) + 0.3 * m; gg = gg * (1 - m) + 0.022 * m; bl = bl * (1 - m) + 0.03 * m; }
+    c.setXYZ(i, r, gg, bl);
+  }
+  c.needsUpdate = true; return g;
+}
+
 function buildZVariant(type) {
   const { C, add, Cy, Sp, Bx, Co } = mkB(), R = p => Math.random() < p, rnd2 = (a, b) => a + Math.random() * (b - a), Tor = (r, t, a = 6, b = 14) => new THREE.TorusGeometry(r, t, a, b);
   const SKN = type === 'burnt' ? ['#5a4236', '#4b392f', '#63483a'] : ['#8b7d70', '#7d7166', '#9a8a78', '#6f6760', '#86786b'];
-  const skin = C(pick(SKN)), skinD = skin.clone().multiplyScalar(0.6), skinL = skin.clone().multiplyScalar(1.12);
+  const skin = C(pick(SKN)), skinD = skin.clone().multiplyScalar(0.6), skinL = skin.clone().multiplyScalar(1.14);
   const bone = C('#d9d2b4'), blood = C('#4a080c'), fresh = C('#8a1a20'), dark = C('#120c0a'), mus = C('#6a2026'), metal = C('#6a6a6e'), boots = C('#2a221c');
+  const teeth = C('#cbbd8c'), teethD = C('#8e7e4e'), gum = C('#7a2a30'), lip = C('#5c2c2c'), veinC = C('#4c5a74'), sinew = C('#a8847a');
   let cloth, cloth2, pants, hairC = C(pick(HAIRS)), bald = false, helm = null, red = false;
   if (type === 'worker') { cloth = C(pick(['#5a5048', '#4a5666', '#62605c', '#6a5a3a'])); cloth2 = C('#6aa0a0'); pants = C(pick(['#3a4650', '#34404a'])); }
   else if (type === 'diner') { cloth = C(pick(['#9a8660', '#8c7a58', '#a08c66'])); cloth2 = cloth.clone().multiplyScalar(0.75); pants = cloth.clone().multiplyScalar(0.9); bald = true; }
@@ -1662,20 +1685,41 @@ function buildZVariant(type) {
   else if (type === 'biker') { cloth = C(pick(['#1e1c1e', '#2a2220'])); cloth2 = C('#6a6a6e'); pants = C('#2a3040'); }
   else if (type === 'farmer') { cloth = C(pick(['#7a4a3a', '#5a6a7a', '#8a7a4a'])); cloth2 = C('#3a4a6a'); pants = C('#3a4a6a'); }
   else { cloth = C(pick(['#5a5a42', '#6a6046', '#50503a'])); cloth2 = C('#6a6a40'); pants = C('#4a4a3a'); helm = 'army'; }
+  const clothD = cloth.clone().multiplyScalar(0.7);
   const t = [], h = [], ua = [], fa = [], th = [], sh = [], fl = (a, b) => rnd2(a, b);
-  // torso: pelvis, belly, chest, shoulders, neck
-  add(t, Sp(0.2, 12, 8), pants, 0, 0.0, 0, 1.15, 0.8, 0.8); add(t, Cy(0.23, 0.2, 0.34, 12), cloth, 0, 0.2, 0, 1.08, 1, 0.78); add(t, Sp(0.27, 14, 10), cloth, 0, 0.5, 0, 1.05, 0.95, 0.78);
-  for (const s of [-1, 1]) add(t, Sp(0.1, 10, 8), cloth, s * 0.28, 0.62, 0);
-  add(t, Cy(0.065, 0.078, 0.14, 10), skinD, 0, 0.74, 0); add(t, Cy(0.1, 0.13, 0.05, 12), cloth2, 0, 0.69, 0, 1, 1, 0.9);
-  add(t, Cy(0.215, 0.215, 0.04, 12), type === 'soldier' ? C('#3a2e22') : dark, 0, 0.06, 0, 1.12, 1, 0.8);
-  for (let i = 0; i < 6; i++) add(t, Bx(0.06, fl(0.1, 0.26), 0.012), cloth.clone().multiplyScalar(0.75), -0.2 + i * 0.08, -0.02, 0.17, 1, 1, 1, 0.12, 0, fl(-0.3, 0.3));
-  for (let i = 0; i < 8; i++) add(t, Sp(fl(0.035, 0.09), 8, 6), blood, fl(-0.2, 0.2), fl(0.12, 0.62), 0.2, 1.3, 1, 0.28);
-  if (R(0.7)) { add(t, Sp(0.12, 8, 6), mus, fl(-0.12, 0.12), fl(0.3, 0.5), 0.2, 1.1, 1.3, 0.3); add(t, Sp(0.06, 6, 5), fresh, 0, 0.36, 0.215, 1, 1.4, 0.3); }
-  if (R(0.35)) { add(t, Sp(0.12, 8, 6), dark, 0.04, 0.42, 0.2, 1.1, 1.5, 0.45); for (let i = 0; i < 5; i++) add(t, Cy(0.011, 0.011, 0.2, 5), bone, 0.04, 0.3 + i * 0.045, 0.235, 1, 1, 1, 0, 0, Math.PI / 2 + (i - 2) * 0.07); }
+  // hair / bristle tuft pointing out of a sphere surface (direction -> Euler)
+  const tuft = (arr, dx, dy, dz, rad, len, col, cy = 0.17) => {
+    const m = Math.hypot(dx, dy, dz); dx /= m; dy /= m; dz /= m;
+    add(arr, Co(0.013, len, 4), col, dx * rad, cy + dy * rad * 1.08, dz * rad, 1, 1, 1, Math.atan2(dz, dy), 0, -Math.asin(dx));
+  };
+
+  /* ---------------- TORSO ---------------- */
+  add(t, Sp(0.2, 12, 8), pants, 0, 0.0, 0, 1.15, 0.8, 0.8); add(t, Cy(0.23, 0.2, 0.34, 14), cloth, 0, 0.2, 0, 1.08, 1, 0.78); add(t, Sp(0.27, 16, 10), cloth, 0, 0.5, 0, 1.05, 0.95, 0.78);
+  for (const s of [-1, 1]) { add(t, Sp(0.1, 12, 8), cloth, s * 0.28, 0.62, 0); add(t, Sp(0.07, 8, 6), clothD, s * 0.2, 0.7, -0.01, 1.4, 0.6, 1); }   // shoulders + trapezius slope
+  add(t, Cy(0.065, 0.078, 0.14, 12), skinD, 0, 0.74, 0);
+  for (const s of [-1, 1]) add(t, Cy(0.011, 0.011, 0.15, 5), sinew, s * 0.038, 0.76, 0.045, 1, 1, 1, 0.12, 0, -s * 0.22);   // neck tendons
+  add(t, Cy(0.1, 0.13, 0.05, 14), cloth2, 0, 0.69, 0, 1, 1, 0.9);
+  for (const s of [-1, 1]) add(t, Bx(0.07, 0.012, 0.075), cloth2.clone().multiplyScalar(1.1), s * 0.062, 0.71, 0.08, 1, 1, 1, 0.5, 0, s * 0.45);   // collar flaps
+  add(t, Cy(0.215, 0.215, 0.04, 16), type === 'soldier' ? C('#3a2e22') : dark, 0, 0.06, 0, 1.12, 1, 0.8);
+  add(t, Bx(0.055, 0.045, 0.016), metal, 0, 0.06, 0.18);   // belt buckle
+  for (let i = 0; i < 9; i++) add(t, Bx(fl(0.035, 0.07), fl(0.1, 0.3), 0.012), clothD, -0.22 + i * 0.055, -0.02, 0.17, 1, 1, 1, 0.12, 0, fl(-0.35, 0.35));   // ragged hem
+  for (let i = 0; i < 5; i++) add(t, Co(0.03, fl(0.08, 0.17), 4), clothD, -0.18 + i * 0.09, -0.1, 0.16, 1, 1, 0.4, 0, 0, Math.PI + fl(-0.3, 0.3));
+  add(t, Bx(0.012, 0.42, 0.02), clothD, 0, 0.38, 0.2);   // placket
+  for (let i = 0; i < 5; i++) add(t, Sp(0.013, 6, 5), cloth.clone().multiplyScalar(0.5), 0.0, 0.2 + i * 0.09, 0.213);   // buttons
+  for (let i = 0; i < 8; i++) add(t, Sp(fl(0.035, 0.09), 6, 5), blood, fl(-0.2, 0.2), fl(0.12, 0.62), 0.2, 1.3, 1, 0.28);
+  for (let i = 0; i < 4; i++) add(t, Bx(0.012, fl(0.1, 0.32), 0.01), blood, fl(-0.18, 0.18), 0.1, 0.215);   // drips
+  if (R(0.7)) { add(t, Sp(0.12, 8, 6), mus, fl(-0.12, 0.12), fl(0.3, 0.5), 0.2, 1.1, 1.3, 0.3); add(t, Sp(0.06, 8, 6), fresh, 0, 0.36, 0.215, 1, 1.4, 0.3); }
+  if (R(0.4)) {   // open ribcage wound
+    add(t, Sp(0.12, 8, 6), dark, 0.04, 0.42, 0.2, 1.1, 1.5, 0.45); add(t, Sp(0.1, 8, 6), fresh, 0.04, 0.4, 0.21, 1.1, 1.4, 0.25);
+    for (let i = 0; i < 5; i++) add(t, Cy(0.011, 0.011, 0.2, 5), bone, 0.04, 0.3 + i * 0.045, 0.235, 1, 1, 1, 0, 0, Math.PI / 2 + (i - 2) * 0.07);
+    for (let i = 0; i < 3; i++) add(t, Cy(0.026, 0.026, 0.22, 7), C('#b0606c'), -0.04 + i * 0.05, 0.2, 0.215 + (i % 2) * 0.012, 1, 1, 1, 0.2 * i - 0.2, 0, (i - 1) * 0.25);
+  }
+  if (R(0.3)) for (let i = 0; i < 7; i++) add(t, Sp(0.019, 6, 5), bone, -0.01, 0.3 + i * 0.05, -0.2, 1.2, 1, 0.9);   // exposed spine
+  if (R(0.5)) { add(t, Bx(0.07, 0.07, 0.014), clothD, -0.12, 0.2, 0.21); add(t, Bx(0.07, 0.012, 0.016), cloth.clone().multiplyScalar(0.55), -0.12, 0.235, 0.215); }   // chest pocket
   if (type === 'worker') { for (const s of [-1, 1]) add(t, Bx(0.05, 0.5, 0.02), cloth2, s * 0.12, 0.45, 0.205, 1, 1, 1, -0.1); add(t, Bx(0.3, 0.2, 0.02), cloth.clone().multiplyScalar(0.8), 0, 0.22, 0.2); }
   if (type === 'prisoner') {
     for (let i = 0; i < 5; i++) add(t, Cy(0.268, 0.268, 0.028, 14), cloth2, 0, 0.3 + i * 0.1, 0, 1.06, 1, 0.8);
-    add(t, Tor(0.21, 0.018, 6, 16), metal, 0, 0.42, 0, 1.18, 1, 0.9, Math.PI / 2); add(t, Tor(0.2, 0.016, 6, 16), metal, 0, 0.3, 0, 1.2, 1, 0.9, Math.PI / 2, 0, 0.3);
+    add(t, Tor(0.21, 0.018, 6, 18), metal, 0, 0.42, 0, 1.18, 1, 0.9, Math.PI / 2); add(t, Tor(0.2, 0.016, 6, 18), metal, 0, 0.3, 0, 1.2, 1, 0.9, Math.PI / 2, 0, 0.3);
     for (let i = 0; i < 4; i++) add(t, Tor(fl(0.2, 0.3), 0.006, 4, 18), C('#7a6a5a'), 0, fl(0.2, 0.6), 0, 1, 1, 0.85, fl(1.2, 1.9), fl(-0.5, 0.5), fl(-0.4, 0.4));
   }
   if (type === 'soldier') { for (const s of [-1, 1]) add(t, Bx(0.1, 0.12, 0.06), C('#4a3c2a'), s * 0.12, 0.08, 0.21); add(t, Bx(0.08, 0.5, 0.02), C('#3a2e22'), 0.12, 0.48, 0.2, 1, 1, 1, 0, 0, 0.5); }
@@ -1684,39 +1728,86 @@ function buildZVariant(type) {
   if (type === 'biker') { for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) add(t, Co(0.026, 0.1, 5), metal, sd * (0.3 + k * 0.01), 0.7 - k * 0.04, 0, 1, 1, 1, 0, 0, -sd * (0.5 + k * 0.15)); add(t, Bx(0.015, 0.5, 0.012), metal, 0, 0.4, 0.2); for (let i = 0; i < 6; i++) add(t, Sp(0.014, 5, 4), metal, -0.2 + i * 0.08, 0.55, 0.205); }
   if (type === 'farmer') { for (const sd of [-1, 1]) add(t, Bx(0.05, 0.55, 0.02), cloth2, sd * 0.11, 0.42, 0.215, 1, 1, 1, -0.08); add(t, Bx(0.24, 0.2, 0.02), cloth2, 0, 0.3, 0.215); add(t, Bx(0.07, 0.06, 0.01), C('#a08a50'), 0.05, 0.3, 0.228); }
   if (type === 'burnt') { for (let i = 0; i < 7; i++) add(t, Bx(0.05, fl(0.15, 0.3), 0.012), cloth2, -0.22 + i * 0.075, -0.08, 0.15, 1, 1, 1, 0.1, 0, fl(-0.2, 0.2)); }
-  // head
-  add(h, Sp(0.15, 16, 12), skin, 0, 0.17, 0, 0.93, 1.1, 1.02); add(h, Sp(0.1, 12, 8), skin, 0, 0.06, 0.035, 0.98, 0.78, 0.92);
-  for (const s of [-1, 1]) { add(h, Sp(0.03, 6, 5), skinD, s * 0.145, 0.16, 0, 0.5, 1.2, 1); add(h, Sp(0.05, 8, 6), dark, s * 0.075, 0.185, 0.115, 1.2, 1, 0.5); add(h, Sp(0.03, 6, 5), skinD, s * 0.1, 0.09, 0.105, 1, 1.3, 0.6); }
-  add(h, Co(0.026, 0.07, 6), skinD, 0, 0.14, 0.152, 1, 1, 1, Math.PI / 2);
-  add(h, Sp(0.062, 10, 6), dark, 0, 0.065, 0.12, 1.15, 0.75, 0.45); add(h, Sp(0.064, 8, 6), blood, 0, 0.055, 0.116, 1.2, 0.85, 0.4);
-  for (let i = 0; i < 4; i++) add(h, Co(0.011, 0.03, 4), bone, -0.04 + i * 0.027, 0.085, 0.152, 1, 1, 1, Math.PI);
-  for (let i = 0; i < 3; i++) add(h, Bx(0.014, fl(0.08, 0.22), 0.01), blood, -0.04 + i * 0.04, 0.0, 0.16);
-  if (R(0.4)) { add(h, Sp(0.05, 7, 5), mus, 0.1, 0.1, 0.09, 1, 1, 0.5); add(h, Sp(0.04, 6, 5), fresh, 0.1, 0.1, 0.1, 1, 1, 0.4); }
-  if (R(0.3)) { add(h, Sp(0.1, 9, 7), C('#c98a96'), 0.02, 0.3, 0, 1, 0.5, 1); add(h, Sp(0.05, 6, 5), blood, -0.05, 0.28, 0.08); }
-  if (helm === 'army') { add(h, new THREE.SphereGeometry(0.185,14,10,0,6.283,0,1.75), C('#4b5438'), 0, 0.2, 0, 1.0, 0.95, 1.1); add(h, Cy(0.205, 0.215, 0.025, 14), C('#3f4830'), 0, 0.2, 0, 1, 1, 1.1); add(h, Bx(0.12, 0.012, 0.06), C('#2a2a24'), 0, 0.14, 0.17); }
-  else if (helm === 'iron') { add(h, Cy(0.168, 0.168, 0.06, 14), C('#5a4a40'), 0, 0.27, 0, 0.95, 1, 1.02); add(h, new THREE.SphereGeometry(0.17,12,8,0,6.283,0,0.9), C('#4a4038'), 0, 0.27, 0, 0.95, 0.75, 1.02);
+
+  /* ---------------- HEAD / FACE ---------------- */
+  add(h, Sp(0.15, 20, 14), skin, 0, 0.17, 0, 0.93, 1.1, 1.02);                                  // cranium
+  add(h, Sp(0.1, 14, 10), skin, 0, 0.06, 0.035, 0.98, 0.78, 0.92);                              // lower face
+  add(h, Sp(0.042, 8, 6), skinL, 0, -0.012, 0.095, 1.1, 0.8, 0.9);                              // chin
+  for (const s of [-1, 1]) {
+    add(h, Sp(0.03, 8, 6), skinD, s * 0.145, 0.16, 0, 0.5, 1.2, 1); add(h, Sp(0.014, 6, 5), dark, s * 0.147, 0.155, 0.012, 0.5, 1.1, 1);       // ears
+    add(h, Sp(0.052, 10, 8), dark, s * 0.07, 0.186, 0.108, 1.2, 1, 0.55);                                                                       // deep eye sockets
+    add(h, Sp(0.05, 8, 6), skinL, s * 0.075, 0.228, 0.112, 1.7, 0.5, 0.7, 0, 0, -s * 0.28);                                                      // heavy brow ridge
+    add(h, Sp(0.03, 8, 6), skinD, s * 0.07, 0.148, 0.118, 1.7, 0.5, 0.5);                                                                         // eye bags
+    add(h, Sp(0.036, 8, 6), skinL, s * 0.098, 0.115, 0.1, 1.25, 0.85, 0.8);                                                                       // cheekbones
+    add(h, Sp(0.05, 8, 6), skinD, s * 0.082, 0.062, 0.1, 0.9, 1.3, 0.6);                                                                          // hollow cheeks
+    add(h, Cy(0.004, 0.003, 0.12, 4), veinC, s * 0.115, 0.23, 0.07, 1, 1, 1, 0.4, 0, s * 0.5 + fl(-0.2, 0.2));                                    // temple veins
+    add(h, Cy(0.003, 0.003, 0.09, 4), veinC, s * 0.065, 0.12, 0.138, 1, 1, 1, 0.2, 0, fl(-0.4, 0.4));
+    add(h, Sp(0.016, 6, 5), fresh, s * 0.07, 0.136, 0.148, 0.8, 2.6, 0.4);                                                                        // blood tears
+  }
+  // nose
+  if (R(0.2)) { add(h, Sp(0.03, 8, 6), dark, 0, 0.11, 0.15, 1, 1.2, 0.5); add(h, Sp(0.024, 6, 5), fresh, 0, 0.12, 0.148, 1, 1.2, 0.4); }   // nose torn away
+  else { add(h, Bx(0.028, 0.07, 0.03), skin, 0, 0.14, 0.15, 1, 1, 1, -0.5); add(h, Co(0.024, 0.05, 6), skinD, 0, 0.115, 0.168, 1, 1, 1, Math.PI / 2 + 0.3); for (const s of [-1, 1]) { add(h, Sp(0.02, 8, 6), skinD, s * 0.02, 0.112, 0.155, 1, 0.9, 0.8); add(h, Sp(0.009, 5, 4), dark, s * 0.011, 0.105, 0.178); } }
+  // mouth: cavity, ragged lips, gums, teeth, tongue
+  add(h, Sp(0.062, 10, 7), dark, 0, 0.065, 0.12, 1.15, 0.75, 0.45); add(h, Sp(0.064, 8, 6), blood, 0, 0.055, 0.116, 1.2, 0.85, 0.4);
+  add(h, Tor(0.052, 0.011, 5, 12), lip, 0, 0.066, 0.123, 1.15, 0.72, 0.6);
+  add(h, Bx(0.1, 0.018, 0.02), gum, 0, 0.092, 0.145); add(h, Bx(0.085, 0.016, 0.02), gum, 0, 0.034, 0.138);
+  for (let i = 0; i < 8; i++) if (!R(0.15)) { const x = -0.049 + i * 0.014; add(h, Bx(0.0125, fl(0.02, 0.03), 0.011), R(0.4) ? teethD : teeth, x, 0.078, 0.158 - x * x * 3.2, 1, 1, 1, 0, -x * 2.2, fl(-0.06, 0.06)); }
+  for (let i = 0; i < 6; i++) if (!R(0.2)) { const x = -0.035 + i * 0.014; add(h, Bx(0.012, fl(0.016, 0.026), 0.01), R(0.45) ? teethD : teeth, x, 0.047, 0.15 - x * x * 3.2, 1, 1, 1, 0, -x * 2.2, fl(-0.08, 0.08)); }
+  for (const s of [-1, 1]) add(h, Co(0.008, 0.032, 4), teeth, s * 0.032, 0.062, 0.153 - 0.003, 1, 1, 1, Math.PI);     // canines
+  if (R(0.5)) add(h, Sp(0.03, 8, 6), fresh, 0, 0.032, 0.115, 1.3, 0.5, 1.5);   // tongue
+  for (let i = 0; i < 4; i++) add(h, Bx(0.012, fl(0.08, 0.24), 0.01), blood, -0.04 + i * 0.027, 0.0, 0.16);   // blood running down chin
+  for (let i = 0; i < 3; i++) add(h, Bx(fl(0.07, 0.12), 0.005, 0.01), skinD, 0, 0.255 + i * 0.022, 0.123, 1, 1, 1, 0, 0, fl(-0.08, 0.08));   // forehead wrinkles
+  add(h, Bx(0.005, 0.06, 0.01), skinD, 0, 0.215, 0.13, 1, 1, 1, 0, 0, 0.1);
+  if (R(0.45)) { add(h, Sp(0.05, 8, 6), mus, 0.1, 0.1, 0.09, 1, 1, 0.5); add(h, Sp(0.04, 7, 5), fresh, 0.1, 0.1, 0.1, 1, 1, 0.4); add(h, Cy(0.008, 0.008, 0.1, 5), bone, 0.11, 0.08, 0.1, 1, 1, 1, 0.3, 0, 0.3); }   // cheek wound / exposed jaw
+  if (R(0.3)) { add(h, Sp(0.1, 12, 9), C('#c98a96'), 0.02, 0.3, 0, 1, 0.5, 1); add(h, Sp(0.05, 6, 5), blood, -0.05, 0.28, 0.08); add(h, Sp(0.04, 6, 5), bone, 0.08, 0.27, -0.06, 1.3, 0.5, 1); }
+  if (helm === 'army') { add(h, new THREE.SphereGeometry(0.185, 18, 12, 0, 6.283, 0, 1.75), C('#4b5438'), 0, 0.2, 0, 1.0, 0.95, 1.1); add(h, Cy(0.205, 0.215, 0.025, 18), C('#3f4830'), 0, 0.2, 0, 1, 1, 1.1); add(h, Bx(0.12, 0.012, 0.06), C('#2a2a24'), 0, 0.14, 0.17); add(h, Cy(0.006, 0.006, 0.2, 4), C('#2a2a24'), 0.17, 0.06, 0.02, 1, 1, 1, 0, 0, 0.1); }
+  else if (helm === 'iron') { add(h, Cy(0.168, 0.168, 0.06, 18), C('#5a4a40'), 0, 0.27, 0, 0.95, 1, 1.02); add(h, new THREE.SphereGeometry(0.17, 14, 9, 0, 6.283, 0, 0.9), C('#4a4038'), 0, 0.27, 0, 0.95, 0.75, 1.02);
     for (let i = 0; i < 7; i++) { const a = i * 0.9, x = Math.cos(a) * 0.1, z = Math.sin(a) * 0.1; add(h, Cy(0.006, 0.006, 0.12, 4), metal, x, 0.4, z, 1, 1, 1, fl(-0.4, 0.4), 0, fl(-0.4, 0.4)); add(h, Cy(0.02, 0.02, 0.008, 6), metal, x, 0.46, z); } }
-  else if (type === 'biker') { add(h, Cy(0.157, 0.161, 0.05, 14), C('#8a1c1c'), 0, 0.27, 0, 0.95, 1, 1.02); add(h, Bx(0.05, 0.04, 0.08), C('#8a1c1c'), 0.17, 0.25, -0.08); }
-  else if (type === 'farmer') { add(h, Cy(0.27, 0.27, 0.012, 18), C('#c8b070'), 0, 0.3, 0); add(h, Cy(0.12, 0.145, 0.1, 14), C('#c8b070'), 0, 0.35, 0); add(h, Cy(0.146, 0.146, 0.02, 14), C('#6a3a20'), 0, 0.31, 0); }
-  else if (type === 'doctor') { add(h, Bx(0.17, 0.08, 0.05), C('#a8c0c8'), 0, 0.07, 0.132); add(h, new THREE.SphereGeometry(0.155, 10, 7, 0, 6.283, 0, 1.2), hairC, 0, 0.19, -0.02, 1, 1, 1.03); }
-  else if (type === 'worker' && R(0.8)) add(h, new THREE.SphereGeometry(0.158,12,8,0,6.283,0,1.45), hairC, 0, 0.19, -0.015, 0.98, 1.05, 1.03);
-  else if (type === 'burnt' && !bald) add(h, new THREE.SphereGeometry(0.155,10,7,0,6.283,0,1.3), hairC, 0, 0.2, -0.02, 1, 1, 1.03);
+  else if (type === 'biker') { add(h, Cy(0.157, 0.161, 0.05, 16), C('#8a1c1c'), 0, 0.27, 0, 0.95, 1, 1.02); add(h, Bx(0.05, 0.04, 0.08), C('#8a1c1c'), 0.17, 0.25, -0.08); }
+  else if (type === 'farmer') { add(h, Cy(0.27, 0.27, 0.012, 20), C('#c8b070'), 0, 0.3, 0); add(h, Cy(0.12, 0.145, 0.1, 16), C('#c8b070'), 0, 0.35, 0); add(h, Cy(0.146, 0.146, 0.02, 16), C('#6a3a20'), 0, 0.31, 0); }
+  else if (type === 'doctor') { add(h, Bx(0.17, 0.08, 0.05), C('#a8c0c8'), 0, 0.07, 0.132); add(h, new THREE.SphereGeometry(0.155, 12, 8, 0, 6.283, 0, 1.2), hairC, 0, 0.19, -0.02, 1, 1, 1.03); }
+  else if (type === 'worker' && R(0.8)) add(h, new THREE.SphereGeometry(0.158, 14, 9, 0, 6.283, 0, 1.45), hairC, 0, 0.19, -0.015, 0.98, 1.05, 1.03);
+  else if (type === 'burnt' && !bald) add(h, new THREE.SphereGeometry(0.155, 12, 8, 0, 6.283, 0, 1.3), hairC, 0, 0.2, -0.02, 1, 1, 1.03);
+  if (!helm && !bald && type !== 'farmer' && type !== 'biker' && type !== 'doctor' && R(0.7)) for (let i = 0; i < 9; i++) tuft(h, fl(-0.8, 0.8), fl(0.4, 1), fl(-1, 0.3), 0.15, fl(0.05, 0.11), hairC);   // wispy scalp hair
   const eyes = mergeGeometries([Sp(0.034, 8, 6).translate(0.07, 0.19, 0.13), Sp(0.034, 8, 6).translate(-0.07, 0.19, 0.13)]);
-  // arms (sleeve over shoulder, elbow joint, claw hand)
+  const glow = mergeGeometries([Sp(0.062, 8, 6).translate(0.07, 0.19, 0.14), Sp(0.062, 8, 6).translate(-0.07, 0.19, 0.14)]);
+
+  /* ---------------- ARMS ---------------- */
   const sleeve = (type === 'diner' || type === 'burnt' || R(0.3)) ? skin : cloth;
-  add(ua, Sp(0.078, 10, 8), cloth, 0, 0, 0); add(ua, Cy(0.066, 0.052, 0.3, 10), sleeve, 0, -0.15, 0); add(ua, Sp(0.054, 8, 6), skinD, 0, -0.3, 0);
-  if (R(0.5)) { add(ua, Sp(0.05, 6, 5), mus, 0.03, -0.16, 0.035, 1, 1.8, 0.5); add(ua, Sp(0.03, 6, 5), fresh, 0.03, -0.14, 0.05, 1, 1.6, 0.4); }
-  add(fa, Cy(0.052, 0.038, 0.28, 10), skin, 0, -0.14, 0); if (type === 'prisoner') add(fa, Cy(0.058, 0.058, 0.05, 10), C('#6a5a4a'), 0, -0.26, 0);
-  if (R(0.6)) { add(fa, Sp(0.05, 6, 5), mus, 0.02, -0.12, 0.03, 1, 1.9, 0.6); add(fa, Cy(0.01, 0.01, 0.14, 5), bone, 0, -0.1, 0.05); }
-  add(fa, Sp(0.046, 10, 8), skinL, 0, -0.31, 0.01, 1, 1.25, 0.65); add(fa, Sp(0.04, 6, 5), blood, 0, -0.32, 0.03, 1.2, 1.2, 0.5);
-  for (let k = -1.5; k <= 1.5; k++) add(fa, Co(0.011, 0.1, 5), bone.clone().lerp(skin, 0.5), k * 0.022, -0.41, 0.02 + Math.abs(k) * 0.004, 1, 1, 1, Math.PI - 0.35, 0, k * 0.1);
-  add(fa, Co(0.012, 0.08, 5), bone.clone().lerp(skin, 0.5), 0.05, -0.33, 0.03, 1, 1, 1, Math.PI - 0.5, 0, -0.7);
-  // legs
-  add(th, Sp(0.1, 10, 8), pants, 0, 0, 0); add(th, Cy(0.1, 0.075, 0.44, 10), pants, 0, -0.22, 0); add(th, Sp(0.074, 8, 6), pants, 0, -0.44, 0);
-  const torn = R(0.55); if (torn) { add(th, Sp(0.07, 6, 5), mus, 0.05, -0.2, 0.06, 0.8, 2, 0.5); add(th, Cy(0.013, 0.013, 0.14, 5), bone, 0.04, -0.18, 0.08); add(th, Sp(0.05, 6, 5), blood, -0.05, -0.1, 0.07, 1, 1.5, 0.5); }
-  add(sh, Cy(0.07, 0.05, 0.4, 10), torn && R(0.5) ? skin : pants, 0, -0.2, 0); add(sh, Cy(0.056, 0.056, 0.05, 8), cloth2.clone().multiplyScalar(0.8), 0, -0.36, 0);
-  add(sh, Sp(0.062, 10, 8), type === 'diner' ? skin : C('#2a221c'), 0, -0.41, 0.05, 0.9, 0.6, 1.7); add(sh, Bx(0.1, 0.03, 0.2), boots, 0, -0.45, 0.07);
-  return { torso: mergeGeometries(t), head: mergeGeometries(h), eyes, ua: mergeGeometries(ua), fa: mergeGeometries(fa), th: mergeGeometries(th), sh: mergeGeometries(sh), red };
+  add(ua, Sp(0.078, 12, 8), cloth, 0, 0, 0); add(ua, Cy(0.066, 0.052, 0.3, 10), sleeve, 0, -0.15, 0); add(ua, Sp(0.054, 10, 8), skinD, 0, -0.3, 0);
+  if (sleeve === cloth) for (let i = 0; i < 7; i++) { const a = i * 0.9; add(ua, Co(0.02, fl(0.04, 0.1), 4), clothD, Math.cos(a) * 0.056, -0.27, Math.sin(a) * 0.056, 1, 1, 0.5, 0, 0, Math.PI + fl(-0.3, 0.3)); }   // torn sleeve edge
+  if (R(0.5)) { add(ua, Sp(0.05, 8, 6), mus, 0.03, -0.16, 0.035, 1, 1.8, 0.5); add(ua, Sp(0.03, 6, 5), fresh, 0.03, -0.14, 0.05, 1, 1.6, 0.4); }
+  add(fa, Cy(0.052, 0.038, 0.28, 10), skin, 0, -0.14, 0); if (type === 'prisoner') add(fa, Cy(0.058, 0.058, 0.05, 12), C('#6a5a4a'), 0, -0.26, 0);
+  for (const sx of [-1, 1]) add(fa, Cy(0.007, 0.006, 0.22, 4), sinew, sx * 0.03, -0.14, 0.03, 1, 1, 1, 0, 0, sx * 0.05);   // tendons
+  add(fa, Cy(0.0045, 0.004, 0.24, 4), veinC, 0.0, -0.14, 0.048, 1, 1, 1, 0, 0, fl(-0.25, 0.25)); add(fa, Cy(0.0045, 0.004, 0.18, 4), veinC, -0.025, -0.13, 0.04, 1, 1, 1, 0, 0, fl(-0.25, 0.25));
+  if (R(0.6)) { add(fa, Sp(0.05, 7, 5), mus, 0.02, -0.12, 0.03, 1, 1.9, 0.6); add(fa, Cy(0.01, 0.01, 0.14, 5), bone, 0, -0.1, 0.05); }
+  add(fa, Sp(0.04, 8, 6), skinD, 0, -0.285, 0);                                                  // wrist
+  add(fa, Sp(0.046, 12, 8), skinL, 0, -0.325, 0.01, 1.1, 1.15, 0.6); add(fa, Sp(0.04, 7, 5), blood, 0, -0.33, 0.03, 1.2, 1.2, 0.5);   // palm
+  for (let k = 0; k < 4; k++) {   // four jointed, clawed fingers
+    const x = (k - 1.5) * 0.02, L1 = 0.042 + (k === 1 || k === 2 ? 0.006 : 0), L2 = 0.036, a1 = 0.18 + fl(0, 0.15), a2 = 0.9 + fl(0, 0.35);
+    const j1y = -0.352, j1z = 0.016, j2y = j1y - Math.cos(a1) * L1, j2z = j1z + Math.sin(a1) * L1;
+    add(fa, Cy(0.0095, 0.0085, L1, 5), skinL, x, j1y - Math.cos(a1) * L1 / 2, j1z + Math.sin(a1) * L1 / 2, 1, 1, 1, Math.PI - a1, 0, 0);
+    add(fa, Sp(0.0095, 5, 4), skinD, x, j2y, j2z);
+    add(fa, Cy(0.0085, 0.007, L2, 5), skinL, x, j2y - Math.cos(a2) * L2 / 2, j2z + Math.sin(a2) * L2 / 2, 1, 1, 1, Math.PI - a2, 0, 0);
+    add(fa, Co(0.0065, 0.02, 4), teethD, x, j2y - Math.cos(a2) * L2, j2z + Math.sin(a2) * L2, 1, 1, 1, Math.PI - a2 - 0.2, 0, 0);   // dirty nail / claw
+  }
+  add(fa, Cy(0.011, 0.009, 0.045, 5), skinL, 0.05, -0.335, 0.03, 1, 1, 1, Math.PI - 0.6, 0, -0.7); add(fa, Co(0.007, 0.02, 4), teethD, 0.062, -0.37, 0.046, 1, 1, 1, Math.PI - 0.9, 0, -0.7);   // thumb
+
+  /* ---------------- LEGS ---------------- */
+  add(th, Sp(0.1, 12, 8), pants, 0, 0, 0); add(th, Cy(0.1, 0.075, 0.44, 10), pants, 0, -0.22, 0); add(th, Sp(0.074, 10, 8), pants, 0, -0.44, 0);
+  add(th, Bx(0.002, 0.3, 0.17), clothD, 0.098, -0.18, 0.0);   // side seam
+  if (R(0.5)) add(th, Bx(0.07, 0.08, 0.016), pants.clone().multiplyScalar(0.7), 0.04, -0.12, 0.095, 1, 1, 1, -0.05);   // pocket
+  const torn = R(0.55); if (torn) { add(th, Sp(0.07, 6, 5), mus, 0.05, -0.2, 0.06, 0.8, 2, 0.5); add(th, Cy(0.013, 0.013, 0.14, 5), bone, 0.04, -0.18, 0.08); add(th, Sp(0.05, 6, 5), blood, -0.05, -0.1, 0.07, 1, 1.5, 0.5); for (let i = 0; i < 4; i++) add(th, Co(0.02, fl(0.05, 0.1), 4), pants.clone().multiplyScalar(0.8), 0.0 + (i - 1.5) * 0.04, -0.12, 0.092, 1, 1, 0.4, 0, 0, Math.PI + fl(-0.3, 0.3)); }
+  const bareShin = torn && R(0.5);
+  add(sh, Cy(0.07, 0.05, 0.4, 10), bareShin ? skin : pants, 0, -0.2, 0); add(sh, Cy(0.056, 0.056, 0.05, 10), cloth2.clone().multiplyScalar(0.8), 0, -0.36, 0);
+  if (bareShin) for (let i = 0; i < 6; i++) { const a = i * 1.05; add(sh, Co(0.02, fl(0.04, 0.09), 4), pants, Math.cos(a) * 0.066, -0.06, Math.sin(a) * 0.066, 1, 1, 0.5, 0, 0, fl(-0.3, 0.3)); }   // ragged trouser hem
+  if (R(0.4)) add(sh, Sp(0.03, 6, 5), mus, -0.03, -0.18, 0.05, 1, 2, 0.5);
+  add(sh, Sp(0.062, 12, 8), type === 'diner' ? skin : C('#2a221c'), 0, -0.41, 0.05, 0.9, 0.6, 1.7);
+  add(sh, Bx(0.1, 0.03, 0.22), dark, 0, -0.455, 0.07); add(sh, Bx(0.092, 0.045, 0.06), boots, 0, -0.43, -0.04);   // sole + heel
+  add(sh, Sp(0.05, 8, 6), boots.clone().multiplyScalar(1.3), 0, -0.425, 0.13, 1, 0.7, 1.1);   // toe cap
+  for (let i = 0; i < 3; i++) add(sh, Bx(0.07, 0.008, 0.012), C('#b8b0a0'), 0, -0.385 + i * 0.012, 0.062 + i * 0.022, 1, 1, 1, -0.5);   // laces
+  const m = a => mergeGeometries(a);
+  return { torso: grimeGeo(m(t), 1, 1, 1), head: grimeGeo(m(h), 2, 0.5, 0.7), eyes, glow, ua: grimeGeo(m(ua), 3, 1, 1), fa: grimeGeo(m(fa), 4, 0.8, 1), th: grimeGeo(m(th), 5, 1, 1.2), sh: grimeGeo(m(sh), 6, 0.9, 1.3), red };
 }
 const zVariants = ['worker', 'diner', 'prisoner', 'burnt', 'soldier', 'doctor', 'biker', 'farmer'].flatMap(ty => [0, 1, 2].map(() => buildZVariant(ty)));
 
@@ -1848,8 +1939,21 @@ function buildVerityBossVariant() {   // VERITY: pale, starved, hunched, over-lo
   return { torso: m(t), head: m(h), eyes, ua: m(ua), fa: m(fa), th: m(th), sh: m(sh), decal: { geo: sphereCap(0.255, 1.9, 2.3, 0.28, 0.035), mat: faceMat(VT.boss) } };
 }
 const verityVariant = buildVerityVariant(), tungVariant = buildTungVariant(), verityBossVariant = buildVerityBossVariant();
-const zMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: texGrain(), roughness: 0.96, metalness: 0.0 });
-const zEyeMat = new THREE.MeshBasicMaterial({ color: 0x7fe8ff, fog: false }); // cold blue glow
+function texZombie(bump) {   // pores, blotches, faint veins (colour) / fine skin relief (bump)
+  const [c, x] = mkCanvas(128);
+  x.fillStyle = bump ? '#808080' : '#d4d4d4'; x.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 320; i++) { x.fillStyle = bump ? 'rgba(' + (Math.random() < 0.5 ? '0,0,0,' : '255,255,255,') + Math.random() * 0.22 + ')' : 'rgba(0,0,0,' + Math.random() * 0.1 + ')'; x.beginPath(); x.arc(Math.random() * 128, Math.random() * 128, Math.random() * 2.6 + 0.4, 0, 6.283); x.fill(); }
+  for (let i = 0; i < 16; i++) {
+    x.strokeStyle = bump ? 'rgba(0,0,0,0.35)' : 'rgba(30,40,75,' + (0.05 + Math.random() * 0.07) + ')'; x.lineWidth = 0.5 + Math.random() * 0.9; x.beginPath();
+    let px = Math.random() * 128, py = Math.random() * 128; x.moveTo(px, py); for (let k = 0; k < 5; k++) { px += Math.random() * 20 - 10; py += Math.random() * 20 - 10; x.lineTo(px, py); } x.stroke();
+  }
+  addNoise(x, 128, 128, bump ? 70 : 44);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; if (!bump) t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const zMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: texZombie(false), bumpMap: texZombie(true), bumpScale: 0.9, roughness: 0.9, metalness: 0.0 });
+const zEyeMat = new THREE.MeshBasicMaterial({ color: 0xc4f7ff, fog: false }); // cold blue glow
+const zGlowMat = new THREE.MeshBasicMaterial({ color: 0x3fc8ff, transparent: true, opacity: 0.38, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+const zGlowRedMat = new THREE.MeshBasicMaterial({ color: 0xff3a1a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
 
 /* ===================================================================
    STATE
@@ -2812,11 +2916,11 @@ const barFg = new THREE.MeshBasicMaterial({ color: 0x7fe05a, depthWrite: false }
 
 function createZombie(x, z, opt = {}) {
   const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
-  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.78, 0.86) : boss ? 1.75 : hound ? 1 : rnd(0.93, 1.08); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.9, 1.14), s * rnd(0.95, 1.06), s * rnd(0.92, 1.15));
+  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(1.0, 1.1) : boss ? 1.75 : hound ? 1 : rnd(1.12, 1.24); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.88, 1.04), s * rnd(0.97, 1.05), s * rnd(0.9, 1.04));
   const G = (par, px, py, pz) => { const g = new THREE.Group(); g.position.set(px, py, pz); par.add(g); return g; };
   const M = (geo, par, part, cast = true) => { const m = new THREE.Mesh(geo, zMat); m.castShadow = cast; par.add(m); m.userData.part = part; return m; };
   const upper = G(root, 0, hound ? 0.62 : 0.9, 0), torso = M(v.torso, upper, 'body'), headP = G(upper, 0, hound ? 0.14 : 0.74, hound ? 0.66 : 0), head = M(v.head, headP, 'head');
-  head.add(new THREE.Mesh(v.eyes, hound ? houndEyeMat : v.red ? houndEyeMat : zEyeMat)); if (v.decal) head.add(new THREE.Mesh(v.decal.geo, v.decal.mat));
+  head.add(new THREE.Mesh(v.eyes, hound ? houndEyeMat : v.red ? houndEyeMat : zEyeMat)); if (v.glow && !hound) head.add(new THREE.Mesh(v.glow, v.red ? zGlowRedMat : zGlowMat)); if (v.decal) head.add(new THREE.Mesh(v.decal.geo, v.decal.mat));
   const aw = boss ? 0.52 : hound ? 0.17 : 0.3, lw = boss ? 0.2 : hound ? 0.17 : 0.14;
   const arm = sx => { const a = G(upper, sx * aw, hound ? 0.02 : 0.58, hound ? 0.44 : 0), u = M(v.ua, a, 'arm', false), e = G(a, 0, -0.3, 0), f = M(sx > 0 && v.faR ? v.faR : v.fa, e, 'arm', false); return { a, e, u, f }; };
   const leg = sx => { const l = G(root, sx * lw, hound ? 0.68 : 0.9, hound ? -0.42 : 0), t = M(v.th, l, 'leg'), k = G(l, 0, hound ? -0.34 : -0.44, 0), sh = M(v.sh, k, 'leg', false); return { l, k, t, sh }; };
@@ -3901,17 +4005,17 @@ function updateZombies(dt) {
     // animation: shamble / run, knees + elbows, hunched torso, lolling head
     const ph = z.phase, sw = Math.sin(ph), attacking = dist <= (z.reach || 1.2), run = z.runner ? 1 : z.boss ? 0.5 : 0, hit = z.stagger > 0, st = z.style;
     const A = 0.5 + run * 0.45, K = 0.9 + run * 0.5;
-    z.legL.rotation.x = sw * A - 0.12; z.legR.rotation.x = -sw * A - 0.12;
-    z.kL.rotation.x = Math.max(0, -Math.cos(ph)) * K + 0.32; z.kR.rotation.x = Math.max(0, Math.cos(ph)) * K + 0.32;
+    z.legL.rotation.x = sw * A - 0.05; z.legR.rotation.x = -sw * A - 0.05;
+    z.kL.rotation.x = Math.max(0, -Math.cos(ph)) * K + 0.14; z.kR.rotation.x = Math.max(0, Math.cos(ph)) * K + 0.14;
     if (z.limp) { z.legR.rotation.x *= 0.4; z.kR.rotation.x *= 0.3; }
-    const lunge = attacking ? Math.sin(t * 10 + ph) * 0.45 : 0, fw = st === 2 ? -0.95 : -1.75, ln = (z.lean || (z.lean = 0.85 + Math.random() * 0.3)) * (0.88 + run * 0.12);
+    const lunge = attacking ? Math.sin(t * 10 + ph) * 0.45 : 0, fw = st === 2 ? -0.95 : -1.75, ln = (z.lean || (z.lean = 0.34 + Math.random() * 0.2)) * (0.9 + run * 0.1) + run * 0.18;
     z.armL.rotation.x = (st === 1 ? -0.8 : fw) - run * 0.3 + Math.sin(ph * 0.5) * 0.15 + lunge;
     z.armR.rotation.x = fw - run * 0.3 - Math.sin(ph * 0.5) * 0.15 - lunge - (attacking ? 0.2 : 0);
     z.armL.rotation.z = -0.12 - (st === 2 ? 0.15 : 0); z.armR.rotation.z = 0.12 + (st === 2 ? 0.15 : 0);
     z.eL.rotation.x = -0.35 - Math.sin(ph * 0.5 + 1) * 0.2 - (attacking ? 0.5 : 0); z.eR.rotation.x = -0.5 + Math.sin(ph * 0.5) * 0.2 - (attacking ? 0.4 : 0);
     z.upper.rotation.set(ln + (hit ? -0.45 : 0) + (attacking ? 0.12 : 0), Math.sin(ph) * 0.2, Math.sin(ph) * (0.07 + (1 - run) * 0.1));
     z.head.rotation.set(-ln * 0.85 + (attacking ? 0.3 : 0) + Math.sin(ph * 1.7) * 0.08, Math.sin(ph * 0.6 + 1) * 0.25, Math.sin(ph * 0.7 + 1) * 0.2 + 0.1);
-    gp.y = Math.abs(sw) * 0.05 * (1 + run) - 0.13 - run * 0.04;
+    gp.y = Math.abs(sw) * 0.05 * (1 + run) - 0.06 - run * 0.04;
     if (z.hound) {
       const gs = Math.sin(ph), gc = Math.cos(ph), att = dist <= z.reach;
       z.armL.rotation.x = z.armR.rotation.x = -gs * 0.9; z.armL.rotation.z = z.armR.rotation.z = 0;
