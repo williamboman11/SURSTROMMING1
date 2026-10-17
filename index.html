@@ -993,6 +993,7 @@ const mbox = {
   beam.position.y = 130; g.add(beam); mbox.beam = beam;
   const light = new THREE.PointLight(0x59d3ff, 16, 12, 2); light.position.y = 1.8; g.add(light); mbox.light = light;
   mbox.display.position.y = 1.7; mbox.display.visible = false; g.add(mbox.display);
+  g.scale.setScalar(1.4);   // bigger mystery box
   scene.add(g);
   { const bo = { minX: mbox.pos.x - 0.85, maxX: mbox.pos.x + 0.85, minZ: mbox.pos.z - 0.55, maxZ: mbox.pos.z + 0.55 }; obstacles.push(bo); boxObs.factory = bo; }
   obstacleMeshes.push(body); mbox.body = body;
@@ -2596,7 +2597,22 @@ function playSnd(name, vol = 1, pan = 0, fade = 0) {
   src.start(); return { src, g };
 }
 let goSnd = null;
-function startJingle(vol) { stopJingle(); mbox.jg = playSnd('jingle', vol); mbox.rollDur = SND.jingle ? SND.jingle.duration : 5.5; }   // the box rolls for exactly as long as the jingle plays
+function jingleTimes(buf) {   // find where the audible part of the mp3 starts / ends (skips silent lead-in and the long quiet tail)
+  if (buf._jt) return buf._jt;
+  const d = buf.getChannelData(0), W = Math.max(1, Math.floor(buf.sampleRate * 0.05)), n = Math.floor(d.length / W), r = []; let pk = 0;
+  for (let i = 0; i < n; i++) { let q = 0; for (let j = 0; j < W; j++) { const x = d[i * W + j]; q += x * x; } const v = Math.sqrt(q / W); r.push(v); if (v > pk) pk = v; }
+  let a = 0, e = n - 1; while (a < n - 1 && r[a] < pk * 0.08) a++; while (e > a && r[e] < pk * 0.2) e--;
+  const st = Math.max(0, a * 0.05 - 0.03), en = Math.min(buf.duration, (e + 1) * 0.05 + 0.15);
+  return buf._jt = { start: st, end: Math.max(en, st + 1.5) };
+}
+function startJingle(vol) {   // plays instantly, and the box rolls for exactly as long as the audible jingle lasts
+  stopJingle(); mbox.rollDur = 5.5; const buf = SND.jingle; if (!audioCtx || !buf) return;
+  const T = jingleTimes(buf), dur = T.end - T.start, t0 = audioCtx.currentTime;
+  const src = audioCtx.createBufferSource(); src.buffer = buf; const g = audioCtx.createGain();
+  g.gain.setValueAtTime(vol, t0); g.gain.setValueAtTime(vol, t0 + Math.max(0, dur - 0.25)); g.gain.linearRampToValueAtTime(0.0001, t0 + dur + 0.1);
+  src.connect(g); g.connect(audioCtx.destination); src.start(t0, T.start); src.stop(t0 + dur + 0.15);
+  mbox.jg = { src, g }; mbox.rollDur = dur;
+}
 let boxJingleCustom = false;
 function loadBoxJingleFile() { try { fetch('mystery box jingle.mp3').then(r => r.ok ? r.arrayBuffer() : null).then(ab => { if (ab && audioCtx) audioCtx.decodeAudioData(ab, b => { SND.jingle = b; boxJingleCustom = true; }, () => {}); }).catch(() => {}); } catch (e) {} }
 function stopJingle() { const j = mbox.jg; mbox.jg = null; if (j) { try { j.g.gain.cancelScheduledValues(0); j.g.gain.setValueAtTime(j.g.gain.value, audioCtx.currentTime); j.g.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3); j.src.stop(audioCtx.currentTime + 0.35); } catch (e) {} } }
@@ -3476,7 +3492,7 @@ function interact() {
 }
 function placeBox(x, z, rot) {
   mbox.pos.set(x, 0, z); mbox.group.position.copy(mbox.pos); mbox.group.rotation.y = rot;
-  const o = boxObs[curMap.id], sw = Math.abs(Math.sin(rot)) > 0.7, hw = sw ? 0.55 : 0.85, hd = sw ? 0.85 : 0.55;
+  const o = boxObs[curMap.id], sw = Math.abs(Math.sin(rot)) > 0.7, hw = (sw ? 0.55 : 0.85) * 1.4, hd = (sw ? 0.85 : 0.55) * 1.4;
   if (o) { o.minX = x - hw; o.maxX = x + hw; o.minZ = z - hd; o.maxZ = z + hd; }
 }
 function moveBox() {
@@ -3510,7 +3526,7 @@ function updateBox(dt) {
   b.light.intensity = b.state === 'closed' ? 14 : 30;
   if (b.state === 'rolling') {
     b.t += dt; b.cycleT -= dt;
-    b.display.position.y = 0.9 + Math.min(1, b.t / (b.rollDur || 5.5)) * 0.9;
+    b.display.position.y = 0.9 + Math.min(1, b.t / (b.rollDur || 5.5)) * 0.9; b.display.scale.setScalar(1);
     if (b.cycleT <= 0) { b.cycleT = 0.16; const ks = Object.keys(b.models).filter(k => k !== 'teddy' && (k !== 'para' || curMap.id === 'buried')); b.ci = ((b.ci || 0) + 1) % ks.length; ks.forEach((k, i) => { b.models[k].visible = i === b.ci; }); }
     if (b.t >= (b.rollDur || 5.5)) { b.state = 'ready'; if (b.result === 'teddy') stopJingle(); b.readyT = 10; b.tt = 0; for (const k in b.models) b.models[k].visible = k === b.result; if (b.result === 'teddy') { if (!playSnd('teddy', 1)) sfx.chime(); } }
   } else if (b.state === 'ready') {
@@ -3518,8 +3534,11 @@ function updateBox(dt) {
     if (b.result === 'teddy') {
       b.tt += dt; if (b.tt > 2.5) b.display.position.y += dt * (b.tt - 2.5) * 14;
       if (b.tt > 4.2) { b.display.visible = false; if (!(MP.on && b.owner && b.owner !== MP.id)) { state.score += BOX_COST; notice('POINTS REFUNDED', 2200); } b.state = 'fly'; b.ft = 0; }
-    } else
-    if (b.readyT <= 0) { b.state = 'closed'; b.display.visible = false; }
+    } else {   // weapon hovers, then slowly sinks back into the box; the lid closes once it is gone
+      const SINK = 5, k = Math.min(1, Math.max(0, (SINK - b.readyT) / SINK)), e = k * k * (3 - 2 * k);
+      b.display.position.y = 1.8 - 1.45 * e; b.display.scale.setScalar(1 - 0.35 * e);
+      if (b.readyT <= 0) { b.state = 'closed'; b.display.visible = false; b.display.position.y = 0.9; b.display.scale.setScalar(1); }
+    }
   }
   if (b.display.visible) {
     if (b.state === 'rolling') b.display.rotation.y += dt * 1.6;   // spins only while the jingle plays, then settles
