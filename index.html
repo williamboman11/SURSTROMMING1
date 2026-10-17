@@ -1965,6 +1965,7 @@ const state = {
   phase: 'menu',          // menu | countdown | playing | dead
   time: 0, score: 0, kills: 0, wave: 0, health: 100, lastHurt: -10,
   roundState: 'intermission', interT: 3, roundTotal: 0, spawned: 0, spawnT: 0,
+  qr: 0, qrN: 0, downDrop: 0,
   fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0,
   reloading: false, reloadT: 0, swapT: 0,
   recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, knifeHit: false,
@@ -2440,15 +2441,15 @@ const MP = {
     if (!this.host) return;
     if (tp.me) hurtPlayer(z.dmg || ZOMBIE_DAMAGE); else if (tp.id) this.send({ t: 'hurt', to: tp.id, d: z.dmg || ZOMBIE_DAMAGE });
   },
-  alive() { const a = []; for (const [id, p] of this.peers) if (!p.d && !p.hid && p.tx !== undefined) a.push({ x: p.x, z: p.z, id, me: false }); if (!this.down && !(gasClouds.length && playerHidden())) { this.me.x = player.pos.x; this.me.z = player.pos.z; a.push(this.me); } return a; },
+  alive() { const a = []; for (const [id, p] of this.peers) if (!p.d && !p.hid && p.tx !== undefined) a.push({ x: p.x, z: p.z, id, me: false }); if (!this.down && !(state.qr > 0) && !(gasClouds.length && playerHidden())) { this.me.x = player.pos.x; this.me.z = player.pos.z; a.push(this.me); } return a; },
   nearest(g) {
     this.me.x = player.pos.x; this.me.z = player.pos.z; if (!this.on) return this.me;
     let best = null, bd = 1e9; for (const c of this.alive()) { const d = (c.x - g.x) ** 2 + (c.z - g.z) ** 2; if (d < bd) { bd = d; best = c; } }
     return best || this.me;
   },
   pick() { this.me.x = player.pos.x; this.me.z = player.pos.z; if (!this.on) return this.me; const a = this.alive(); return a.length ? a[(Math.random() * a.length) | 0] : this.me; },
-  goDown() { this.down = true; state.health = 0; state.mouseDown = false; state.rmb = false; notice('YOU ARE DOWN - BACK NEXT ROUND', 4000); },
-  revive() { if (!this.down) return; this.down = false; state.health = state.maxHealth; state.lastHurt = -10; notice('REVIVED!', 2500); },
+  goDown() { this.down = true; state.health = 0; state.mouseDown = false; state.rmb = false; equipDownPistol(false); notice('YOU ARE DOWN - BACK NEXT ROUND', 4000); },
+  revive() { if (!this.down) return; this.down = false; restoreDownGear(); state.health = state.maxHealth; state.lastHurt = -10; notice('REVIVED!', 2500); },
   paused: false,
   setPause(v) {
     this.paused = v; let o = $('mpPause');
@@ -3170,12 +3171,42 @@ function updateGrenades(dt) {
   }
 }
 
+
+/* ===================== DOWNED STATE: look around, temp pistol, Quick Revive auto-get-up ===================== */
+const DNG = { saved: null };
+const isDowned = () => MP.down || state.qr > 0;
+function equipDownPistol(pap) {   // swap everything for a temporary pistol (Pack-a-Punched when Quick Revive caused the down)
+  if (!DNG.saved) DNG.saved = { cur: player.cur, s1: player.slot1, s2: player.slot2, s3: player.slot3, pap: player.pap.pistol, mag: player.ammo.pistol.mag, res: player.ammo.pistol.res };
+  player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.cur = 'pistol';
+  player.pap.pistol = !!pap; player.ammo.pistol.mag = magOf('pistol'); player.ammo.pistol.res = Infinity;
+  state.reloading = false; state.swapT = 0.3; state.mouseDown = false; state.rmb = false; state.knifeT = 0; setViewmodels();
+}
+function restoreDownGear() {
+  const g = DNG.saved; if (!g) return; DNG.saved = null;
+  player.slot1 = g.s1; player.slot2 = g.s2; player.slot3 = g.s3; player.cur = g.cur; player.pap.pistol = g.pap; player.ammo.pistol.mag = g.mag; player.ammo.pistol.res = g.res;
+  state.reloading = false; state.swapT = 0.3; state.mouseDown = false; setViewmodels();
+}
+function startQrDown() {
+  state.qr = 5; state.qrN = 0; state.health = 1; state.lastHurt = state.time; equipDownPistol(true);
+  notice('QUICK REVIVE! YOU GO DOWN - GETTING UP IN 5', 1200); sfx.chime();
+}
+function endQrDown() {
+  state.qr = 0; state.qrN = 0; state.health = state.maxHealth; state.lastHurt = state.time; restoreDownGear();
+  notice('QUICK REVIVE - BACK ON YOUR FEET!', 2500); sfx.chime();
+}
+function updateDownedView(dt) {
+  state.downDrop += (1.0 - state.downDrop) * Math.min(1, dt * 5);
+  player.vel.x = 0; player.vel.z = 0;
+  state.shake = Math.max(0, state.shake - dt * 2.2);
+  applyCamera(0); updateViewmodel(dt, 0, false, 0, 0);
+}
+
 function hurtPlayer(dmg) {
-  if (state.phase !== 'playing' || MP.down || state.god) return;
+  if (state.phase !== 'playing' || MP.down || state.qr > 0 || state.god) return;
   state.health -= dmg; state.lastHurt = state.time; if (state.health <= 0) state.downs = (state.downs | 0) + 1;
   const v = $('vignette'); v.style.opacity = 1; setTimeout(() => { v.style.opacity = 0; }, 160);
   sfx.hurt(); state.shake = Math.max(state.shake, 0.25);
-  if (state.health <= 0 && boughtExtraPerks.has('quick')) { boughtExtraPerks.delete('quick'); state.health = state.maxHealth; state.lastHurt = state.time; notice('QUICK REVIVE SAVED YOU!', 3000); sfx.chime(); return; }
+  if (state.health <= 0 && boughtExtraPerks.has('quick')) { boughtExtraPerks.delete('quick'); startQrDown(); return; }
   if (state.health <= 0) { if (MP.on) MP.goDown(); else gameOver(); }
 }
 
@@ -3519,8 +3550,9 @@ function resetWorld() {
   for (const g of grenades) scene.remove(g.mesh); grenades.length = 0; grenadeCooldown = 0; player.jumpY = 0; player.jumpVel = 0; player.onGround = true; for (const c of gasClouds) scene.remove(c.g); gasClouds.length = 0;
   for (const p of particles) scene.remove(p.m); particles.length = 0;
   for (const e of explosions) scene.remove(e.m); explosions.length = 0;
+  DNG.saved = null;
   Object.assign(state, {
-    time: 0, score: START_POINTS, kills: 0, wave: 0, health: 100, lastHurt: -10, roundState: 'intermission', interT: 3, roundTotal: 0, spawned: 0, spawnT: 0,
+    qr: 0, qrN: 0, downDrop: 0, time: 0, score: START_POINTS, kills: 0, wave: 0, health: 100, lastHurt: -10, roundState: 'intermission', interT: 3, roundTotal: 0, spawned: 0, spawnT: 0,
     fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 100, ads: 0, rmb: false, god: false, cheated: false, coinNext: 10, downs: 0, revives: 0, heads: 0,
   });
   camera.fov = 75; camera.updateProjectionMatrix();
@@ -3774,7 +3806,7 @@ document.addEventListener('mousedown', e => { if (!locked || state.phase !== 'pl
 document.addEventListener('mouseup', e => { if (e.button === 0) state.mouseDown = false; else if (e.button === 2) state.rmb = false; });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('wheel', e => {
-  if (!locked || state.phase !== 'playing' || !player.slot2) return;
+  if (!locked || state.phase !== 'playing' || !player.slot2 || isDowned()) return;
   const sl = [player.slot1, player.slot2, player.slot3].filter(Boolean), ci = sl.indexOf(player.cur);
   switchWeapon(sl[(ci + (e.deltaY > 0 ? 1 : sl.length - 1)) % sl.length]);
 }, { passive: true });
@@ -3846,6 +3878,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Space' && locked) e.preventDefault();
   keys[e.code] = true;
   if (!locked || state.phase !== 'playing' || e.repeat) return;
+  if (isDowned() && e.code !== 'KeyR') return;   // downed: only look, shoot the temp pistol and reload
   if (e.code === 'KeyR') startReload();
   else if (e.code === 'KeyG') throwGrenade();
   else if (e.code === 'Space' && player.onGround) { player.jumpVel = 6.2 * (boughtExtraPerks.has('lunar') ? 1.3 : 1); player.onGround = false; }
@@ -3866,7 +3899,7 @@ const fwd = new THREE.Vector3(), right = new THREE.Vector3(), wish = new THREE.V
 function applyCamera(bobY = 0) {
   let sx = 0, sy = 0;
   if (state.shake > 0) { sx = (Math.random() - 0.5) * state.shake * 0.12; sy = (Math.random() - 0.5) * state.shake * 0.12; }
-  camera.position.set(player.pos.x + sx, PLAYER_HEIGHT + player.jumpY + bobY + sy, player.pos.z);
+  camera.position.set(player.pos.x + sx, PLAYER_HEIGHT - (state.downDrop || 0) + player.jumpY + bobY + sy, player.pos.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
 }
 
@@ -3920,11 +3953,12 @@ function updatePlayer(dt) {
   const f = Math.min(1, spd / WALK_SPEED);
   const bobY = Math.sin(player.bob * 2) * 0.035 * f, bobX = Math.cos(player.bob) * 0.02 * f;
   state.shake = Math.max(0, state.shake - dt * 2.2);
+  state.downDrop += (0 - state.downDrop) * Math.min(1, dt * 6);
   applyCamera(bobY);
   updateViewmodel(dt, spd, sprinting, bobX, bobY);
 }
 
-function updateCombat(dt) {
+function updateCombat(dt, downed = false) {
   updateParaWeapon(dt);
   state.fireCd -= dt; state.clickBuf -= dt; state.knifeCd -= dt;
   const w = WEAPONS[player.cur];
@@ -3942,7 +3976,7 @@ function updateCombat(dt) {
   }
   // out of ammo on a box weapon -> back to the pistol
   if (player.cur !== 'pistol') { const a = player.ammo[player.cur]; if (a.mag <= 0 && a.res <= 0 && !state.reloading) { notice('OUT OF AMMO'); switchWeapon('pistol'); } }
-  if (state.health < state.maxHealth && state.time - state.lastHurt > 4) state.health = Math.min(state.maxHealth, state.health + dt * 6 * state.maxHealth / 100 * (boughtExtraPerks.has('quick') ? 1.8 : 1));
+  if (!downed && state.health < state.maxHealth && state.time - state.lastHurt > 4) state.health = Math.min(state.maxHealth, state.health + dt * 6 * state.maxHealth / 100 * (boughtExtraPerks.has('quick') ? 1.8 : 1));
 }
 
 function updateRounds(dt) {
@@ -3967,7 +4001,7 @@ function updateZombies(dt) {
       continue;
     }
     const TP = MP.nearest(gp); let tx = TP.x, tz = TP.z;
-    const hid = !!TP.me && gasClouds.length > 0 && playerHidden();
+    const hid = !!TP.me && ((gasClouds.length > 0 && playerHidden()) || state.qr > 0);
     if (hid) { z.wt = (z.wt || 0) - dt; if (z.wt <= 0 || z.wx === undefined) { z.wt = 1.5 + Math.random() * 2; z.wx = gp.x + (Math.random() - 0.5) * 9; z.wz = gp.z + (Math.random() - 0.5) * 9; } tx = z.wx; tz = z.wz; }
     const hs = curMap.id === 'factory' ? [house, ...cottageDoors] : (curMap.houses || []);
     for (const H of hs) {   // zombies path through open doors / the window to reach you (and back out)
@@ -4208,7 +4242,8 @@ function update(dt) {
   if (MP.on && MP.paused) { MP.tick(dt); return; }
   state.time += dt;
   if (state.phase === 'playing' && !state.cheated) { while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
-  if (!MP.down) { updatePlayer(dt); updateCombat(dt); }
+  if (state.qr > 0) { state.qr -= dt; const n = Math.ceil(state.qr); if (n > 0 && n !== state.qrN) { state.qrN = n; notice(`QUICK REVIVE - GETTING UP IN ${n}`, 1100); } if (state.qr <= 0) endQrDown(); }
+  if (!isDowned()) { updatePlayer(dt); updateCombat(dt); } else { updateDownedView(dt); updateCombat(dt, true); }
   MP.tick(dt);
   if (!MP.client) updateRounds(dt);
   if (NAV.on) navUpdate(dt);
@@ -4221,7 +4256,7 @@ function update(dt) {
   updatePowerups(dt);
   updateBossCans(dt);
   updateGiants(dt);
-  updateInteractions();
+  if (isDowned()) { if (el.prompt._v) { el.prompt.textContent = ''; el.prompt._v = ''; } } else updateInteractions();
   updateEffects(dt);
   updateHUD();
 }
