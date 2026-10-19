@@ -109,6 +109,7 @@
   .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-right: 22px; }
   .pager .btn { flex: 1; width: auto; padding: 10px 12px; font-size: 9px; text-align: center; }
   .pager .btn.off { opacity: .25; pointer-events: none; }
+  #menuButtons .btn.off { opacity: .6; pointer-events: none; }
   .pager em { font-style: normal; font-size: 9px; color: var(--dim); }
   #lockerView { position: fixed; left: 50%; top: 50%; transform: translate(-40%,-50%); z-index: 19; display: none; text-align: center; pointer-events: none; }
   #lockerView canvas { width: 300px; height: 433px; display: block; }
@@ -2426,7 +2427,7 @@ const MP = {
         if (this.paused) this.send({ t: 'ps', v: 1 });
         this.send({ t: 'welcome', to: m.i, map: this.map, dr: openedDoors(), pw: (curMap.switches || []).filter(w => w.on).map(w => w.id), bx: [+mbox.pos.x.toFixed(2), +mbox.pos.z.toFixed(2), +mbox.group.rotation.y.toFixed(3)], lb: this.lobby ? 1 : 0, ff: this.ff ? 1 : 0 }); this.beat(); this.sendRoster(); if (this.lobby && menuView === 'lobby') this.draw(); break;
       case 'lb': { const p = this.peers.get(m.i); if (p) p.seen = now; break; }
-      case 'ros': if (this.client) { this.ros = m.l || []; this.ff = !!m.ff; this.lastRos = now; if (menuView === 'lobbyc') this.draw(); } break;
+      case 'ros': if (this.client) { const f0 = this.ff; this.ros = m.l || []; this.ff = !!m.ff; this.lastRos = now; if (menuView === 'lobbyc') { if (f0 !== this.ff) renderMenu('lobbyc'); else this.draw(); } } break;
       case 'start': if (this.client && this.lobby) { this.lobby = false; this.lastS = now; selectMap(this.map); startCountdown(); } break;
       case 'pvp': if (this.ff && Number.isFinite(m.d)) hurtPlayer(Math.max(0, Math.min(90, m.d))); break;
       case 'badpw': this.leave(); this.status = 'WRONG PASSWORD'; this.draw(); break;
@@ -2978,6 +2979,14 @@ function spawnTracer(from, to, tid) {
 }
 const explLight = new THREE.PointLight(0xff8a30, 0, 24, 2); scene.add(explLight);
 let explLightT = 0;
+function pvpBlast(point, R, base) {   // friendly fire: explosions you fired hurt teammates inside the radius
+  if (!(MP.on && MP.ff)) return;
+  for (const [id, p] of MP.peers) {
+    if (p.d || p.hid || p.dn || p.tx === undefined) continue;
+    const dist = Math.hypot(p.x - point.x, (p.ty || 0) + 1 - point.y, p.z - point.z);
+    if (dist < R) MP.send({ t: 'pvp', to: id, d: Math.round(Math.max(5, Math.min(90, base * (1 - 0.6 * dist / R)))) });
+  }
+}
 function explode(point, ray = false, wt = null, vis = false) {
   const R = ray ? 3.2 : wt === 'rpg' ? 6.5 : EXPLOSION_RADIUS;
   const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: ray ? 0x66ff44 : 0xff9a3a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
@@ -2989,6 +2998,7 @@ function explode(point, ray = false, wt = null, vis = false) {
   const d = Math.hypot(point.x - player.pos.x, point.z - player.pos.z);
   if (d < 22) state.shake = Math.max(state.shake, 1 - d / 22);
 
+  if (!vis) pvpBlast(point, R, wt === 'rpg' ? 110 : ray ? 45 : 70);
   if (!vis) for (const z of [...zombies]) {
     const c = new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), dist = c.distanceTo(point);
     if (dist < R) damageZombie(z, wt === 'rpg' ? dmgOf('rpg') : wt === 'thumper' ? dmgOf('thumper') * (1 - 0.5 * dist / R) : (wt === 'pistol' ? dmgOf('pistol') * 2.5 : dmgOf(ray ? (wt || 'raygun') : 'crossbow')) * (1 - 0.6 * dist / R), c, false);
@@ -3240,6 +3250,7 @@ function detonateGrenade(g) {
   m.position.copy(point); scene.add(m); explosions.push({ m, t: 0, R });
   explLight.position.copy(point); explLight.intensity = 115; explLightT = 0.28;
   burst(point, 24, pMat.fire, 12, 0.7, 4); burst(point, 18, pMat.smoke, 6, 1.1, -1.2); burst(point, 12, pMat.spark, 14, 0.5, 8); sfx.explode();
+  if (!g.vis) pvpBlast(point, R, 90);
   if (!g.vis) for (const z of [...zombies]) {
     const c = new THREE.Vector3(z.root.position.x, 1.0, z.root.position.z), dist = c.distanceTo(point);
     if (dist <= R) damageZombie(z, Math.max(1, GRENADE_DAMAGE * (boughtExtraPerks.has('double') ? 2 : 1) * (1 - 0.45 * dist / R)), c, false);
@@ -3508,6 +3519,7 @@ function knifeStrike() {
   for (const z of zombies) targets.push(...z.meshes);
   targets.push(...obstacleMeshes);
   const hits = raycaster.intersectObjects(targets, false);
+  if (MP.on && MP.ff) { const ph = peerHit(raycaster.ray, hits.length ? Math.min(hits[0].distance, KNIFE_RANGE) : KNIFE_RANGE); if (ph && !(hits.length && hits[0].object.userData.zombie && hits[0].distance < ph.t)) { sfx.knifeHit(); MP.send({ t: 'pvp', to: ph.id, d: player.bowie ? 70 : 40 }); return; } }
   if (hits.length) {
     const h = hits[0], z = h.object.userData.zombie;
     if (z) { sfx.knifeHit(); const dt2 = boughtExtraPerks.has('double') ? 2 : 1; const kd = player.bowie ? (state.wave <= 8 ? (z.boss ? 500 : 1e5) : 300) : KNIFE_DMG; damageZombie(z, kd * dt2, h.point, h.object.userData.part === 'head', true); }
@@ -3808,9 +3820,10 @@ document.addEventListener('keydown', e => {
   devBuf = (devBuf + e.key.toLowerCase()).slice(-7);
   if (devBuf === 'devmode') { devBuf = ''; CL.dev = true; try { localStorage.setItem('zdev', '1'); } catch (x) {} CL.msg = 'DEVMODE ON - CHANGELOG EDITING UNLOCKED'; sfx.chime && sfx.chime(); renderMenu('changelog'); }
 });
+function showLobbyClient() { menuEl.classList.remove('hidden'); renderMenu('lobbyc'); }
 function renderMenu(view) {
   let h = ''; menuView = view; mprev.style.display = 'none';
-  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + (CL.dev ? btn('editor', 'MAP EDITOR', 'devmode: build maps') : '') + btn('changelog', 'CHANGELOG', CL.dev ? 'devmode: editable' : 'what\'s new') + btn('controls', 'CONTROLS');
+  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + (CL.dev ? btn('editor', 'MAP EDITOR') : '') + btn('changelog', 'CHANGELOG') + btn('controls', 'CONTROLS');
   else if (view === 'changelog') h = (CL.dev ? '<div class="clnote">DEVMODE: EDIT BELOW. FIRST LINE OF EACH BLOCK IS THE TITLE, BLANK LINE BETWEEN UPDATES.</div><textarea id="clText" class="clin" spellcheck="false">' + clEsc(CL.text) + '</textarea>' + btn('clsave', 'SAVE FOR EVERYONE') : clHTML()) + (CL.msg ? '<div class="clnote">' + CL.msg + '</div>' : '') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
@@ -3819,7 +3832,7 @@ function renderMenu(view) {
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'lobby') h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
-  else if (view === 'lobbyc') h = '<div class="label">LOBBY: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">WAITING FOR HOST TO START...</div><div class="label">FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF') + '</div>' + btn('mpleave', '&lt; LEAVE', '', 'back');
+  else if (view === 'lobbyc') h = '<div class="label">LOBBY: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">WAITING FOR HOST TO START...</div>' + btn('ffview', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'set by the host', 'off') + btn('mpleave', '&lt; LEAVE', '', 'back');
   else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
   menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
 }
@@ -6667,14 +6680,15 @@ function cmRegister(d) {
   const id = 'cm_' + d.id, old = MAPS[id];
   if (old && curMap && curMap.id === id && state.phase !== 'menu') return false;
   if (old && old.root) scene.remove(old.root);
-  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: 'CUSTOM MAP', built: false, build: () => buildCustomMap(d), custom: true };
+  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: clEsc(String(d.sub || 'CUSTOM MAP').toUpperCase().slice(0, 40)), built: false, build: () => buildCustomMap(d), custom: true };
+  if (d.desc) MAP_DESC[id] = clEsc(String(d.desc).slice(0, 220)); else delete MAP_DESC[id];
   if (!MAP_ORDER.includes(id)) MAP_ORDER.push(id);
   CM.maps[d.id] = d; cmRebuildPages(); return true;
 }
 function cmRemove(did) {
   const id = 'cm_' + did, old = MAPS[id]; if (old && old.root) scene.remove(old.root);
   if (curMap && curMap.id === id && state.phase !== 'menu') return;
-  delete MAPS[id]; delete CM.maps[did]; const i = MAP_ORDER.indexOf(id); if (i >= 0) MAP_ORDER.splice(i, 1); cmRebuildPages();
+  delete MAPS[id]; delete MAP_DESC[id]; delete CM.maps[did]; const i = MAP_ORDER.indexOf(id); if (i >= 0) MAP_ORDER.splice(i, 1); cmRebuildPages();
   if (curMap && curMap.id === id) { try { activateMap('factory'); } catch (e) {} }
 }
 function cmStore() { try { localStorage.setItem('zcm', JSON.stringify(CM.maps)); } catch (e) {} }
@@ -6767,6 +6781,8 @@ function edAct(a) {
   else if (a.startsWith('perk:')) { ED.perk = a.slice(5); ED.tool = 'perk'; }
   else if (a === 'exit') { ED.el.style.display = 'none'; renderMenu('main'); return; }
   else if (a === 'name') { const n = prompt('MAP NAME', d.name); if (n) d.name = n.toUpperCase().slice(0, 18); }
+  else if (a === 'sub') { const n = prompt('SUBTITLE (SHOWN UNDER THE MAP NAME)', d.sub || ''); if (n !== null) d.sub = n.slice(0, 40); }
+  else if (a === 'desc') { const n = prompt('DESCRIPTION (SHOWN IN THE MAP PREVIEW)', d.desc || ''); if (n !== null) d.desc = n.slice(0, 220); }
   else if (a === 'size') { const L = [30, 40, 50, 60, 80], i = L.indexOf(d.ax); d.ax = d.az = L[(i + 1) % L.length]; }
   else if (a === 'ground') { d.ground = CM_GND[(CM_GND.indexOf(d.ground) + 1) % CM_GND.length]; }
   else if (a === 'zoomin') ED.sc = Math.min(40, ED.sc * 1.3); else if (a === 'zoomout') ED.sc = Math.max(2, ED.sc / 1.3);
@@ -6794,7 +6810,7 @@ function edAct(a) {
 }
 function edUI() {
   const d = ED.d, B = (a, t, on, cls = '') => `<button class="edb ${on ? 'on' : ''} ${cls}" data-ea="${a}">${t}</button>`;
-  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('size', d.ax * 2 + 'M') + B('ground', d.ground.toUpperCase()) + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + B('maps', 'MAPS', ED.panel === 'maps') + B('save', 'SAVE') + B('play', 'PLAY') + B('zoomin', '+') + B('zoomout', '-');
+  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('sub', 'SUBTITLE') + B('desc', 'DESCRIPTION') + B('size', d.ax * 2 + 'M') + B('ground', d.ground.toUpperCase()) + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + B('maps', 'MAPS', ED.panel === 'maps') + B('save', 'SAVE') + B('play', 'PLAY') + B('zoomin', '+') + B('zoomout', '-');
   $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : k.toUpperCase()), ED.perk === k)).join('') : '');
   const s = ED.sel, it = edItem(s); let h = '';
   if (it) {
