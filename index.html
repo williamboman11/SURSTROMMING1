@@ -2360,7 +2360,7 @@ const MP = {
   id: Math.random().toString(36).slice(2, 8), name: '', status: '', topic: '', map: '', view: '',
   peers: new Map(), servers: new Map(), zmap: new Map(), me: { x: 0, z: 0, me: true },
   PRE: 'czmb1/', BR: ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'], bi: 0, fails: 0, c: null,
-  tp: 0, ts: 0, tb: 0, th: 0, lastS: 0, panel: null, hud: null,
+  ff: false, tp: 0, ts: 0, tb: 0, th: 0, lastS: 0, panel: null, hud: null, pw: '', lobby: false, started: false, ros: [], lastRos: 0, synced: false,
   online: new Map(),   // presence: everyone with the game loaded (id -> last seen)
   presence() { if (this.c && this.c.connected) this.c.publish(this.PRE + 'online/' + this.id, String(Date.now())); },
   onlineCount() { const now = Date.now(); for (const [k, t] of this.online) if (now - t > 100000) this.online.delete(k); if (this.c && this.c.connected) this.online.set(this.id, now); return this.online.size; },
@@ -2374,24 +2374,31 @@ const MP = {
     c.on('message', (t, p) => { try { this.msg(t, p.toString()); } catch (e) {} });
     c.on('error', () => { if (c.connected) return; this.status = 'CANNOT REACH SERVER...'; if (++this.fails % 2 === 0 && !this.on) { c.end(true); this.c = null; this.bi++; this.init(); } this.draw(); });
   },
+  roster() { return [this.name + ' (HOST)', ...[...this.peers.values()].map(p => p.n || 'PLAYER')]; },
+  sendRoster() { if (this.host) this.send({ t: 'ros', l: this.roster(), ff: this.ff ? 1 : 0 }); },
+  lobbyTick() {
+    if (!this.on || !this.lobby) return; const now = performance.now();
+    if (this.host) { for (const [id, p] of this.peers) if (now - p.seen > 8000) { this.peers.delete(id); } this.sendRoster(); this.beat(); if (menuView === 'lobby') this.draw(); }
+    else { this.send({ t: 'lb' }); if (this.lastRos && now - this.lastRos > 9000) { this.leave(); this.status = 'HOST LEFT'; showMenu('mp'); } }
+  },
   send(o) { o.i = this.id; if (this.c && this.topic) this.c.publish(this.topic, JSON.stringify(o)); },
-  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: MAX_PLAYERS }), { retain: true }); },
+  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: MAX_PLAYERS, k: this.pw ? 1 : 0, f: this.ff ? 1 : 0, l: this.lobby ? 1 : 0 }), { retain: true }); },
   startHost(map) {
     this.leave(); this.init(); this.on = this.host = true; this.map = map; this.topic = this.PRE + 'g/' + this.id;
     if (this.c) this.c.subscribe(this.topic); this.beat();
   },
-  join(sid) {
+  join(sid, pw = '') {
     const s = this.servers.get(sid); if (!s || !this.c) return;
-    this.leave(); this.on = this.client = true; this.topic = this.PRE + 'g/' + sid; this.map = s.m; this.joined = false;
+    this.leave(); this.jpw = pw; this.on = this.client = true; this.topic = this.PRE + 'g/' + sid; this.map = s.m; this.joined = false;
     this.c.subscribe(this.topic); this.status = 'JOINING ' + s.n + '...'; this.draw();
-    const tryJoin = () => this.send({ t: 'join', n: this.name });
+    const tryJoin = () => this.send({ t: 'join', n: this.name, pw: this.jpw });
     tryJoin(); const iv = setInterval(() => { if (this.joined || !this.client) clearInterval(iv); else tryJoin(); }, 1000);
     setTimeout(() => { if (this.client && !this.joined) { this.leave(); this.status = 'SERVER NOT RESPONDING'; this.draw(); } }, 6500);
   },
   leave() {
     if (this.on && this.c) { this.send({ t: 'bye' }); try { this.c.unsubscribe(this.topic); } catch (e) {} if (this.host) this.c.publish(this.PRE + 'list/' + this.id, '', { retain: true }); }
     for (const p of this.peers.values()) if (p.g) scene.remove(p.g);
-    Voice.stop(); this.peers.clear(); this.zmap.clear(); this.on = this.host = this.client = this.down = false; this.topic = ''; this.joined = false; this.setPause(false);
+    Voice.stop(); this.peers.clear(); this.zmap.clear(); this.on = this.host = this.client = this.down = false; this.topic = ''; this.joined = false; this.lobby = this.started = this.synced = this.ff = false; this.joinWave = 0; this.ros = []; this.setPause(false);
     if (this.hud) this.hud.style.display = 'none';
   },
   msg(t, s) {
@@ -2413,17 +2420,24 @@ const MP = {
     switch (m.t) {
       case 'join':
         if (!this.host) break;
+        if (this.pw && m.pw !== this.pw) { this.send({ t: 'badpw', to: m.i }); break; }
         if (!this.peers.has(m.i) && this.peers.size >= MAX_PLAYERS - 1) { this.send({ t: 'full', to: m.i }); break; }
         if (!this.peers.has(m.i)) this.peers.set(m.i, { n: this.esc(m.n), x: 0, y: 0, z: 0, yaw: 0, pt: 0, d: 0, h: 100, w: 'pistol', seen: now });
         if (this.paused) this.send({ t: 'ps', v: 1 });
-        this.send({ t: 'welcome', to: m.i, map: this.map, dr: openedDoors(), pw: (curMap.switches || []).filter(w => w.on).map(w => w.id), bx: [+mbox.pos.x.toFixed(2), +mbox.pos.z.toFixed(2), +mbox.group.rotation.y.toFixed(3)] }); this.beat(); break;
+        this.send({ t: 'welcome', to: m.i, map: this.map, dr: openedDoors(), pw: (curMap.switches || []).filter(w => w.on).map(w => w.id), bx: [+mbox.pos.x.toFixed(2), +mbox.pos.z.toFixed(2), +mbox.group.rotation.y.toFixed(3)], lb: this.lobby ? 1 : 0, ff: this.ff ? 1 : 0 }); this.beat(); this.sendRoster(); if (this.lobby && menuView === 'lobby') this.draw(); break;
+      case 'lb': { const p = this.peers.get(m.i); if (p) p.seen = now; break; }
+      case 'ros': if (this.client) { this.ros = m.l || []; this.ff = !!m.ff; this.lastRos = now; if (menuView === 'lobbyc') this.draw(); } break;
+      case 'start': if (this.client && this.lobby) { this.lobby = false; this.lastS = now; selectMap(this.map); startCountdown(); } break;
+      case 'pvp': if (this.ff && Number.isFinite(m.d)) hurtPlayer(Math.max(0, Math.min(90, m.d))); break;
+      case 'badpw': this.leave(); this.status = 'WRONG PASSWORD'; this.draw(); break;
       case 'ps': if (!this.host) this.setPause(!!m.v); break;
       case 'pu': if (this.client) dropPowerup(m.x, m.z, m.ty, m.k); break;
       case 'pk': { const q = powerups.findIndex(p => p.k === m.k); if (q >= 0) { scene.remove(powerups[q].m); powerups.splice(q, 1); } collectPowerup(m.ty, true); break; }
       case 'full': this.leave(); this.status = 'SERVER FULL'; this.draw(); break;
       case 'welcome':
-        if (this.joined) break; this.joined = true; this.status = ''; this.lastS = now; this.panelHide();
+        if (this.joined) break; this.ff = !!m.ff; this.joined = true; this.status = ''; this.lastS = now; this.panelHide();
         this.pend = { dr: m.dr || [], pw: m.pw || [], bx: m.bx || null };
+        if (m.lb) { this.lobby = true; this.lastRos = now; showLobbyClient(); break; }
         if (MAPS[m.map]) { selectMap(m.map); startCountdown(); } break;
       case 'p': {
         if (this.host && !this.peers.has(m.i) && (m.i === undefined || this.peers.size >= MAX_PLAYERS - 1)) break;
@@ -2431,7 +2445,7 @@ const MP = {
         Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, lk: m.lk, cm: m.cm | 0, hid: m.hid, sc: m.sc, kk: m.kk, dn: m.dn, rv: m.rv, hs: m.hs, seen: now }); break; }
       case 'vs': Voice.rx(m); break;
       case 'chat': chatAdd(this.esc(m.n) || 'PLAYER', String(m.m).slice(0, 80)); break;
-      case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); Voice.drop(m.i); this.beat(); break; }
+      case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); Voice.drop(m.i); this.beat(); this.sendRoster(); if (menuView === 'lobby') this.draw(); break; }
       case 's': if (this.client) this.sync(m); break;
       case 'hit': if (this.host) this.onHit(m); break;
       case 'hurt': hurtPlayer(m.d); break;
@@ -2451,6 +2465,7 @@ const MP = {
   },
   sync(m) {
     this.lastS = performance.now();
+    if (!this.synced) { this.synced = true; this.joinWave = m.w; if (m.w > 1) state.coinNext = m.w + 10; }   // joining mid-game: round coins only after playing 10 more rounds
     if (this.lr === 1 && m.r === 0 && m.w === state.wave) sfx.roundEnd(); this.lr = m.r;
     if (m.w !== state.wave) { if (m.w > state.wave) { if (m.hr) playSnd('hound', 1); else sfx.round(); } state.wave = m.w; }
     const seen = new Set();
@@ -2538,23 +2553,27 @@ const MP = {
   /* ---- menu UI ---- */
   panelHide() { if (this.panel) this.panel.style.display = 'none'; },
   setView(v) {
-    this.view = v; const show = v === 'mp' || v === 'mpmaps';
+    this.view = v; const show = v === 'mp' || v === 'mpmaps' || v === 'lobby' || v === 'lobbyc';
     if (!this.panel) {
       const p = this.panel = document.createElement('div');
       p.style.cssText = 'position:fixed;right:3vw;top:50%;transform:translateY(-50%);width:min(400px,42vw);max-height:80vh;overflow:auto;padding:18px;background:rgba(8,10,16,.88);border:2px solid #e8d27a;z-index:50;font-size:10px;line-height:1.8';
-      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); this.join(b.dataset.join); } });
+      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); const sv = this.servers.get(b.dataset.join); let pw = ''; if (sv && sv.k) { pw = prompt('SERVER PASSWORD'); if (pw === null) return; } this.join(b.dataset.join, pw); } });
       document.body.appendChild(p);
     }
     this.panel.style.display = show ? 'block' : 'none'; if (show) { this.init(); this.draw(); }
   },
   draw() {
     if (!this.panel || this.panel.style.display === 'none') return;
+    if (this.view === 'lobby' || this.view === 'lobbyc') {
+      const L = this.host ? this.roster() : this.ros, mx = MAX_PLAYERS;
+      this.panel.innerHTML = '<div style="color:#e8d27a;margin-bottom:10px">PLAYERS ' + L.length + '/' + mx + '</div>' + L.map(n => `<div style="padding:7px 0;border-top:1px solid #333">${this.esc(n.replace(/ \(HOST\)$/, '')) + (/\(HOST\)$/.test(n) ? ' <span style="color:#e8d27a">HOST</span>' : '')}</div>`).join('') + (this.host ? '' : '<div style="color:#8e949b;margin-top:10px">WAITING FOR THE HOST TO START...</div>'); return;
+    }
     const now = Date.now(); let h = '<div style="color:#e8d27a;margin-bottom:10px">SERVER LIST</div>';
     if (this.status) h += `<div style="color:#ff8a6a;margin-bottom:10px">${this.status}</div>`;
     let n = 0;
     for (const [id, s] of this.servers) {
       if (now - s.seen > 15000) continue; n++; const full = s.p >= s.x;
-      h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #333"><div>${this.esc(s.n)}<br><span style="color:#8e949b">${MAPS[s.m] ? MAPS[s.m].name : s.m} &middot; ${s.p}/${s.x}</span></div>${full ? '<span style="color:#e0453a">FULL</span>' : `<button class="btn" data-join="${id}" style="padding:8px 12px;font-size:9px">JOIN</button>`}</div>`;
+      h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #333"><div>${this.esc(s.n)}<br><span style="color:#8e949b">${MAPS[s.m] ? MAPS[s.m].name : s.m} &middot; ${s.p}/${s.x}${s.k ? ' &middot; <span style="color:#e8d27a">PASSWORD</span>' : ''}${s.f ? ' &middot; <span style="color:#ff8a6a">FRIENDLY FIRE</span>' : ''}${s.l ? ' &middot; LOBBY' : ''}</span></div>${full ? '<span style="color:#e0453a">FULL</span>' : `<button class="btn" data-join="${id}" style="padding:8px 12px;font-size:9px">JOIN</button>`}</div>`;
     }
     if (!n) h += '<div style="color:#8e949b">NO SERVERS YET.<br>CREATE ONE AND TELL YOUR FRIENDS!</div>';
     this.panel.innerHTML = h;
@@ -2565,7 +2584,13 @@ const MP = {
     if (a === 'mpback') { renderMenu('mp'); return true; }
     if (a.startsWith('host:')) {
       const id = a.slice(5); menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>';
-      setTimeout(() => { selectMap(id); this.startHost(id); startCountdown(); }, 40); return true;
+      setTimeout(() => { selectMap(id); this.startHost(id); this.lobby = true; this.started = false; this.pw = ''; this.beat(); renderMenu('lobby'); }, 40); return true;
+    }
+    if (a === 'mpff') { this.ff = !this.ff; this.beat(); this.sendRoster(); renderMenu('lobby'); return true; }
+    if (a === 'mpstart') {
+      const i = $('mpPw'); if (i) this.pw = i.value.trim().slice(0, 16); this.lobby = false; this.started = true; this.send({ t: 'start' }); this.beat(); startCountdown(); return true;
+    }
+    if (a === 'mpleave') { this.leave(); renderMenu('mp'); return true;
     }
     return false;
   },
@@ -3311,6 +3336,18 @@ function giveWeapon(type) {
   player.cur = type; state.reloading = false; state.swapT = 0.25; sfx.swap(); setViewmodels();
 }
 
+const _pp = new THREE.Vector3();
+function peerHit(ray, maxD) {   // friendly fire: ray vs. three spheres per teammate (legs, torso, head)
+  let best = null;
+  for (const [id, p] of MP.peers) {
+    if (p.d || p.hid || p.dn || p.tx === undefined) continue;
+    for (const [hy, r, head] of [[0.35, 0.35, 0], [0.95, 0.38, 0], [1.55, 0.28, 1]]) {
+      _pp.set(p.x, (p.ty || 0) + hy, p.z); const t = _pp.clone().sub(ray.origin).dot(ray.direction); if (t < 0 || t > maxD) continue;
+      if (ray.origin.clone().addScaledVector(ray.direction, t).distanceTo(_pp) < r && (!best || t < best.t)) best = { id, t, head };
+    }
+  }
+  return best;
+}
 function shoot() {
   const w = WEAPONS[player.cur], a = player.ammo[player.cur];
   if (state.reloading || state.knifeT > 0 || state.swapT > 0) return;
@@ -3344,8 +3381,9 @@ function shoot() {
       const sprd = w.spread * (1 - 0.8 * state.ads); ndc.set((Math.random() - 0.5) * 2 * sprd, (Math.random() - 0.5) * 2 * sprd);
       raycaster.setFromCamera(ndc, camera); raycaster.far = 150;
       const hits = raycaster.intersectObjects(targets, false);
-      let end;
-      if (hits.length) {
+      let end; const ph = (MP.on && MP.ff) ? peerHit(raycaster.ray, hits.length ? hits[0].distance : 150) : null;
+      if (ph) { end = raycaster.ray.at(ph.t, new THREE.Vector3()); burst(end, 4, pMat.blood, 4, 0.3, 6); MP.send({ t: 'pvp', to: ph.id, d: Math.round(Math.min(90, Math.max(4, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - ph.t / 24) : 1) * (ph.head ? 1.5 : 1) * 0.4))) }); }
+      else if (hits.length) {
         const h = hits[0]; end = h.point; const z = h.object.userData.zombie;
         if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1) * (h.object.userData.part === 'head' ? headMul(player.cur) : 1), h.point, h.object.userData.part === 'head');
         else burst(h.point, 4, pMat.spark, 4, 0.3, 6);
@@ -3780,9 +3818,12 @@ function renderMenu(view) {
   else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn('maps', '&lt; BACK', '', 'back');
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'lobby') h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
+  else if (view === 'lobbyc') h = '<div class="label">LOBBY: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">WAITING FOR HOST TO START...</div><div class="label">FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF') + '</div>' + btn('mpleave', '&lt; LEAVE', '', 'back');
   else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
   menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
 }
+menuButtons.addEventListener('input', e => { if (e.target && e.target.id === 'mpPw' && MP.host && MP.lobby) { MP.pw = e.target.value.trim().slice(0, 16); MP.beat(); } });
 menuButtons.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   initAudio(); sfx.click();
@@ -4351,7 +4392,8 @@ function updateInteractions() {
 function update(dt) {
   if (MP.on && MP.paused) { MP.tick(dt); return; }
   state.time += dt;
-  if (state.phase === 'playing' && !state.cheated) { while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
+  if (state.phase === 'playing' && !state.cheated) { if (MP.client && MP.joinWave > 1 && state.coinNext < MP.joinWave + 10) state.coinNext = MP.joinWave + 10;   // late joiners: coins only after playing 10 more rounds
+  while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
   if (state.qr > 0) { state.qr -= dt; const n = Math.ceil(state.qr); if (n > 0 && n !== state.qrN) { state.qrN = n; notice(`QUICK REVIVE - GETTING UP IN ${n}`, 1100); } if (state.qr <= 0) endQrDown(); }
   if (!isDowned()) { updatePlayer(dt); updateCombat(dt); } else { updateDownedView(dt); updateCombat(dt, true); }
   MP.tick(dt);
