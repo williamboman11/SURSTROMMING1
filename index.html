@@ -2370,7 +2370,7 @@ const MP = {
     if (typeof mqtt === 'undefined') { this.status = 'NETWORK LIBRARY BLOCKED'; this.draw(); return; }
     this.status = 'CONNECTING...';
     let c; try { c = this.c = mqtt.connect(this.BR[this.bi % 2], { clientId: 'zmb' + this.id + Math.random().toString(36).slice(2, 5), connectTimeout: 6000, reconnectPeriod: 2500, will: { topic: this.PRE + 'list/' + this.id, payload: '', retain: true } }); } catch (e) { this.c = null; this.status = 'CANNOT REACH SERVER...'; return; }
-    c.on('connect', () => { this.status = ''; this.fails = 0; c.subscribe(this.PRE + 'list/+'); c.subscribe(this.PRE + 'online/+'); c.subscribe(this.PRE + 'changelog'); this.presence(); c.publish(this.PRE + 'online/ping', '1'); if (this.topic) c.subscribe(this.topic); this.draw(); });
+    c.on('connect', () => { this.status = ''; this.fails = 0; c.subscribe(this.PRE + 'list/+'); c.subscribe(this.PRE + 'online/+'); c.subscribe(this.PRE + 'changelog'); c.subscribe(this.PRE + 'cmap/+'); this.presence(); c.publish(this.PRE + 'online/ping', '1'); if (this.topic) c.subscribe(this.topic); this.draw(); });
     c.on('message', (t, p) => { try { this.msg(t, p.toString()); } catch (e) {} });
     c.on('error', () => { if (c.connected) return; this.status = 'CANNOT REACH SERVER...'; if (++this.fails % 2 === 0 && !this.on) { c.end(true); this.c = null; this.bi++; this.init(); } this.draw(); });
   },
@@ -2395,6 +2395,7 @@ const MP = {
     if (this.hud) this.hud.style.display = 'none';
   },
   msg(t, s) {
+    if (t.startsWith(this.PRE + 'cmap/')) { cmRemote(t.slice((this.PRE + 'cmap/').length), s); return; }
     if (t === this.PRE + 'changelog') { try { clSet(JSON.parse(s)); } catch (e) {} return; }
     if (t.startsWith(this.PRE + 'online/')) {
       const id = t.slice((this.PRE + 'online/').length);
@@ -3055,7 +3056,7 @@ function spawnBoss(warlord = false, kind = null) {
 }
 function spawnZombie() {
   const ST = MP.pick();
-  const hopt = state.houndRound ? { hound: true } : curMap.id === 'verity' ? { kind: (() => { const r = Math.random(); return r < 0.38 ? 'verity' : r < 0.72 ? 'tung' : 'cat'; })() } : {};
+  const hopt = state.houndRound ? { hound: true } : curMap.zk ? { kind: pickZK(curMap.zk) } : curMap.id === 'verity' ? { kind: (() => { const r = Math.random(); return r < 0.38 ? 'verity' : r < 0.72 ? 'tung' : 'cat'; })() } : {};
   if (curMap.spawnPts) {
     const L = curMap.spawnPts.filter(p => !NAV.on || navReachable(p.x, p.z)); if (!L.length) return false;
     const dd = p => Math.hypot(p.x - ST.x, p.z - ST.z), mid = L.filter(p => dd(p) > 10 && dd(p) < 55), P0 = pick(mid.length ? mid : L);
@@ -3640,6 +3641,7 @@ function startRound() {
   const nB10 = Math.floor(state.wave / 10), nB8 = Math.floor(state.wave / 8);   // one more boss every time the boss round comes round again
   if (curMap.id === 'verity') { if (state.wave % 10 === 0) for (let i = 0; i < nB10; i++) spawnBoss(false, 'vboss'); }
   else if ((curMap.id === 'factory' || curMap.id === 'osterled') && state.wave % 10 === 0) for (let i = 0; i < nB10; i++) spawnBoss();
+  else if (curMap.custom) { if (curMap.boss && state.wave % 10 === 0) for (let i = 0; i < nB10; i++) spawnBoss(false, curMap.boss === 2 ? 'vboss' : null); }
   else if (curMap.id === 'ironmire') { if (state.wave % 8 === 0) for (let i = 0; i < nB8; i++) spawnBoss(true); if (state.wave % 5 === 0) spawnGiant(); }
 }
 function endRound() {
@@ -3653,7 +3655,7 @@ let cdTimer = 0, menuAngle = 0;
 
 function btn(a, text, sub = '', cls = '') { return `<button class="btn ${cls}" data-a="${a}">${text}${sub ? `<small>${sub}</small>` : ''}</button>`; }
 menuEl.appendChild(coinsEl);
-const MAP_ORDER = ['factory', 'osterled', 'window', 'ironmire', 'verity', 'giant', 'moon', 'dust', 'buried'], MAP_PAGES = [MAP_ORDER.slice(0, 6), MAP_ORDER.slice(6)];
+const MAP_ORDER = ['factory', 'osterled', 'window', 'ironmire', 'verity', 'giant', 'moon', 'dust', 'buried']; let MAP_PAGES = [MAP_ORDER.slice(0, 6), MAP_ORDER.slice(6)];
 let mapPage = 0, menuView = 'main';
 const MAP_DESC = {
   factory: 'An old harbour cannery. Locked cottages hide perk machines, and the big house hides Jugger-Nog.',
@@ -3728,7 +3730,11 @@ function shopGuiHTML() {
   return `<div id="shopGui"><div class="sgHead"><span>SHOP</span><em>COINS <b>${WALLET.coins}</b></em></div><div class="sgTabs">` + SHOP_TABS.map(t => `<button class="stab ${t[0] === shopTab ? 'on' : ''}" data-a="st:${t[0]}">${t[1]}</button>`).join('') + `</div><div class="sgBody">${body}</div><div class="sgFoot">EARN 100 COINS EVERY 10 ROUNDS YOU REACH &middot; CHEATS DISABLE COINS</div></div>`;
 }
 /* ---------- changelog (shared through the MQTT broker as a retained message; devmode edits it) ---------- */
-const CL_DEFAULT = `OCT 19 - CAT ZOMBIE + CHANGELOG
+const CL_DEFAULT = `OCT 19 - MAP EDITOR
+Devmode map editor: build maps with walls, buy-to-open doors, perks, Pack-a-Punch, mystery box spots, spawns and a zombie mix
+Custom maps are shared with everyone in the map list
+
+OCT 19 - CAT ZOMBIE + CHANGELOG
 Verity: cat-ears guy posters all over the map
 Verity: new zombie with the cat-ears guy's face (he meows)
 Changelog button added to the main menu
@@ -3766,7 +3772,7 @@ document.addEventListener('keydown', e => {
 });
 function renderMenu(view) {
   let h = ''; menuView = view; mprev.style.display = 'none';
-  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + btn('changelog', 'CHANGELOG', CL.dev ? 'devmode: editable' : 'what\'s new') + btn('controls', 'CONTROLS');
+  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + (CL.dev ? btn('editor', 'MAP EDITOR', 'devmode: build maps') : '') + btn('changelog', 'CHANGELOG', CL.dev ? 'devmode: editable' : 'what\'s new') + btn('controls', 'CONTROLS');
   else if (view === 'changelog') h = (CL.dev ? '<div class="clnote">DEVMODE: EDIT BELOW. FIRST LINE OF EACH BLOCK IS THE TITLE, BLANK LINE BETWEEN UPDATES.</div><textarea id="clText" class="clin" spellcheck="false">' + clEsc(CL.text) + '</textarea>' + btn('clsave', 'SAVE FOR EVERYONE') : clHTML()) + (CL.msg ? '<div class="clnote">' + CL.msg + '</div>' : '') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
@@ -3781,6 +3787,7 @@ menuButtons.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   initAudio(); sfx.click();
   const a = b.dataset.a;
+  if (a === 'editor') { edOpen(); return; }
   if (a === 'changelog') { CL.msg = ''; renderMenu('changelog'); return; }
   if (a === 'clsave') { const ta = $('clText'); if (ta) clPublish(ta.value.trim()); renderMenu('changelog'); return; }
   if (a === 'locker') { renderMenu('locker'); return; }
@@ -6547,7 +6554,247 @@ function buildOsterled() {
   return m;
 }
 
+/* ===================================================================
+   CUSTOM MAPS (devmode map editor) - stored in this browser and shared through the broker as retained messages
+=================================================================== */
+const CM = { maps: {} };
+const CM_COL = ['#8a8c8e', '#7b3f32', '#cdb98f', '#4a5a6a', '#2d3a2a', '#d94a9b', '#e58a2b', '#2fb8d9'];
+const CM_GND = ['grass', 'asphalt', 'concrete', 'sand'];
+const CM_PD = {
+  jug: { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J', ec: '#a3141a', L: 'J' },
+  quick: { id: 'quick', title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500, ec: '#176cbd', L: 'Q' },
+  speed: { id: 'speed', title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000, ec: '#2d8d48', L: 'S' },
+  double: { id: 'double', title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000, ec: '#c5a321', L: '2' },
+  stamin: { id: 'stamin', title: 'STAMIN-UP', fs: 25, body: '#6e8d35', trim: '#f2f2f2', emb: '↑', cost: 2000, ec: '#6e8d35', L: 'U' },
+  mule: { id: 'mule', title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000, ec: '#d4631f', L: 'M' },
+  pap: { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P', ec: '#6a4be0', L: 'P' },
+};
+function cmNewData() { return { id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 5, v: 0, t: 0, c: 0 }, boss: 1, ts: 0 }; }
+function pickZK(z) { const a = [[null, z.n], ['verity', z.v], ['tung', z.t], ['cat', z.c]], tot = a.reduce((s, q) => s + q[1], 0); if (tot <= 0) return null; let r = Math.random() * tot; for (const [k, w] of a) { if ((r -= w) < 0) return k; } return null; }
+function buildCustomMap(d) {
+  const AXc = d.ax || 40, AZc = d.az || 40, PI = Math.PI, id = 'cm_' + d.id;
+  const obs = [], occ = [], gates = [], sv = { o: obstacles, m: obstacleMeshes };
+  obstacles = obs; obstacleMeshes = occ;
+  const w0 = scene.children.length;
+  const addBox = (x, z, w, dd, h, mat, solid = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), mat); m.position.set(x, h / 2, z); m.castShadow = m.receiveShadow = true; scene.add(m); if (solid) { obs.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - dd / 2, maxZ: z + dd / 2 }); occ.push(m); } return m; };
+  const gtex = ({ grass: texGrass, asphalt: texAsphalt, concrete: () => texConcrete('#8d8f8c'), sand: texGravel }[d.ground] || texGrass)();
+  gtex.wrapS = gtex.wrapT = THREE.RepeatWrapping; gtex.repeat.set((AXc * 2 + 60) / 8, (AZc * 2 + 60) / 8);
+  const gm = new THREE.Mesh(new THREE.PlaneGeometry(AXc * 2 + 60, AZc * 2 + 60), new THREE.MeshStandardMaterial({ map: gtex, roughness: 1 })); gm.rotation.x = -PI / 2; gm.receiveShadow = true; scene.add(gm);
+  addBox(0, -AZc - 0.5, AXc * 2 + 2, 1, 3, MAT.fence); addBox(0, AZc + 0.5, AXc * 2 + 2, 1, 3, MAT.fence); addBox(-AXc - 0.5, 0, 1, AZc * 2, 3, MAT.fence); addBox(AXc + 0.5, 0, 1, AZc * 2, 3, MAT.fence);
+  const wallTex = texConcrete('#cfcfcf');
+  for (const w of d.walls) { const t = wallTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, w.w / 3), Math.max(1, w.h / 3)); addBox(w.x, w.z, w.w, w.d, w.h, new THREE.MeshStandardMaterial({ map: t, color: w.c || '#8a8c8e', roughness: 0.9 })); }
+  const plank = std(texPlanks('#5a4030', { n: 6, vertical: true })), strip = new THREE.MeshStandardMaterial({ color: 0xe0b020, roughness: 0.6 });
+  d.gates.forEach((q, i) => {
+    const grp = new THREE.Group(); scene.add(grp);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(q.w, 3, q.d), plank); m.position.set(q.x, 1.5, q.z); m.castShadow = true; grp.add(m);
+    const st = new THREE.Mesh(new THREE.BoxGeometry(q.w + 0.04, 0.3, q.d + 0.04), strip); st.position.set(q.x, 2.4, q.z); grp.add(st);
+    const ob = { minX: q.x - q.w / 2, maxX: q.x + q.w / 2, minZ: q.z - q.d / 2, maxZ: q.z + q.d / 2 }; obs.push(ob); occ.push(m);
+    const g = { id: 'cg' + i, label: 'OPEN DOOR', cost: q.cost, open: false, grp, ob, doorX: q.x, doorZ: q.z, t: 0, mesh: null, obs: ob };
+    g.near = (px, pz) => px > ob.minX - 2.2 && px < ob.maxX + 2.2 && pz > ob.minZ - 2.2 && pz < ob.maxZ + 2.2;
+    g.open_fn = () => { g.open = true; grp.visible = false; let k = obs.indexOf(ob); if (k >= 0) obs.splice(k, 1); k = occ.indexOf(m); if (k >= 0) occ.splice(k, 1); if (mm.nav) navRefresh(mm); };
+    g.reset = () => { g.open = false; grp.visible = true; if (!obs.includes(ob)) obs.push(ob); if (!occ.includes(m)) occ.push(m); };
+    gates.push(g);
+  });
+  const V = (x, z) => new THREE.Vector3(x, 0, z);
+  let jugPos = V(9999, 9999), papPos = V(9999, 9999), gear = null; const perks = []; let lights = 0;
+  const lamp = (x, z, c) => { if (lights++ < 6) { const pl = new THREE.PointLight(c, 12, 11, 2); pl.position.set(x, 2.8, z); scene.add(pl); } };
+  for (const p of d.perks) {
+    const P = CM_PD[p.k]; if (!P) continue; const g = addPerk(p.x, p.z, p.ry || 0, P); lamp(p.x + Math.sin(p.ry || 0) * 1.4, p.z + Math.cos(p.ry || 0) * 1.4, P === CM_PD.pap ? 0x7a6bff : 0xffe0b0);
+    if (p.k === 'jug') jugPos = V(p.x, p.z); else if (p.k === 'pap') { gear = makePapGear(g); papPos = V(p.x, p.z); } else perks.push({ ...P, x: p.x, z: p.z, pos: V(p.x, p.z) });
+  }
+  if (!gear) gear = makePapGear(addPerk(9999, 9999, 0, CM_PD.pap));
+  const bs = d.boxes.length ? d.boxes : [{ x: 0, z: -4, rot: 0 }];
+  const boxOb = b => { const sw = Math.abs(Math.sin(b.rot || 0)) > 0.7, hw = sw ? 0.55 : 0.85, hd = sw ? 0.85 : 0.55; return { minX: b.x - hw, maxX: b.x + hw, minZ: b.z - hd, maxZ: b.z + hd }; };
+  const bo = boxOb(bs[0]); obs.push(bo); boxObs[id] = bo; occ.push(mbox.body);
+  lamp(d.spawn.x, d.spawn.z - 2, 0xcfd8ff);
+  const root = new THREE.Group(); for (const c of scene.children.slice(w0)) root.add(c); scene.add(root);
+  obstacles = sv.o; obstacleMeshes = sv.m;
+  const mm = {
+    id, ax: AXc, az: AZc, fog: 0.012, shadowX: AXc + 6, shadowZ: AZc + 6, spawn: { x: d.spawn.x, z: d.spawn.z, yaw: d.spawn.yaw || 0 },
+    menuCam: { cx: 0, cz: 0, r: Math.max(AXc, AZc) * 1.3, rv: 4, h: Math.max(AXc, AZc) * 0.6, look: 2 },
+    root, obs, occ, jugPos, papPos, papGear: gear, boxPos: V(bs[0].x, bs[0].z), boxRot: bs[0].rot || 0, perks, gates,
+    boxSpots: bs.map(b => ({ x: b.x, z: b.z, rot: b.rot || 0 })), custom: true, zk: d.zk, boss: d.boss,
+    onReset() { for (const g of gates) g.reset(); if (mm.nav) navRefresh(mm); },
+  };
+  if (d.zs && d.zs.length) mm.spawnPts = d.zs.map(q => ({ x: q.x, z: q.z }));
+  mm.nav = buildNav(mm);
+  return mm;
+}
+function cmRebuildPages() { MAP_PAGES = []; for (let i = 0; i < MAP_ORDER.length; i += 6) MAP_PAGES.push(MAP_ORDER.slice(i, i + 6)); if (mapPage >= MAP_PAGES.length) mapPage = Math.max(0, MAP_PAGES.length - 1); }
+function cmRegister(d) {
+  const id = 'cm_' + d.id, old = MAPS[id];
+  if (old && curMap && curMap.id === id && state.phase !== 'menu') return false;
+  if (old && old.root) scene.remove(old.root);
+  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: 'CUSTOM MAP', built: false, build: () => buildCustomMap(d), custom: true };
+  if (!MAP_ORDER.includes(id)) MAP_ORDER.push(id);
+  CM.maps[d.id] = d; cmRebuildPages(); return true;
+}
+function cmRemove(did) {
+  const id = 'cm_' + did, old = MAPS[id]; if (old && old.root) scene.remove(old.root);
+  if (curMap && curMap.id === id && state.phase !== 'menu') return;
+  delete MAPS[id]; delete CM.maps[did]; const i = MAP_ORDER.indexOf(id); if (i >= 0) MAP_ORDER.splice(i, 1); cmRebuildPages();
+  if (curMap && curMap.id === id) { try { activateMap('factory'); } catch (e) {} }
+}
+function cmStore() { try { localStorage.setItem('zcm', JSON.stringify(CM.maps)); } catch (e) {} }
+function cmLoadLocal() { try { const o = JSON.parse(localStorage.getItem('zcm') || '{}'); for (const k in o) if (o[k] && o[k].id) cmRegister(o[k]); } catch (e) {} }
+function cmRemote(did, s) {
+  if (!s) { if (CM.maps[did]) { cmRemove(did); cmStore(); if (menuView === 'maps') renderMenu('maps'); } return; }
+  let d; try { d = JSON.parse(s); } catch (e) { return; }
+  if (!d || d.id !== did || !Array.isArray(d.walls)) return;
+  const cur = CM.maps[did]; if (cur && (cur.ts || 0) >= (d.ts || 0)) return;
+  if (cmRegister(d)) { cmStore(); if (menuView === 'maps') renderMenu('maps'); }
+}
+function cmPublish(d) { if (!MP.c || !MP.c.connected) return false; try { MP.c.publish(MP.PRE + 'cmap/' + d.id, JSON.stringify(d), { retain: true, qos: 1 }); return true; } catch (e) { return false; } }
+
+/* ---------- editor (top-down 2D, works with touch) ---------- */
+const ED = { d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
+const ED_TOOLS = [['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['del', 'DELETE']];
+function edBuild() {
+  const css = document.createElement('style'); css.textContent = `
+  #ed{position:fixed;inset:0;z-index:70;background:#0b0d12;display:none;flex-direction:column;font:8px "Press Start 2P",monospace;color:#cfd2d6}
+  #ed .bar{display:flex;flex-wrap:wrap;gap:5px;padding:6px;background:#12151c;align-items:center}
+  #ed .edb{padding:9px 7px;background:#1d222c;border:2px solid #3a3f48;color:#fff;font:inherit;cursor:pointer;border-radius:0}
+  #ed .edb.on{border-color:#e8d27a;color:#e8d27a} #ed .edb.red{border-color:#9a2a2a;color:#ff8a8a}
+  #edCv{flex:1;width:100%;min-height:0;touch-action:none;display:block}
+  #edMsg{padding:5px 8px;color:#e8d27a;min-height:12px;background:#12151c}
+  #edPanel{position:absolute;left:8px;right:8px;top:56px;max-height:70%;overflow:auto;background:rgba(8,10,16,.96);border:2px solid #e8d27a;padding:12px;display:none;line-height:2}
+  #edPanel .row{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap} #edPanel .row span{flex:1;min-width:90px}`;
+  document.head.appendChild(css);
+  const e = ED.el = document.createElement('div'); e.id = 'ed';
+  e.innerHTML = '<div class="bar" id="edTop"></div><div class="bar" id="edTools"></div><canvas id="edCv"></canvas><div class="bar" id="edSel"></div><div id="edMsg"></div><div id="edPanel"></div>';
+  document.body.appendChild(e);
+  const cv = $('edCv');
+  e.addEventListener('click', ev => { const b = ev.target.closest('[data-ea]'); if (b) { ev.stopPropagation(); edAct(b.dataset.ea); } });
+  cv.addEventListener('pointerdown', ev => { try { cv.setPointerCapture(ev.pointerId); } catch (x) {} ED.ptrs.set(ev.pointerId, edXY(ev)); if (ED.ptrs.size === 2) { ED.drag = null; ED.pinch = edPinch(); } else edDown(ev); });
+  cv.addEventListener('pointermove', ev => { if (!ED.ptrs.has(ev.pointerId)) return; ED.ptrs.set(ev.pointerId, edXY(ev)); if (ED.ptrs.size >= 2) edPinchMove(); else edMove(ev); });
+  const up = ev => { ED.ptrs.delete(ev.pointerId); if (ED.ptrs.size === 0) edUp(); if (ED.ptrs.size < 2) ED.pinch = null; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', ev => { ev.preventDefault(); ED.sc = Math.max(2, Math.min(40, ED.sc * (ev.deltaY < 0 ? 1.12 : 0.89))); edDraw(); }, { passive: false });
+  window.addEventListener('resize', () => { if (ED.el && ED.el.style.display === 'flex') edDraw(); });
+}
+function edXY(ev) { const r = $('edCv').getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+function edW(p) { const cv = $('edCv'), r = cv.getBoundingClientRect(); return { x: ED.cx + (p.x - r.width / 2) / ED.sc, z: ED.cz + (p.y - r.height / 2) / ED.sc }; }
+function edPinch() { const a = [...ED.ptrs.values()]; return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1, sc: ED.sc, mx: (a[0].x + a[1].x) / 2, my: (a[0].y + a[1].y) / 2, cx: ED.cx, cz: ED.cz }; }
+function edPinchMove() { const a = [...ED.ptrs.values()]; if (a.length < 2 || !ED.pinch) return; const P = ED.pinch, d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; ED.sc = Math.max(2, Math.min(40, P.sc * d / P.d)); const mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2; ED.cx = P.cx - (mx - P.mx) / ED.sc; ED.cz = P.cz - (my - P.my) / ED.sc; edDraw(); }
+const edSn = v => Math.round(v * 2) / 2;
+function edHit(x, z) {
+  const d = ED.d, r = Math.max(1.3, 16 / ED.sc);
+  for (let i = d.perks.length - 1; i >= 0; i--) if (Math.hypot(d.perks[i].x - x, d.perks[i].z - z) < r) return { t: 'perk', i };
+  for (let i = d.boxes.length - 1; i >= 0; i--) if (Math.hypot(d.boxes[i].x - x, d.boxes[i].z - z) < r) return { t: 'box', i };
+  for (let i = d.zs.length - 1; i >= 0; i--) if (Math.hypot(d.zs[i].x - x, d.zs[i].z - z) < r) return { t: 'zs', i };
+  if (Math.hypot(d.spawn.x - x, d.spawn.z - z) < r) return { t: 'spawn', i: 0 };
+  for (const [t, arr] of [['gate', d.gates], ['wall', d.walls]]) for (let i = arr.length - 1; i >= 0; i--) { const q = arr[i]; if (Math.abs(q.x - x) <= q.w / 2 + 0.3 && Math.abs(q.z - z) <= q.d / 2 + 0.3) return { t, i }; }
+  return null;
+}
+function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ wall: d.walls, gate: d.gates, perk: d.perks, box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
+function edDown(ev) {
+  const p = edXY(ev), w = edW(p), t = ED.tool, d = ED.d; ED.msg = '';
+  if (t === 'sel') {
+    const it = edItem(ED.sel);
+    if (it && it.w && Math.hypot((it.x + it.w / 2 - w.x) * ED.sc, (it.z + it.d / 2 - w.z) * ED.sc) < 18) { ED.drag = { m: 'resize' }; return; }
+    const h = edHit(w.x, w.z); ED.sel = h;
+    if (h) { const q = edItem(h); ED.drag = { m: 'move', ox: q.x - w.x, oz: q.z - w.z }; } else ED.drag = { m: 'pan', sx: p.x, sy: p.y, cx: ED.cx, cz: ED.cz };
+  } else if (t === 'wall' || t === 'gate') ED.drag = { m: 'rect', x0: edSn(w.x), z0: edSn(w.z), x1: edSn(w.x), z1: edSn(w.z) };
+  else if (t === 'perk') { const k = ED.perk; d.perks = d.perks.filter(q => q.k !== k); d.perks.push({ k, x: edSn(w.x), z: edSn(w.z), ry: 0 }); ED.sel = { t: 'perk', i: d.perks.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'box') { d.boxes.push({ x: edSn(w.x), z: edSn(w.z), rot: 0 }); ED.sel = { t: 'box', i: d.boxes.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'spawn') { d.spawn.x = edSn(w.x); d.spawn.z = edSn(w.z); ED.sel = { t: 'spawn', i: 0 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'zs') { d.zs.push({ x: edSn(w.x), z: edSn(w.z) }); ED.sel = { t: 'zs', i: d.zs.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'del') { const h = edHit(w.x, w.z); if (h) edDelete(h); }
+  edUI(); edDraw();
+}
+function edMove(ev) {
+  const g = ED.drag; if (!g) return; const p = edXY(ev), w = edW(p);
+  if (g.m === 'pan') { ED.cx = g.cx - (p.x - g.sx) / ED.sc; ED.cz = g.cz - (p.y - g.sy) / ED.sc; }
+  else if (g.m === 'move') { const q = edItem(ED.sel); if (q) { q.x = edSn(w.x + g.ox); q.z = edSn(w.z + g.oz); } }
+  else if (g.m === 'rect') { g.x1 = edSn(w.x); g.z1 = edSn(w.z); }
+  else if (g.m === 'resize') { const q = edItem(ED.sel); if (q) { q.w = Math.max(0.5, edSn((w.x - q.x) * 2)); q.d = Math.max(0.5, edSn((w.z - q.z) * 2)); } }
+  edDraw();
+}
+function edUp() {
+  const g = ED.drag; ED.drag = null; if (!g) return; const d = ED.d;
+  if (g.m === 'rect') {
+    const w = Math.abs(g.x1 - g.x0), dd = Math.abs(g.z1 - g.z0), x = (g.x0 + g.x1) / 2, z = (g.z0 + g.z1) / 2;
+    if (w >= 0.5 && dd >= 0.5) { if (ED.tool === 'wall') { d.walls.push({ x, z, w, d: dd, h: 3.6, c: '#8a8c8e' }); ED.sel = { t: 'wall', i: d.walls.length - 1 }; } else { d.gates.push({ x, z, w, d: dd, cost: 750 }); ED.sel = { t: 'gate', i: d.gates.length - 1 }; } }
+  }
+  edUI(); edDraw();
+}
+function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; ({ wall: d.walls, gate: d.gates, perk: d.perks, box: d.boxes, zs: d.zs }[s.t]).splice(s.i, 1); ED.sel = null; }
+function edAct(a) {
+  const d = ED.d; initAudio(); sfx.click();
+  if (a.startsWith('tool:')) { ED.tool = a.slice(5); ED.panel = ''; }
+  else if (a.startsWith('perk:')) { ED.perk = a.slice(5); ED.tool = 'perk'; }
+  else if (a === 'exit') { ED.el.style.display = 'none'; renderMenu('main'); return; }
+  else if (a === 'name') { const n = prompt('MAP NAME', d.name); if (n) d.name = n.toUpperCase().slice(0, 18); }
+  else if (a === 'size') { const L = [30, 40, 50, 60, 80], i = L.indexOf(d.ax); d.ax = d.az = L[(i + 1) % L.length]; }
+  else if (a === 'ground') { d.ground = CM_GND[(CM_GND.indexOf(d.ground) + 1) % CM_GND.length]; }
+  else if (a === 'zoomin') ED.sc = Math.min(40, ED.sc * 1.3); else if (a === 'zoomout') ED.sc = Math.max(2, ED.sc / 1.3);
+  else if (a === 'maps' || a === 'zmb') ED.panel = ED.panel === a ? '' : a;
+  else if (a === 'new') { ED.d = cmNewData(); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; }
+  else if (a.startsWith('load:')) { const o = CM.maps[a.slice(5)]; if (o) { ED.d = JSON.parse(JSON.stringify(o)); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; } }
+  else if (a.startsWith('del:')) { const id = a.slice(4); if (confirm('DELETE THIS MAP FOR EVERYONE?')) { if (MP.c && MP.c.connected) try { MP.c.publish(MP.PRE + 'cmap/' + id, '', { retain: true, qos: 1 }); } catch (e) {} cmRemove(id); cmStore(); if (ED.d.id === id) ED.d = cmNewData(); ED.msg = 'MAP DELETED'; } }
+  else if (a.startsWith('zk:')) { const [k, dl] = a.slice(3).split(','); d.zk[k] = Math.max(0, Math.min(9, d.zk[k] + +dl)); }
+  else if (a === 'boss') d.boss = (d.boss + 1) % 3;
+  else if (a === 'save' || a === 'play') {
+    if (!d.spawn) d.spawn = { x: 0, z: 0, yaw: 0 }; d.ts = Date.now();
+    const ok = cmRegister(JSON.parse(JSON.stringify(d))); cmStore(); const shared = cmPublish(d);
+    ED.msg = ok ? (shared ? 'SAVED + SHARED WITH EVERYONE' : 'SAVED HERE ONLY (SERVER NOT CONNECTED)') : 'CANNOT UPDATE WHILE PLAYING';
+    if (a === 'play' && ok) { ED.el.style.display = 'none'; const id = 'cm_' + d.id; MAPS[id].built = false; menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>'; setTimeout(() => { selectMap(id); renderMenu('start'); }, 40); return; }
+  }
+  else { const it = edItem(ED.sel); if (it) {
+    if (a === 'w-') it.w = Math.max(0.5, it.w - 0.5); else if (a === 'w+') it.w += 0.5; else if (a === 'd-') it.d = Math.max(0.5, it.d - 0.5); else if (a === 'd+') it.d += 0.5;
+    else if (a === 'h') { const L = [1, 2, 3.6, 6, 10]; it.h = L[(L.indexOf(it.h) + 1) % L.length]; }
+    else if (a === 'col') it.c = CM_COL[(CM_COL.indexOf(it.c) + 1) % CM_COL.length];
+    else if (a === 'c-') it.cost = Math.max(0, it.cost - 250); else if (a === 'c+') it.cost = Math.min(9000, it.cost + 250);
+    else if (a === 'rot') { if (ED.sel.t === 'spawn') it.yaw = ((it.yaw || 0) + Math.PI / 2) % (Math.PI * 2); else if (ED.sel.t === 'box') it.rot = ((it.rot || 0) + Math.PI / 2) % (Math.PI * 2); else it.ry = ((it.ry || 0) + Math.PI / 2) % (Math.PI * 2); }
+    else if (a === 'del') edDelete(ED.sel);
+  } }
+  edUI(); edDraw();
+}
+function edUI() {
+  const d = ED.d, B = (a, t, on, cls = '') => `<button class="edb ${on ? 'on' : ''} ${cls}" data-ea="${a}">${t}</button>`;
+  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('size', d.ax * 2 + 'M') + B('ground', d.ground.toUpperCase()) + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + B('maps', 'MAPS', ED.panel === 'maps') + B('save', 'SAVE') + B('play', 'PLAY') + B('zoomin', '+') + B('zoomout', '-');
+  $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : k.toUpperCase()), ED.perk === k)).join('') : '');
+  const s = ED.sel, it = edItem(s); let h = '';
+  if (it) {
+    if (s.t === 'wall') h = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+') + B('h', 'H ' + it.h) + B('col', 'COLOR') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'gate') h = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+') + B('c-', '-250') + `<span>COST ${it.cost}</span>` + B('c+', '+250') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'spawn') h = '<span>PLAYER SPAWN</span>' + B('rot', 'TURN');
+    else if (s.t === 'perk') h = `<span>${CM_PD[it.k].title}</span>` + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'box') h = '<span>MYSTERY BOX ' + (s.i === 0 ? '(START)' : '') + '</span>' + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'zs') h = '<span>ZOMBIE SPAWN</span>' + B('del', 'DEL', 0, 'red');
+  } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
+  $('edSel').innerHTML = h; $('edMsg').textContent = ED.msg;
+  const P = $('edPanel');
+  if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div>' + Object.values(CM.maps).map(m => `<div class="row"><span>${clEsc(m.name)}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
+  else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'CAT GUY' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k]}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
+  else { P.style.display = 'none'; }
+}
+function edDraw() {
+  const cv = $('edCv'), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; if (!r.width) return;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const x = cv.getContext('2d'), d = ED.d, sc = ED.sc; x.setTransform(dpr, 0, 0, dpr, 0, 0); x.fillStyle = '#050608'; x.fillRect(0, 0, r.width, r.height);
+  const X = v => r.width / 2 + (v - ED.cx) * sc, Z = v => r.height / 2 + (v - ED.cz) * sc;
+  x.fillStyle = { grass: '#27401f', asphalt: '#2a2d31', concrete: '#4a4c4e', sand: '#6a5e46' }[d.ground]; x.fillRect(X(-d.ax), Z(-d.az), d.ax * 2 * sc, d.az * 2 * sc);
+  x.strokeStyle = 'rgba(255,255,255,0.08)'; x.lineWidth = 1; for (let v = -d.ax; v <= d.ax; v += 5) { x.beginPath(); x.moveTo(X(v), Z(-d.az)); x.lineTo(X(v), Z(d.az)); x.stroke(); } for (let v = -d.az; v <= d.az; v += 5) { x.beginPath(); x.moveTo(X(-d.ax), Z(v)); x.lineTo(X(d.ax), Z(v)); x.stroke(); }
+  x.strokeStyle = '#e8d27a'; x.lineWidth = 2; x.strokeRect(X(-d.ax), Z(-d.az), d.ax * 2 * sc, d.az * 2 * sc);
+  const sel = ED.sel, isS = (t, i) => sel && sel.t === t && sel.i === i;
+  d.walls.forEach((q, i) => { x.fillStyle = q.c; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('wall', i) ? '#fff' : 'rgba(0,0,0,0.6)'; x.lineWidth = isS('wall', i) ? 2 : 1; x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); });
+  d.gates.forEach((q, i) => { x.fillStyle = 'rgba(224,176,32,0.55)'; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('gate', i) ? '#fff' : '#e0b020'; x.lineWidth = 2; x.setLineDash([5, 4]); x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.setLineDash([]); x.fillStyle = '#fff'; x.font = 'bold 10px monospace'; x.textAlign = 'center'; x.fillText(q.cost, X(q.x), Z(q.z) + 4); });
+  const sq = (px, pz, c, L, on, ry) => { const s = Math.max(10, 1.6 * sc); x.fillStyle = c; x.fillRect(X(px) - s / 2, Z(pz) - s / 2, s, s); x.strokeStyle = on ? '#fff' : '#000'; x.lineWidth = on ? 2 : 1; x.strokeRect(X(px) - s / 2, Z(pz) - s / 2, s, s); if (ry !== undefined) { x.fillStyle = '#fff'; x.fillRect(X(px) + Math.sin(ry) * s * 0.5 - 3, Z(pz) + Math.cos(ry) * s * 0.5 - 3, 6, 6); } x.fillStyle = '#fff'; x.font = 'bold 11px monospace'; x.textAlign = 'center'; x.fillText(L, X(px), Z(pz) + 4); };
+  d.perks.forEach((q, i) => sq(q.x, q.z, CM_PD[q.k].ec, CM_PD[q.k].L, isS('perk', i), q.ry || 0));
+  d.boxes.forEach((q, i) => sq(q.x, q.z, '#8a5a2a', i === 0 ? 'B*' : 'B', isS('box', i), q.rot || 0));
+  d.zs.forEach((q, i) => { x.fillStyle = '#b02020'; x.beginPath(); x.arc(X(q.x), Z(q.z), Math.max(6, 0.9 * sc), 0, 7); x.fill(); x.strokeStyle = isS('zs', i) ? '#fff' : '#000'; x.lineWidth = 2; x.stroke(); x.fillStyle = '#fff'; x.font = 'bold 10px monospace'; x.textAlign = 'center'; x.fillText('Z', X(q.x), Z(q.z) + 4); });
+  { const q = d.spawn, rr = Math.max(7, 1.1 * sc), yw = q.yaw || 0; x.fillStyle = '#2aa84a'; x.beginPath(); x.arc(X(q.x), Z(q.z), rr, 0, 7); x.fill(); x.strokeStyle = isS('spawn', 0) ? '#fff' : '#000'; x.lineWidth = 2; x.stroke(); x.strokeStyle = '#fff'; x.beginPath(); x.moveTo(X(q.x), Z(q.z)); x.lineTo(X(q.x) - Math.sin(yw) * rr * 1.8, Z(q.z) - Math.cos(yw) * rr * 1.8); x.stroke(); }
+  if (ED.drag && ED.drag.m === 'rect') { const g = ED.drag; x.strokeStyle = '#fff'; x.setLineDash([4, 4]); x.strokeRect(X(Math.min(g.x0, g.x1)), Z(Math.min(g.z0, g.z1)), Math.abs(g.x1 - g.x0) * sc, Math.abs(g.z1 - g.z0) * sc); x.setLineDash([]); }
+  const it = edItem(sel); if (it && it.w && ED.tool === 'sel') { x.fillStyle = '#fff'; x.fillRect(X(it.x + it.w / 2) - 6, Z(it.z + it.d / 2) - 6, 12, 12); }
+}
+function edOpen() {
+  if (!ED.el) edBuild(); if (!ED.d) ED.d = cmNewData();
+  ED.el.style.display = 'flex'; ED.panel = ''; ED.msg = ''; ED.sc = Math.min(innerWidth, innerHeight * 0.7) / (ED.d.ax * 2.3); edUI(); requestAnimationFrame(() => { edUI(); edDraw(); });
+}
+
 /* ---------- boot ---------- */
+cmLoadLocal();
 activateMap('factory');
 showMenu('main');
 try {   // online counter: if the browser blocks the connection the game must still start
