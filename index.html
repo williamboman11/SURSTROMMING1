@@ -3892,8 +3892,8 @@ function clHTML() {
   return '<div class="clbox">' + blocks.map(b => '<h4>' + clEsc(b[0]) + '</h4>' + b.slice(1).map(l => '<p>' + clEsc(l.replace(/^[-*>]\s*/, '')) + '</p>').join('')).join('') + '</div>';
 }
 function clPublish(text) {
-  if (!MP.c || !MP.c.connected) { CL.msg = 'CANNOT REACH SERVER - NOT SHARED'; return false; }
-  const o = { text, ts: Date.now() }; try { MP.c.publish(MP.PRE + 'changelog', JSON.stringify(o), { retain: true, qos: 1 }); } catch (e) { CL.msg = 'SAVE FAILED'; return false; }
+  if (!syOK()) { CL.msg = 'CANNOT REACH SERVER - NOT SHARED'; return false; }
+  const o = { text, ts: Date.now() }; if (!syPub('changelog', JSON.stringify(o))) { CL.msg = 'SAVE FAILED'; return false; }
   CL.ts = 0; clSet(o); CL.msg = 'SAVED - EVERYONE SEES IT'; return true;
 }
 let devBuf = '';
@@ -3901,7 +3901,7 @@ document.addEventListener('keydown', e => {
   if (state.phase !== 'menu' || menuView !== 'main' || !e.key || e.key.length !== 1) return;
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   devBuf = (devBuf + e.key.toLowerCase()).slice(-7);
-  if (devBuf === 'devmode') { devBuf = ''; CL.dev = true; try { localStorage.setItem('zdev', '1'); } catch (x) {} try { if (MP.c && MP.c.connected) MP.c.subscribe(MP.PRE + 'user/+'); } catch (x) {} CL.msg = 'DEVMODE ON - CHANGELOG EDITING UNLOCKED'; sfx.chime && sfx.chime(); renderMenu('changelog'); }
+  if (devBuf === 'devmode') { devBuf = ''; CL.dev = true; try { localStorage.setItem('zdev', '1'); } catch (x) {} try { if (MP.c && MP.c.connected) MP.c.subscribe(MP.PRE + 'user/+'); syDevSub(); } catch (x) {} CL.msg = 'DEVMODE ON - CHANGELOG EDITING UNLOCKED'; sfx.chime && sfx.chime(); renderMenu('changelog'); }
 });
 function showLobbyClient() { menuEl.classList.remove('hidden'); renderMenu('lobbyc'); }
 function renderMenu(view) {
@@ -6874,20 +6874,85 @@ function cmRemote(did, s) {
   if (!s) { if (CM.maps[did]) { cmRemove(did); cmStore(); if (menuView === 'maps') renderMenu('maps'); } return; }
   let d; try { d = JSON.parse(s); } catch (e) { return; }
   if (!d || d.id !== did || !Array.isArray(d.walls)) return;
+  if ((SY.tomb['cm-' + did] || 0) >= (d.ts || 0)) return;
   const cur = CM.maps[did]; if (cur && (cur.ts || 0) >= (d.ts || 0)) return;
   if (cmRegister(d)) { cmStore(); if (menuView === 'maps') renderMenu('maps'); }
 }
-function cmPublish(d) { if (!MP.c || !MP.c.connected) return false; try { MP.c.publish(MP.PRE + 'cmap/' + d.id, JSON.stringify(d), { retain: true, qos: 1 }); return true; } catch (e) { return false; } }
+function cmPublish(d) { return syPub('cmap/' + d.id, JSON.stringify(d)); }
+
+/* ---------- SYNC: shared data (maps, changelog, review queue, users) lives on TWO public servers at once ----------
+   Before, each device talked to only one server and the servers don't keep data forever, so devices could disagree and
+   clearing browser data lost maps. Now every device listens to and publishes to both, devmode devices re-upload what a
+   server is missing, and deletions are tombstones so removed maps can't come back. */
+const SY = { cl: [], seen: [{}, {}], tm: [], tomb: {} };
+try { SY.tomb = JSON.parse(localStorage.getItem('ztomb') || '{}') || {}; } catch (e) {}
+function syTombSave() { try { localStorage.setItem('ztomb', JSON.stringify(SY.tomb)); } catch (e) {} }
+function syOK() { return SY.cl.some(c => c && c.connected); }
+function syPub(topic, payload) {
+  let ok = false;
+  for (const c of SY.cl) if (c && c.connected) { try { c.publish(MP.PRE + topic, payload, { retain: true, qos: 1 }); ok = true; } catch (e) {} }
+  return ok;
+}
+function syDel(kind, id) {   // kind: 'cm' (custom map) or 'sub' (submission)
+  syPub(kind === 'cm' ? 'cmap/' + id : 'sub/' + id, '');
+  const ts = Date.now(); SY.tomb[kind + '-' + id] = ts; syTombSave(); syPub('tomb/' + kind + '-' + id, String(ts));
+}
+function syTomb(key, ts) {
+  if (!(ts > 0) || (SY.tomb[key] || 0) >= ts) return;
+  SY.tomb[key] = ts; syTombSave();
+  const [kind, id] = key.split('-');
+  if (kind === 'cm' && CM.maps[id] && (CM.maps[id].ts || 0) <= ts) { cmRemove(id); cmStore(); if (menuView === 'maps') renderMenu('maps'); }
+  if (kind === 'sub' && RV.subs[id] && (RV.subs[id].ts || 0) <= ts) { delete RV.subs[id]; rvStore(); if (menuView === 'review') renderMenu('review'); }
+}
+function syMsg(i, t, s) {
+  const k = t.slice(MP.PRE.length); let ts = 0;
+  try { ts = k.startsWith('tomb/') ? +s : (JSON.parse(s).ts || 0); } catch (e) {}
+  SY.seen[i][k] = ts;
+  if (k === 'changelog') { try { clSet(JSON.parse(s)); } catch (e) {} }
+  else if (k.startsWith('cmap/')) cmRemote(k.slice(5), s);
+  else if (k.startsWith('sub/')) rvRemote(k.slice(4), s);
+  else if (k.startsWith('user/')) usRemote(k.slice(5), s);
+  else if (k.startsWith('tomb/')) syTomb(k.slice(5), +s);
+}
+function syHeal(i) {   // devmode only: re-upload anything this server is missing or has an older copy of
+  const c = SY.cl[i]; if (!CL.dev || !c || !c.connected) return 0;
+  const seen = SY.seen[i]; let n = 0;
+  const pub = (k, p) => { try { c.publish(MP.PRE + k, p, { retain: true, qos: 1 }); n++; } catch (e) {} };
+  const need = (k, ts) => seen[k] === undefined || seen[k] < ts;
+  for (const id in CM.maps) { const d = CM.maps[id]; if ((SY.tomb['cm-' + id] || 0) >= (d.ts || 0)) continue; if (need('cmap/' + id, d.ts || 0)) pub('cmap/' + id, JSON.stringify(d)); }
+  for (const id in RV.subs) { const d = RV.subs[id]; if ((SY.tomb['sub-' + id] || 0) >= (d.ts || 0)) continue; if (need('sub/' + id, d.ts || 0)) pub('sub/' + id, JSON.stringify(d)); }
+  if (CL.ts && need('changelog', CL.ts)) pub('changelog', JSON.stringify({ text: CL.text, ts: CL.ts }));
+  for (const k in SY.tomb) if (need('tomb/' + k, SY.tomb[k])) pub('tomb/' + k, String(SY.tomb[k]));
+  return n;
+}
+function syDevSub() { for (const c of SY.cl) if (c && c.connected) c.subscribe(MP.PRE + 'user/+'); }
+function syInit() {
+  if (typeof mqtt === 'undefined' || SY.cl.length) return;
+  if (CL.dev) { try { const o = JSON.parse(localStorage.getItem('zrv') || '{}'); for (const id in o) rvRemote(id, JSON.stringify(o[id])); } catch (e) {} }
+  MP.BR.forEach((url, i) => {
+    let c; try { c = mqtt.connect(url, { clientId: 'zsy' + i + Math.random().toString(36).slice(2, 9), connectTimeout: 8000, reconnectPeriod: 4000 }); } catch (e) { return; }
+    SY.cl[i] = c;
+    c.on('connect', () => {
+      SY.seen[i] = {};
+      for (const t of ['changelog', 'cmap/+', 'sub/+', 'tomb/+']) c.subscribe(MP.PRE + t);
+      if (CL.dev) c.subscribe(MP.PRE + 'user/+');
+      clearTimeout(SY.tm[i]); SY.tm[i] = setTimeout(() => syHeal(i), 8000);
+      try { usAnnounce(); } catch (e) {}
+    });
+    c.on('message', (t, p) => { try { syMsg(i, t, p.toString()); } catch (e) {} });
+    c.on('error', () => {});
+  });
+}
 
 /* ---------- USERS (every browser that ever opened the game, counted once; shown in devmode only) ---------- */
 const US = { users: {}, page: 0 };
 function usAnnounce() {
-  if (!MP.c || !MP.c.connected) return;
+  if (!syOK()) return;
   let uid = '', first = 0, nm = '';
   try { uid = localStorage.getItem('zuid') || ''; first = +localStorage.getItem('zuidf') || 0; nm = localStorage.getItem('zmb_name') || ''; } catch (e) {}
   if (!/^[a-z0-9]{8,12}$/.test(uid)) { uid = ''; while (uid.length < 10) uid += Math.random().toString(36).slice(2); uid = uid.slice(0, 10); try { localStorage.setItem('zuid', uid); } catch (e) {} }
   if (!first) { first = Date.now(); try { localStorage.setItem('zuidf', String(first)); } catch (e) {} }
-  try { MP.c.publish(MP.PRE + 'user/' + uid, JSON.stringify({ id: uid, n: nm.slice(0, 14), f: first, l: Date.now() }), { retain: true, qos: 1 }); } catch (e) {}
+  syPub('user/' + uid, JSON.stringify({ id: uid, n: nm.slice(0, 14), f: first, l: Date.now() }));
 }
 function usRemote(id, s) {
   if (!CL.dev || !/^[a-z0-9]{8,12}$/.test(id)) return;
@@ -6912,8 +6977,9 @@ function usHTML() {
 const RV = { subs: {}, i: 0, msg: '', testing: false };
 const rvClean = t => String(t == null ? '' : t).replace(/[<>&"'`\\]/g, '').trim();
 function rvIds() { return Object.keys(RV.subs).sort((a, b) => (RV.subs[a].ts || 0) - (RV.subs[b].ts || 0)); }
+function rvStore() { if (CL.dev) try { localStorage.setItem('zrv', JSON.stringify(RV.subs)); } catch (e) {} }
 function rvRemote(id, s) {
-  if (!s) { if (RV.subs[id]) { delete RV.subs[id]; if (menuView === 'review') renderMenu('review'); } return; }
+  if (!s) { if (RV.subs[id]) { delete RV.subs[id]; rvStore(); if (menuView === 'review') renderMenu('review'); } return; }
   let d; try { d = JSON.parse(s); } catch (e) { return; }
   if (!d || d.id !== id || !/^[a-z0-9]{1,12}$/.test(id)) return;
   for (const k of ['walls', 'gates', 'perks', 'boxes', 'zs']) if (!Array.isArray(d[k]) || d[k].length > 400) return;
@@ -6924,8 +6990,9 @@ function rvRemote(id, s) {
   const z = d.zk || {}; d.zk = { n: 0, v: 0, t: 0, c: 0 }; for (const k in d.zk) d.zk[k] = Math.max(0, Math.min(9, Math.round(+z[k] || 0)));
   d.boss = [0, 1, 2].includes(d.boss) ? d.boss : 1; if (!CM_GND.includes(d.ground)) d.ground = 'grass';
   d.name = rvClean(d.name).toUpperCase().slice(0, 18) || 'UNNAMED'; d.creator = rvClean(d.creator).slice(0, 20) || 'UNKNOWN'; d.sub = rvClean(d.sub).slice(0, 40); d.desc = rvClean(d.desc).slice(0, 220);
+  if ((SY.tomb['sub-' + id] || 0) >= (d.ts || 0)) return;
   const cur = RV.subs[id]; if (cur && (cur.ts || 0) >= (d.ts || 0)) return;
-  RV.subs[id] = d; if (menuView === 'review') renderMenu('review');
+  RV.subs[id] = d; rvStore(); if (menuView === 'review') renderMenu('review');
 }
 function rvHTML() {
   const ids = rvIds(); RV.i = Math.max(0, Math.min(ids.length - 1, RV.i));
@@ -6953,15 +7020,15 @@ function rvAct(k) {
     RV.testing = true; const mid = 'cm_' + d.id; MAPS[mid].built = false; menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>';
     setTimeout(() => { selectMap(mid); renderMenu('start'); }, 40); return;
   }
-  if (!(MP.c && MP.c.connected)) { RV.msg = 'NOT CONNECTED - TRY AGAIN IN A MOMENT'; renderMenu('review'); return; }
+  if (!syOK()) { RV.msg = 'NOT CONNECTED - TRY AGAIN IN A MOMENT'; renderMenu('review'); return; }
   if (k === 'no' && !confirm('REJECT AND DELETE THIS SUBMISSION?')) return;
   if (k === 'ok') {
     const a = JSON.parse(JSON.stringify(d)); a.ts = Date.now(); a.sub = ('BY ' + a.creator).toUpperCase().slice(0, 40);
     if (!cmRegister(a)) { RV.msg = 'CANNOT UPDATE WHILE PLAYING'; renderMenu('review'); return; }
     cmStore(); cmPublish(a); RV.msg = 'PUBLISHED - ' + d.name + ' BY ' + d.creator;
   } else RV.msg = 'REJECTED';
-  try { MP.c.publish(MP.PRE + 'sub/' + id, '', { retain: true, qos: 1 }); } catch (e) {}
-  delete RV.subs[id]; renderMenu('review');
+  syDel('sub', id);
+  delete RV.subs[id]; rvStore(); renderMenu('review');
 }
 
 /* ---------- editor (top-down 2D, works with touch) ---------- */
@@ -7059,7 +7126,10 @@ function edAct(a) {
   else if (a === 'maps' || a === 'zmb') ED.panel = ED.panel === a ? '' : a;
   else if (a === 'new') { ED.d = cmNewData(); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; }
   else if (a.startsWith('load:')) { const o = CM.maps[a.slice(5)]; if (o) { ED.d = JSON.parse(JSON.stringify(o)); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; } }
-  else if (a.startsWith('del:')) { const id = a.slice(4); if (confirm('DELETE THIS MAP FOR EVERYONE?')) { if (MP.c && MP.c.connected) try { MP.c.publish(MP.PRE + 'cmap/' + id, '', { retain: true, qos: 1 }); } catch (e) {} cmRemove(id); cmStore(); if (ED.d.id === id) ED.d = cmNewData(); ED.msg = 'MAP DELETED'; } }
+  else if (a === 'sync') { let n = 0; SY.cl.forEach((c, i) => { SY.seen[i] = {}; n += syHeal(i); }); ED.msg = syOK() ? 'RE-UPLOADED EVERYTHING TO BOTH SERVERS (' + n + ' ITEMS)' : 'NOT CONNECTED - TRY AGAIN'; }
+  else if (a === 'bkp') edBackup();
+  else if (a === 'rst') edRestore();
+  else if (a.startsWith('del:')) { const id = a.slice(4); if (confirm('DELETE THIS MAP FOR EVERYONE?')) { syDel('cm', id); cmRemove(id); cmStore(); if (ED.d.id === id) ED.d = cmNewData(); ED.msg = 'MAP DELETED'; } }
   else if (a.startsWith('zk:')) { const [k, dl] = a.slice(3).split(','); d.zk[k] = Math.max(0, Math.min(9, d.zk[k] + +dl)); }
   else if (a === 'boss') d.boss = (d.boss + 1) % 3;
   else if (a === 'save' || a === 'play') {
@@ -7078,14 +7148,37 @@ function edAct(a) {
   } }
   edUI(); edDraw();
 }
+function edBackup() {
+  const o = { v: 1, maps: CM.maps, cl: { text: CL.text, ts: CL.ts }, subs: RV.subs, tomb: SY.tomb };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' }));
+  a.download = 'zombies-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  ED.msg = 'BACKUP DOWNLOADED (' + Object.keys(CM.maps).length + ' MAPS)'; edUI();
+}
+function edRestore() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => {
+    let o; try { o = JSON.parse(r.result); } catch (e) { ED.msg = 'NOT A VALID BACKUP FILE'; edUI(); return; }
+    let n = 0;
+    for (const id in (o.maps || {})) {
+      const d = o.maps[id]; if (!d || d.id !== id || !Array.isArray(d.walls)) continue;
+      const cur = CM.maps[id]; if (cur && (cur.ts || 0) >= (d.ts || 0)) continue;
+      if ((SY.tomb['cm-' + id] || 0) >= (d.ts || 0)) d.ts = Date.now();
+      if (cmRegister(d)) { n++; syPub('cmap/' + id, JSON.stringify(d)); }
+    }
+    for (const id in (o.subs || {})) { const d = o.subs[id]; if (!d) continue; rvRemote(id, JSON.stringify(d)); if (RV.subs[id]) syPub('sub/' + id, JSON.stringify(RV.subs[id])); }
+    if (o.cl && typeof o.cl.text === 'string' && (o.cl.ts || 0) > CL.ts) { clSet(o.cl); syPub('changelog', JSON.stringify(o.cl)); }
+    cmStore(); ED.msg = 'RESTORED ' + n + ' MAPS'; edUI();
+  }; r.readAsText(f); };
+  inp.click();
+}
 function edSubmit() {
   const d = ED.d; let n = prompt('MAP NAME', d.name === 'MY MAP' ? '' : d.name); if (n === null) return;
   n = rvClean(n).toUpperCase().slice(0, 18); if (!n) { ED.msg = 'MAP NAME REQUIRED'; edUI(); return; }
   let c = prompt('YOUR CREATOR NAME (SHOWN IN THE CREDITS)', ED.creator || ''); if (c === null) return;
   c = rvClean(c).slice(0, 20); if (!c) { ED.msg = 'CREATOR NAME REQUIRED'; edUI(); return; }
   d.name = n; d.creator = c; ED.creator = c; d.ts = Date.now();
-  if (!(MP.c && MP.c.connected)) { ED.msg = 'COULD NOT REACH THE SERVER - TRY AGAIN'; edUI(); return; }
-  try { MP.c.publish(MP.PRE + 'sub/' + d.id, JSON.stringify(d), { retain: true, qos: 1 }); ED.msg = 'SENT TO REVIEW - THANKS ' + c.toUpperCase() + '!'; } catch (e) { ED.msg = 'COULD NOT SEND - TRY AGAIN'; }
+  if (!syOK()) { ED.msg = 'COULD NOT REACH THE SERVER - TRY AGAIN'; edUI(); return; }
+  ED.msg = syPub('sub/' + d.id, JSON.stringify(d)) ? 'SENT TO REVIEW - THANKS ' + c.toUpperCase() + '!' : 'COULD NOT SEND - TRY AGAIN';
   edUI(); edDraw();
 }
 function edUI() {
@@ -7105,7 +7198,7 @@ function edUI() {
   $('edSel').innerHTML = h; $('edMsg').textContent = ED.msg;
   const P = $('edPanel');
   if (ED.tool === 'wb' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A WALL BUY</span>' + B('guns', 'GUN: ' + WEAPONS[ED.wbType || 'ak'].name);
-  if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div>' + Object.values(CM.maps).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
+  if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div><div class="row"><span>SYNC</span>' + B('sync', 'PUSH ALL') + B('bkp', 'BACKUP') + B('rst', 'RESTORE') + '</div>' + Object.values(CM.maps).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
   else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'CAT GUY' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k]}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
   else if (ED.panel === 'guns') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>PICK A WEAPON</span></div><div class="row">' + Object.keys(WEAPONS).filter(k => k !== 'para').map(k => B('gun:' + k, WEAPONS[k].name)).join('') + '</div>'; }
   else { P.style.display = 'none'; }
@@ -7138,7 +7231,7 @@ function edOpen(pub) {
 }
 
 /* ---------- boot ---------- */
-cmLoadLocal();
+cmLoadLocal(); syInit();
 activateMap('factory');
 showMenu('main');
 try {   // online counter: if the browser blocks the connection the game must still start
