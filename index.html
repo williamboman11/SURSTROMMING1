@@ -291,7 +291,7 @@ const SHOTGUN_WALL_COST = 1500;
 const DOOR_COST = 500, JUG_COST = 2500, PAP_COST = 5000;   // prices
 WEAPONS.smg = { name: 'MP5 SMG', dmg: 30, delay: 0.065, auto: true, mag: 32, reserve: 192, reload: 1.8, kind: 'hitscan', spread: 0.012, kick: 0.04, rot: 0.045, vm: [0.22, -0.23, -0.44], ads: [0, -0.095, -0.3] };
 WEAPONS.galil = { name: 'GALIL', dmg: 65, delay: 0.115, auto: true, mag: 35, reserve: 210, reload: 2.3, kind: 'hitscan', spread: 0.005, kick: 0.075, rot: 0.065, vm: [0.24, -0.24, -0.48], ads: [0, -0.1, -0.32] };
-WEAPONS.pistol.ads = [0, -0.075, -0.32]; WEAPONS.ak.ads = [0, -0.105, -0.32]; WEAPONS.crossbow.ads = [0, -0.1, -0.34];
+WEAPONS.pistol.name = '1911'; WEAPONS.pistol.ads = [0, -0.075, -0.32]; WEAPONS.ak.ads = [0, -0.105, -0.32]; WEAPONS.crossbow.ads = [0, -0.1, -0.34];
 WEAPONS.revolver = { name: '.44 MAGNUM', dmg: 150, delay: 0.45, auto: false, mag: 6, reserve: 36, reload: 2.0, kind: 'hitscan', spread: 0.002, kick: 0.12, rot: 0.12, vm: [0.2, -0.22, -0.42], ads: [0, -0.075, -0.32] };
 WEAPONS.sniper = { name: 'SNIPER RIFLE', dmg: 450, delay: 1.1, auto: false, mag: 5, reserve: 30, reload: 3.0, kind: 'hitscan', spread: 0, kick: 0.14, rot: 0.12, vm: [0.24, -0.24, -0.5], ads: [0, -0.105, -0.34] };
 WEAPONS.minigun = { name: 'MINIGUN', dmg: 40, delay: 0.04, auto: true, mag: 150, reserve: 450, reload: 4.0, kind: 'hitscan', spread: 0.02, kick: 0.03, rot: 0.03, vm: [0.26, -0.26, -0.52], ads: [0, -0.12, -0.36] };
@@ -302,6 +302,19 @@ WEAPONS.shotgun = { name: 'REMINGTON 870 MCS', dmg: 45, pellets: 8, delay: 0.85,
 WEAPONS.raygun2 = { name: 'RAY GUN MARK II', dmg: 200, delay: 0.55, auto: false, mag: 24, reserve: 120, reload: 3.0, kind: 'ray', burst: 2, spread: 0, kick: 0.07, rot: 0.1, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
 WEAPONS.para = { name: 'PARALYZER', dmg: 0, delay: 0.05, auto: true, mag: Infinity, reserve: Infinity, reload: 0, kind: 'beam', spread: 0, kick: 0.025, rot: 0.02, vm: [0.25, -0.27, -0.55], ads: [0.02, -0.15, -0.42] };
 const PARA = { heatShot: 0.0068, cool: 0.3, coolDelay: 0.25, resume: 0.25, range: 17, linger: 4, need: 0.7, dotFrac: 0.45, dotMin: 90, bossFrac: 0.012, slow: 0.14, slowBoss: 0.5 };
+const _ads = [0, -0.1, -0.32];
+WEAPONS.mr6 = { name: 'MR6', dmg: 45, delay: 0.22, auto: false, mag: 15, reserve: 120, reload: 1.4, kind: 'hitscan', spread: 0.003, kick: 0.06, rot: 0.1, vm: [0.2, -0.22, -0.42], ads: [0, -0.075, -0.32] };
+WEAPONS.kn44 = { name: 'KN-44', dmg: 55, delay: 0.1, auto: true, mag: 30, reserve: 150, reload: 2.0, kind: 'hitscan', spread: 0.005, kick: 0.07, rot: 0.06, vm: [0.24, -0.24, -0.48], ads: [0, -0.105, -0.32] };
+WEAPONS.manowar = { name: 'MAN-O-WAR', dmg: 115, delay: 0.22, auto: true, mag: 20, reserve: 100, reload: 2.4, kind: 'hitscan', spread: 0.004, kick: 0.1, rot: 0.09, vm: [0.24, -0.24, -0.48], ads: [0, -0.1, -0.32] };
+WEAPONS.kuda = { name: 'KUDA', dmg: 34, delay: 0.07, auto: true, mag: 32, reserve: 192, reload: 1.8, kind: 'hitscan', spread: 0.011, kick: 0.04, rot: 0.045, vm: [0.22, -0.23, -0.44], ads: [0, -0.095, -0.3] };
+WEAPONS.vmp = { name: 'VMP', dmg: 42, delay: 0.055, auto: true, mag: 40, reserve: 200, reload: 1.9, kind: 'hitscan', spread: 0.02, kick: 0.04, rot: 0.05, vm: [0.22, -0.23, -0.44], ads: [0, -0.095, -0.3] };
+WEAPONS.krm262 = { name: 'KRM-262', dmg: 55, pellets: 8, delay: 0.8, auto: false, mag: 6, reserve: 36, reload: 2.6, kind: 'hitscan', spread: 0.05, kick: 0.16, rot: 0.2, vm: [0.22, -0.24, -0.5], ads: [0, -0.095, -0.3] };
+WEAPONS.haymaker = { name: 'HAYMAKER 12', dmg: 32, pellets: 8, delay: 0.2, auto: true, mag: 12, reserve: 72, reload: 3.0, kind: 'hitscan', spread: 0.06, kick: 0.12, rot: 0.14, vm: [0.22, -0.24, -0.5], ads: [0, -0.095, -0.3] };
+WEAPONS.brm = { name: 'BRM', dmg: 50, delay: 0.08, auto: true, mag: 100, reserve: 400, reload: 4.2, kind: 'hitscan', spread: 0.01, kick: 0.05, rot: 0.05, vm: [0.26, -0.26, -0.52], ads: [0, -0.12, -0.36] };
+WEAPONS.drakon = { name: 'DRAKON', dmg: 380, delay: 0.4, auto: false, mag: 10, reserve: 50, reload: 3.0, kind: 'hitscan', spread: 0, kick: 0.12, rot: 0.1, vm: [0.24, -0.24, -0.5], ads: [0, -0.105, -0.34] };
+WEAPONS.thundergun = { name: 'THUNDERGUN', dmg: 1, delay: 1.0, auto: false, mag: 2, reserve: 12, reload: 3.5, kind: 'special', spread: 0, kick: 0.2, rot: 0.2, vm: [0.22, -0.25, -0.48], ads: [0, -0.11, -0.34] };
+WEAPONS.servant = { name: 'APOTHICON SERVANT', dmg: 1, delay: 1.2, auto: false, mag: 3, reserve: 9, reload: 3.2, kind: 'special', spread: 0, kick: 0.08, rot: 0.1, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
+WEAPONS.wunder = { name: 'WUNDERWAFFE DG-2', dmg: 1, delay: 0.9, auto: false, mag: 3, reserve: 15, reload: 3.5, kind: 'special', spread: 0, kick: 0.1, rot: 0.1, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
 WEAPONS.raygun = { name: 'RAY GUN', dmg: 250, delay: 0.32, auto: false, mag: 20, reserve: 160, reload: 2.8, kind: 'ray', spread: 0, kick: 0.06, rot: 0.08, vm: [0.2, -0.21, -0.42], ads: [0, -0.1, -0.3] };
 
 /* ===================================================================
@@ -1552,6 +1565,13 @@ function papGlow(m) {
 const vm = { pistol: buildPistol(), ak: buildAK(), crossbow: buildCrossbow(), raygun: buildRay(), shotgun: buildShotgun(), raygun2: buildRay2(), smg: buildSMG(), galil: buildGalil(), rpg: buildRPG(), revolver: buildRevolver(), sniper: buildSniper(), minigun: buildMinigun(), dbl: buildDouble(), thumper: buildThumper(), para: buildParalyzer() };
 for (const k in vm) papGlow(vm[k]);
 for (const k in vm) { vm[k].visible = false; camera.add(vm[k]); }
+/* ---------- extra guns: existing models with a coloured accent so each one reads differently ---------- */
+const accM = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.35, metalness: 0.7, emissive: c, emissiveIntensity: 0.25 });
+function variantOf(build, acc, len = 0.34) {
+  return () => { const g = build(), m = accM(acc); part(g, B(0.012, 0.012, len), m, 0, 0.068, -0.2); for (const s of [-1, 1]) part(g, B(0.006, 0.014, len * 0.8), m, s * 0.032, 0.0, -0.2); part(g, B(0.05, 0.01, 0.012), m, 0, 0.03, -0.46); return g; };
+}
+const NEWB = { mr6: variantOf(buildPistol, '#ffc83a', 0.16), kn44: variantOf(buildAK, '#35c8ff'), manowar: variantOf(buildGalil, '#ff4a2a'), kuda: variantOf(buildSMG, '#8aff4a'), vmp: variantOf(buildSMG, '#d048ff'), krm262: variantOf(buildShotgun, '#ffb030'), haymaker: variantOf(buildShotgun, '#ff5a1a'), brm: variantOf(buildMinigun, '#c8ff3a'), drakon: variantOf(buildSniper, '#30ffc8', 0.5), thundergun: variantOf(buildThumper, '#ffb800', 0.2), servant: variantOf(buildRay2, '#a040ff', 0.2), wunder: variantOf(buildRay, '#40c8ff', 0.2) };
+for (const k in NEWB) { vm[k] = NEWB[k](); papGlow(vm[k]); vm[k].visible = false; camera.add(vm[k]); }
 const knifeModel = buildKnife(); knifeModel.visible = false; camera.add(knifeModel);
 
 const muzzleFlash = new THREE.Mesh(
@@ -1563,6 +1583,7 @@ const muzzleLight = new THREE.PointLight(0xffb060, 0, 12, 2);
 
 // mystery box floating display models
 mbox.models.teddy = buildTeddy(); mbox.models.ak = buildAK(); mbox.models.crossbow = buildCrossbow(); mbox.models.rpg = buildRPG(); mbox.models.revolver = buildRevolver(); mbox.models.sniper = buildSniper(); mbox.models.minigun = buildMinigun(); mbox.models.dbl = buildDouble(); mbox.models.thumper = buildThumper(); mbox.models.raygun = buildRay(); mbox.models.shotgun = buildShotgun(); mbox.models.raygun2 = buildRay2(); mbox.models.smg = buildSMG(); mbox.models.galil = buildGalil(); mbox.models.para = buildParalyzer();
+for (const k in NEWB) mbox.models[k] = NEWB[k]();
 for (const k in mbox.models) { mbox.models[k].scale.setScalar(1.5); mbox.models[k].rotation.y = Math.PI / 2; mbox.models[k].visible = false; mbox.display.add(mbox.models[k]); }
 
 /* ===== MAP VERITY assets (embedded: face textures + the Verity melody) ===== */
@@ -1995,7 +2016,7 @@ const zGlowRedMat = new THREE.MeshBasicMaterial({ color: 0xff3a1a, transparent: 
 =================================================================== */
 const zombies = [], dying = [], projectiles = [], grenades = [], particles = [], tracers = [], explosions = [];
 let grenadeCooldown = 0;
-const GRENADE_DAMAGE = 200, GRENADE_RADIUS = 7.5, GRENADE_FUSE = 3.0;
+const GRENADE_DAMAGE = 300, GRENADE_RADIUS = 7.5, GRENADE_FUSE = 3.0;
 const state = {
   phase: 'menu',          // menu | countdown | playing | dead
   time: 0, score: 0, kills: 0, wave: 0, health: 100, lastHurt: -10,
@@ -2288,6 +2309,8 @@ function lockerHTML() {
   return h + '</div><div class="label" style="margin-top:12px">YOUR LOOK IS SHOWN TO PLAYERS IN MULTIPLAYER</div>';
 }
 const WBUILD = { pistol: buildPistol, ak: buildAK, crossbow: buildCrossbow, raygun: buildRay, shotgun: buildShotgun, raygun2: buildRay2, smg: buildSMG, galil: buildGalil, rpg: buildRPG, revolver: buildRevolver, sniper: buildSniper, minigun: buildMinigun, dbl: buildDouble, thumper: buildThumper, para: buildParalyzer };
+Object.assign(WBUILD, NEWB);
+for (const k in WEAPONS) if (!player.ammo[k]) player.ammo[k] = { mag: WEAPONS[k].mag, res: WEAPONS[k].reserve };
 /* ---------- voice chat (WebRTC mesh, signalled over the game's MQTT topic) ---------- */
 const Voice = {
   pcs: new Map(), stream: null, track: null, on: false, busy: false, ctx: null, level: new Map(), talking: new Set(), err: '', lastLvl: 0,
@@ -2669,12 +2692,12 @@ function jingleTimes(buf) {   // find where the audible part of the mp3 starts /
   return buf._jt = { start: st, end: Math.max(en, st + 1.5) };
 }
 function startJingle(vol) {   // plays instantly, and the box rolls for exactly as long as the audible jingle lasts
-  stopJingle(); mbox.rollDur = 5.5; const buf = SND.jingle; if (!audioCtx || !buf) return;
+  stopJingle(); mbox.rollDur = 5; const buf = SND.jingle; if (!audioCtx || !buf) return;
   const T = jingleTimes(buf), dur = T.end - T.start, t0 = audioCtx.currentTime;
   const src = audioCtx.createBufferSource(); src.buffer = buf; const g = audioCtx.createGain();
   g.gain.setValueAtTime(vol, t0); g.gain.setValueAtTime(vol, t0 + Math.max(0, dur - 0.25)); g.gain.linearRampToValueAtTime(0.0001, t0 + dur + 0.1);
   src.connect(g); g.connect(audioCtx.destination); src.start(t0, T.start); src.stop(t0 + dur + 0.15);
-  mbox.jg = { src, g }; mbox.rollDur = dur;
+  mbox.jg = { src, g }; mbox.rollDur = Math.max(1.5, dur - 0.5);   // spin 0.5s shorter than the jingle
 }
 let boxJingleCustom = false;
 function loadBoxJingleFile() { try { fetch('mystery box jingle.mp3').then(r => r.ok ? r.arrayBuffer() : null).then(ab => { if (ab && audioCtx) audioCtx.decodeAudioData(ab, b => { SND.jingle = b; boxJingleCustom = true; }, () => {}); }).catch(() => {}); } catch (e) {} }
@@ -2789,6 +2812,7 @@ const sfx = {
   overheat: () => { noiseBurst(0.7, 3500, 500, 0.35, 'highpass'); tone('sawtooth', 600, 60, 0.6, 0.15); },
   chime: () => { [0, 1, 2].forEach(i => tone('triangle', 660 * Math.pow(1.26, i), 660 * Math.pow(1.26, i), 0.25, 0.16, i * 0.1)); },
 };
+for (const [k, v] of Object.entries({ mr6: 'pistol', kn44: 'ak', manowar: 'galil', kuda: 'smg', vmp: 'smg', krm262: 'shotgun', haymaker: 'shotgun', brm: 'minigun', drakon: 'sniper', thundergun: 'dbl', servant: 'raygun', wunder: 'raygun2' })) sfx[k] = sfx[v];
 function RELOAD_AUDIO() { return 0.9; }
 function gunSnd(o) {   // layered: crack + body + low thump + room tail
   noiseBurst(0.025, o.c0, o.c1, o.v, 'highpass'); noiseBurst(o.b, o.b0, o.b1, o.v * 0.9);
@@ -3350,6 +3374,54 @@ function giveWeapon(type) {
   player.cur = type; state.reloading = false; state.swapT = 0.25; sfx.swap(); setViewmodels();
 }
 
+/* ---------- special weapons: Thundergun, Apothicon Servant, Wunderwaffe DG-2 ---------- */
+const holes = [];
+const holeGeo = new THREE.SphereGeometry(0.6, 16, 12), holeMat = new THREE.MeshBasicMaterial({ color: 0x000000 }), holeRing = new THREE.MeshBasicMaterial({ color: 0x9a4bff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+function killOrHurt(z, pap, bossDmg = 900) { const p = new THREE.Vector3(z.root.position.x, 1.2, z.root.position.z); damageZombie(z, z.boss ? bossDmg * (pap ? 2 : 1) : 1e7, p, false); return p; }
+function fireSpecial(t) {
+  camera.getWorldDirection(_v); const o = camera.getWorldPosition(new THREE.Vector3()), dir = _v.clone(), pap = !!player.pap[t];
+  if (t === 'thundergun') {
+    const R = pap ? 22 : 16; burst(o.clone().addScaledVector(dir, 2.5), 34, pMat.spark, 16, 0.6, 2); burst(o.clone().addScaledVector(dir, 4), 20, pMat.smoke, 8, 1.0, -1);
+    state.shake = Math.max(state.shake, 0.8);
+    for (const z of [...zombies]) {
+      if (z.dead) continue; const dx = z.root.position.x - o.x, dz = z.root.position.z - o.z, d = Math.hypot(dx, dz);
+      if (d > R || d < 0.01 || (dx * dir.x + dz * dir.z) / (d * Math.hypot(dir.x, dir.z) || 1) < 0.6) continue;
+      const p = killOrHurt(z, pap, 700); burst(p, 8, pMat.blood, 8, 0.7, 6); if (!z.dead) { z.root.position.x += dx / d * 4; z.root.position.z += dz / d * 4; }
+    }
+  } else if (t === 'servant') {
+    raycaster.set(o, dir); raycaster.far = 34; const h = raycaster.intersectObjects(obstacleMeshes, false);
+    const pt = h.length ? h[0].point.clone().addScaledVector(dir, -0.8) : o.clone().addScaledVector(dir, 20); pt.y = Math.max(1.0, Math.min(pt.y, 2.2));
+    const m = new THREE.Group(); m.add(new THREE.Mesh(holeGeo, holeMat)); const r1 = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.07, 8, 28), holeRing), r2 = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.04, 8, 28), holeRing); m.add(r1, r2); m.position.copy(pt); scene.add(m);
+    holes.push({ m, r1, r2, pos: pt, t: 0, life: pap ? 9 : 6, tick: 0, pap }); spawnTracer(o.clone().add(new THREE.Vector3(0, -0.1, 0)).addScaledVector(dir, 0.8), pt);
+  } else if (t === 'wunder') {
+    let best = null, bd = 1e9; const maxD = 45;
+    for (const z of zombies) { if (z.dead) continue; const dx = z.root.position.x - o.x, dz = z.root.position.z - o.z, d = Math.hypot(dx, dz); if (d > maxD || d < 0.5) continue; const c = (dx * dir.x + dz * dir.z) / (d * Math.hypot(dir.x, dir.z) || 1); if (c > 0.93 && d < bd) { bd = d; best = z; } }
+    const muzzle = vm.wunder.localToWorld(vm.wunder.userData.muzzle.clone());
+    if (!best) { spawnTracer(muzzle, o.clone().addScaledVector(dir, 25)); return; }
+    const hit = new Set(), N = pap ? 12 : 8; let cur = best, from = muzzle;
+    for (let i = 0; i < N && cur; i++) {
+      hit.add(cur); const pt = killOrHurt(cur, pap, 1200); spawnTracer(from, pt); burst(pt, 10, pMat.pspark || pMat.spark, 9, 0.5, 2); from = pt;
+      let nx = null, nd = 7.5; for (const z of zombies) { if (z.dead || hit.has(z)) continue; const d = Math.hypot(z.root.position.x - pt.x, z.root.position.z - pt.z); if (d < nd) { nd = d; nx = z; } }
+      cur = nx;
+    }
+    state.shake = Math.max(state.shake, 0.5);
+  }
+}
+function updateHoles(dt) {
+  for (let i = holes.length - 1; i >= 0; i--) {
+    const h = holes[i]; h.t += dt; h.tick -= dt; const k = Math.min(1, h.t / 0.4, (h.life - h.t) / 0.5);
+    h.m.scale.setScalar(Math.max(0.01, k)); h.r1.rotation.x += dt * 4; h.r1.rotation.y += dt * 2; h.r2.rotation.z -= dt * 3; h.r2.rotation.x += dt * 1.5;
+    for (const z of [...zombies]) {
+      if (z.dead) continue; const dx = h.pos.x - z.root.position.x, dz = h.pos.z - z.root.position.z, d = Math.hypot(dx, dz);
+      if (d > 9) continue;
+      if (!MP.client && d > 0.01) { const sp = (z.boss ? 1.5 : 5.5) * dt; z.root.position.x += dx / d * sp; z.root.position.z += dz / d * sp; }
+      if (d < 1.5 && !z.boss && !MP.client) killOrHurt(z, h.pap);
+      else if (h.tick <= 0 && (z.boss ? d < 9 : (MP.client && d < 5))) damageZombie(z, z.boss ? 120 * (h.pap ? 2 : 1) : 1e7, new THREE.Vector3(z.root.position.x, 1.2, z.root.position.z), false);
+    }
+    if (h.tick <= 0) h.tick = 0.4;
+    if (h.t >= h.life) { scene.remove(h.m); holes.splice(i, 1); }
+  }
+}
 const _pp = new THREE.Vector3();
 function peerHit(ray, maxD) {   // friendly fire: ray vs. three spheres per teammate (legs, torso, head)
   let best = null;
@@ -3373,6 +3445,7 @@ function shoot() {
   }
   a.mag--; state.fireCd = w.delay; state.recoil = 1;
   sfx[player.cur]();
+  if (w.kind === 'special') { fireSpecial(player.cur); if (a.mag === 0 && a.res > 0) startReload(); return; }
   if (player.cur !== 'crossbow' && player.cur !== 'raygun' && player.cur !== 'raygun2') {
     state.flashT = 0.045; muzzleFlash.visible = true; muzzleFlash.rotation.z = Math.random() * 6; muzzleFlash.scale.setScalar(0.8 + Math.random() * 0.6); muzzleLight.intensity = 6;
   } else if (player.cur === 'crossbow') {
@@ -3574,7 +3647,7 @@ function interact() {
     if (state.score < BOX_COST) { notice(`NEED ${BOX_COST} POINTS`); sfx.deny(); return; }
     state.score -= BOX_COST; sfx.buy(); mbox.owner = MP.id;
     mbox.state = 'rolling'; mbox.t = 0; mbox.cycleT = 0; const teddy = (curMap.boxSpots || []).length > 1 && (mbox.uses || 0) >= 3 && (Math.random() < 0.22 || mbox.uses >= 8);
-    mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2', 'rpg', 'rpg', 'revolver', 'sniper', 'minigun', 'dbl', 'thumper', 'pistol', ...(curMap.id === 'buried' ? ['para', 'para', 'para'] : [])]);
+    mbox.result = teddy ? 'teddy' : pick(['ak', 'ak', 'smg', 'smg', 'galil', 'galil', 'crossbow', 'crossbow', 'shotgun', 'shotgun', 'raygun', 'raygun2', 'rpg', 'rpg', 'revolver', 'sniper', 'minigun', 'dbl', 'thumper', 'pistol', 'mr6', 'kn44', 'manowar', 'kuda', 'vmp', 'krm262', 'haymaker', 'brm', 'drakon', 'thundergun', 'servant', 'wunder', ...(curMap.id === 'buried' ? ['para', 'para', 'para'] : [])]);
     mbox.display.visible = true; mbox.display.position.y = 0.9;
     if (MP.on) MP.send({ t: 'box', a: 'open', r: mbox.result, u: mbox.uses || 0 });
     startJingle(0.85);
@@ -3623,9 +3696,9 @@ function updateBox(dt) {
   b.light.intensity = b.state === 'closed' ? 14 : 30;
   if (b.state === 'rolling') {
     b.t += dt; b.cycleT -= dt;
-    b.display.position.y = 0.9 + Math.min(1, b.t / (b.rollDur || 5.5)) * 0.9; b.display.scale.setScalar(1);
+    b.display.position.y = 0.9 + Math.min(1, b.t / (b.rollDur || 5)) * 0.9; b.display.scale.setScalar(1);
     if (b.cycleT <= 0) { b.cycleT = 0.16; const ks = Object.keys(b.models).filter(k => k !== 'teddy' && (k !== 'para' || curMap.id === 'buried')); b.ci = ((b.ci || 0) + 1) % ks.length; ks.forEach((k, i) => { b.models[k].visible = i === b.ci; }); }
-    if (b.t >= (b.rollDur || 5.5)) { b.state = 'ready'; if (b.result === 'teddy') stopJingle(); b.readyT = 10; b.tt = 0; for (const k in b.models) b.models[k].visible = k === b.result; if (b.result === 'teddy') { if (!playSnd('teddy', 1)) sfx.chime(); } }
+    if (b.t >= (b.rollDur || 5)) { b.state = 'ready'; if (b.result === 'teddy') stopJingle(); b.readyT = 10; b.tt = 0; for (const k in b.models) b.models[k].visible = k === b.result; if (b.result === 'teddy') { if (!playSnd('teddy', 1)) sfx.chime(); } }
   } else if (b.state === 'ready') {
     b.readyT -= dt;
     if (b.result === 'teddy') {
@@ -3663,7 +3736,7 @@ function resetWorld() {
   for (const z of dying) scene.remove(z.root);
   zombies.length = 0; dying.length = 0; clearPowerups(); state.houndRound = false;
   for (const p of projectiles) scene.remove(p.mesh); projectiles.length = 0;
-  for (const g of grenades) scene.remove(g.mesh); grenades.length = 0; grenadeCooldown = 0; player.jumpY = 0; player.jumpVel = 0; player.onGround = true; for (const c of gasClouds) scene.remove(c.g); gasClouds.length = 0;
+  for (const h of holes) scene.remove(h.m); holes.length = 0; for (const g of grenades) scene.remove(g.mesh); grenades.length = 0; grenadeCooldown = 0; player.jumpY = 0; player.jumpVel = 0; player.onGround = true; for (const c of gasClouds) scene.remove(c.g); gasClouds.length = 0;
   for (const p of particles) scene.remove(p.m); particles.length = 0;
   for (const e of explosions) scene.remove(e.m); explosions.length = 0;
   DNG.saved = null;
@@ -3784,7 +3857,13 @@ function shopGuiHTML() {
   return `<div id="shopGui"><div class="sgHead"><span>SHOP</span><em>COINS <b>${WALLET.coins}</b></em></div><div class="sgTabs">` + SHOP_TABS.map(t => `<button class="stab ${t[0] === shopTab ? 'on' : ''}" data-a="st:${t[0]}">${t[1]}</button>`).join('') + `</div><div class="sgBody">${body}</div><div class="sgFoot">EARN 100 COINS EVERY 10 ROUNDS YOU REACH &middot; CHEATS DISABLE COINS</div></div>`;
 }
 /* ---------- changelog (shared through the MQTT broker as a retained message; devmode edits it) ---------- */
-const CL_DEFAULT = `OCT 19 - MAP EDITOR
+const CL_DEFAULT = `OCT 20 - NEW GUNS + WALL BUYS
+New guns: MR6, KN-44, Man-O-War, Kuda, VMP, KRM-262, Haymaker 12, BRM, Drakon, Thundergun, Apothicon Servant, Wunderwaffe DG-2 (all in the mystery box)
+Pistol is now the 1911
+Grenades do 100 more damage, mystery box spins 0.5s shorter
+Map editor: place wall buys with any weapon and your own price
+
+OCT 19 - MAP EDITOR
 Devmode map editor: build maps with walls, buy-to-open doors, perks, Pack-a-Punch, mystery box spots, spawns and a zombie mix
 Custom maps are shared with everyone in the map list
 
@@ -4427,7 +4506,7 @@ function update(dt) {
   if (NAV.on) navUpdate(dt);
   updateZombies(dt);
   updateProjectiles(dt);
-  updateGrenades(dt); updateClouds(dt);
+  updateGrenades(dt); updateHoles(dt); updateClouds(dt);
   updateBox(dt);
   updateCan(dt);
   updatePerks(dt);
@@ -6714,7 +6793,7 @@ const CM_PD = {
   cash: { id: 'cash', title: 'CASHBACK COLA', fs: 21, body: '#b8921a', trim: '#1a1405', emb: '$', cost: 2500, ec: '#b8921a', L: '$', nm: 'CASHBACK' },
   pap: { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P', ec: '#6a4be0', L: 'P' },
 };
-function cmNewData() { return { id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 5, v: 0, t: 0, c: 0 }, boss: 1, ts: 0 }; }
+function cmNewData() { return { id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], wb: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 5, v: 0, t: 0, c: 0 }, boss: 1, ts: 0 }; }
 function pickZK(z) { const a = [[null, z.n], ['verity', z.v], ['tung', z.t], ['cat', z.c]], tot = a.reduce((s, q) => s + q[1], 0); if (tot <= 0) return null; let r = Math.random() * tot; for (const [k, w] of a) { if ((r -= w) < 0) return k; } return null; }
 function buildCustomMap(d) {
   const AXc = d.ax || 40, AZc = d.az || 40, PI = Math.PI, id = 'cm_' + d.id;
@@ -6748,6 +6827,14 @@ function buildCustomMap(d) {
     if (p.k === 'jug') jugPos = V(p.x, p.z); else if (p.k === 'pap') { gear = makePapGear(g); papPos = V(p.x, p.z); } else perks.push({ ...P, x: p.x, z: p.z, pos: V(p.x, p.z) });
   }
   if (!gear) gear = makePapGear(addPerk(9999, 9999, 0, CM_PD.pap));
+  const wbs = [], postM = new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.7 });
+  for (const q of (d.wb || [])) {
+    const W = WEAPONS[q.type]; if (!W) continue; const ry = q.ry || 0, fx = Math.sin(ry), fz = Math.cos(ry);
+    makeWallBuy(q.x, 1.55, q.z, ry, W.name, q.cost);
+    const pl = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.95, 0.06), postM); pl.position.set(q.x - fx * 0.04, 1.55, q.z - fz * 0.04); pl.rotation.y = ry; scene.add(pl);
+    const po = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), postM); po.position.set(q.x - fx * 0.06, 0.55, q.z - fz * 0.06); scene.add(po);
+    wbs.push({ pos: V(q.x, q.z), type: q.type, cost: q.cost });
+  }
   const bs = d.boxes.length ? d.boxes : [{ x: 0, z: -4, rot: 0 }];
   const boxOb = b => { const sw = Math.abs(Math.sin(b.rot || 0)) > 0.7, hw = sw ? 0.55 : 0.85, hd = sw ? 0.85 : 0.55; return { minX: b.x - hw, maxX: b.x + hw, minZ: b.z - hd, maxZ: b.z + hd }; };
   const bo = boxOb(bs[0]); obs.push(bo); boxObs[id] = bo; occ.push(mbox.body);
@@ -6758,7 +6845,7 @@ function buildCustomMap(d) {
     id, ax: AXc, az: AZc, fog: 0.012, shadowX: AXc + 6, shadowZ: AZc + 6, spawn: { x: d.spawn.x, z: d.spawn.z, yaw: d.spawn.yaw || 0 },
     menuCam: { cx: 0, cz: 0, r: Math.max(AXc, AZc) * 1.3, rv: 4, h: Math.max(AXc, AZc) * 0.6, look: 2 },
     root, obs, occ, jugPos, papPos, papGear: gear, boxPos: V(bs[0].x, bs[0].z), boxRot: bs[0].rot || 0, perks, gates,
-    boxSpots: bs.map(b => ({ x: b.x, z: b.z, rot: b.rot || 0 })), custom: true, zk: d.zk, boss: d.boss,
+    boxSpots: bs.map(b => ({ x: b.x, z: b.z, rot: b.rot || 0 })), custom: true, zk: d.zk, boss: d.boss, wallBuys: wbs,
     onReset() { for (const g of gates) g.reset(); if (mm.nav) navRefresh(mm); },
   };
   if (d.zs && d.zs.length) mm.spawnPts = d.zs.map(q => ({ x: q.x, z: q.z }));
@@ -6833,7 +6920,7 @@ function rvRemote(id, s) {
   if (!d.spawn || !Number.isFinite(d.spawn.x) || !Number.isFinite(d.spawn.z) || !Number.isFinite(d.ax) || !Number.isFinite(d.az) || d.ax < 10 || d.ax > 100 || d.az < 10 || d.az > 100) return;
   const fin = (q, ks) => q && ks.every(k => Number.isFinite(q[k]));
   d.walls = d.walls.filter(q => fin(q, ['x', 'z', 'w', 'd', 'h'])); d.gates = d.gates.filter(q => fin(q, ['x', 'z', 'w', 'd', 'cost']));
-  d.perks = d.perks.filter(q => fin(q, ['x', 'z']) && CM_PD[q.k]); d.boxes = d.boxes.filter(q => fin(q, ['x', 'z'])); d.zs = d.zs.filter(q => fin(q, ['x', 'z']));
+  d.perks = d.perks.filter(q => fin(q, ['x', 'z']) && CM_PD[q.k]); d.boxes = d.boxes.filter(q => fin(q, ['x', 'z'])); d.wb = (Array.isArray(d.wb) ? d.wb : []).filter(q => fin(q, ['x', 'z', 'cost']) && WEAPONS[q.type] && q.type !== 'para').slice(0, 60).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, type: q.type, cost: Math.max(0, Math.min(99999, Math.round(q.cost))) })); d.zs = d.zs.filter(q => fin(q, ['x', 'z']));
   const z = d.zk || {}; d.zk = { n: 0, v: 0, t: 0, c: 0 }; for (const k in d.zk) d.zk[k] = Math.max(0, Math.min(9, Math.round(+z[k] || 0)));
   d.boss = [0, 1, 2].includes(d.boss) ? d.boss : 1; if (!CM_GND.includes(d.ground)) d.ground = 'grass';
   d.name = rvClean(d.name).toUpperCase().slice(0, 18) || 'UNNAMED'; d.creator = rvClean(d.creator).slice(0, 20) || 'UNKNOWN'; d.sub = rvClean(d.sub).slice(0, 40); d.desc = rvClean(d.desc).slice(0, 220);
@@ -6879,7 +6966,7 @@ function rvAct(k) {
 
 /* ---------- editor (top-down 2D, works with touch) ---------- */
 const ED = { d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
-const ED_TOOLS = [['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['del', 'DELETE']];
+const ED_TOOLS = [['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['wb', '+WALLBUY'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['del', 'DELETE']];
 function edBuild() {
   const css = document.createElement('style'); css.textContent = `
   #ed{position:fixed;inset:0;z-index:70;background:#0b0d12;display:none;flex-direction:column;font:8px "Press Start 2P",monospace;color:#cfd2d6}
@@ -6911,13 +6998,14 @@ const edSn = v => Math.round(v * 2) / 2;
 function edHit(x, z) {
   const d = ED.d, r = Math.max(1.3, 16 / ED.sc);
   for (let i = d.perks.length - 1; i >= 0; i--) if (Math.hypot(d.perks[i].x - x, d.perks[i].z - z) < r) return { t: 'perk', i };
+  for (let i = (d.wb || []).length - 1; i >= 0; i--) if (Math.hypot(d.wb[i].x - x, d.wb[i].z - z) < r) return { t: 'wb', i };
   for (let i = d.boxes.length - 1; i >= 0; i--) if (Math.hypot(d.boxes[i].x - x, d.boxes[i].z - z) < r) return { t: 'box', i };
   for (let i = d.zs.length - 1; i >= 0; i--) if (Math.hypot(d.zs[i].x - x, d.zs[i].z - z) < r) return { t: 'zs', i };
   if (Math.hypot(d.spawn.x - x, d.spawn.z - z) < r) return { t: 'spawn', i: 0 };
   for (const [t, arr] of [['gate', d.gates], ['wall', d.walls]]) for (let i = arr.length - 1; i >= 0; i--) { const q = arr[i]; if (Math.abs(q.x - x) <= q.w / 2 + 0.3 && Math.abs(q.z - z) <= q.d / 2 + 0.3) return { t, i }; }
   return null;
 }
-function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ wall: d.walls, gate: d.gates, perk: d.perks, box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
+function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ wall: d.walls, gate: d.gates, perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
 function edDown(ev) {
   const p = edXY(ev), w = edW(p), t = ED.tool, d = ED.d; ED.msg = '';
   if (t === 'sel') {
@@ -6927,6 +7015,7 @@ function edDown(ev) {
     if (h) { const q = edItem(h); ED.drag = { m: 'move', ox: q.x - w.x, oz: q.z - w.z }; } else ED.drag = { m: 'pan', sx: p.x, sy: p.y, cx: ED.cx, cz: ED.cz };
   } else if (t === 'wall' || t === 'gate') ED.drag = { m: 'rect', x0: edSn(w.x), z0: edSn(w.z), x1: edSn(w.x), z1: edSn(w.z) };
   else if (t === 'perk') { const k = ED.perk; d.perks = d.perks.filter(q => q.k !== k); d.perks.push({ k, x: edSn(w.x), z: edSn(w.z), ry: 0 }); ED.sel = { t: 'perk', i: d.perks.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'wb') { d.wb = d.wb || []; d.wb.push({ x: edSn(w.x), z: edSn(w.z), ry: 0, type: ED.wbType || 'ak', cost: ED.wbCost || 1000 }); ED.sel = { t: 'wb', i: d.wb.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
   else if (t === 'box') { d.boxes.push({ x: edSn(w.x), z: edSn(w.z), rot: 0 }); ED.sel = { t: 'box', i: d.boxes.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
   else if (t === 'spawn') { d.spawn.x = edSn(w.x); d.spawn.z = edSn(w.z); ED.sel = { t: 'spawn', i: 0 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
   else if (t === 'zs') { d.zs.push({ x: edSn(w.x), z: edSn(w.z) }); ED.sel = { t: 'zs', i: d.zs.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
@@ -6949,13 +7038,16 @@ function edUp() {
   }
   edUI(); edDraw();
 }
-function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; ({ wall: d.walls, gate: d.gates, perk: d.perks, box: d.boxes, zs: d.zs }[s.t]).splice(s.i, 1); ED.sel = null; }
+function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; ({ wall: d.walls, gate: d.gates, perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t]).splice(s.i, 1); ED.sel = null; }
 function edAct(a) {
   const d = ED.d; initAudio(); sfx.click();
   if (ED.pub && a === 'save') { edSubmit(); return; }
   if (ED.pub && a === 'play') { ED.msg = 'PLAY IS NOT AVAILABLE YET - COMING SOON'; edUI(); return; }
   if (ED.pub && (a === 'maps' || a.startsWith('load:') || a.startsWith('del:'))) return;
   if (a.startsWith('tool:')) { ED.tool = a.slice(5); ED.panel = ''; }
+  else if (a === 'guns') ED.panel = ED.panel === 'guns' ? '' : 'guns';
+  else if (a.startsWith('gun:')) { const k = a.slice(4); if (WEAPONS[k]) { const it = ED.sel && ED.sel.t === 'wb' ? edItem(ED.sel) : null; if (it) it.type = k; else { ED.wbType = k; ED.tool = 'wb'; } ED.panel = ''; } }
+  else if (a === 'cset') { const it = edItem(ED.sel); if (it && it.cost !== undefined) { const n = parseInt(prompt('PRICE (POINTS)', it.cost), 10); if (Number.isFinite(n)) { it.cost = Math.max(0, Math.min(99999, n)); if (ED.sel.t === 'wb') ED.wbCost = it.cost; } } }
   else if (a.startsWith('perk:')) { ED.perk = a.slice(5); ED.tool = 'perk'; }
   else if (a === 'exit') { ED.el.style.display = 'none'; renderMenu('main'); return; }
   else if (a === 'name') { const n = prompt('MAP NAME', d.name); if (n) d.name = n.toUpperCase().slice(0, 18); }
@@ -7006,13 +7098,16 @@ function edUI() {
     else if (s.t === 'gate') h = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+') + B('c-', '-250') + `<span>COST ${it.cost}</span>` + B('c+', '+250') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'spawn') h = '<span>PLAYER SPAWN</span>' + B('rot', 'TURN');
     else if (s.t === 'perk') h = `<span>${CM_PD[it.k].title}</span>` + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'wb') h = B('guns', 'GUN: ' + WEAPONS[it.type].name) + B('c-', '-250') + B('cset', 'PRICE ' + it.cost) + B('c+', '+250') + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'box') h = '<span>MYSTERY BOX ' + (s.i === 0 ? '(START)' : '') + '</span>' + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'zs') h = '<span>ZOMBIE SPAWN</span>' + B('del', 'DEL', 0, 'red');
-  } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
+  } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', wb: 'TAP TO PLACE A WALL BUY (STAND IT AGAINST A WALL).', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
   $('edSel').innerHTML = h; $('edMsg').textContent = ED.msg;
   const P = $('edPanel');
+  if (ED.tool === 'wb' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A WALL BUY</span>' + B('guns', 'GUN: ' + WEAPONS[ED.wbType || 'ak'].name);
   if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div>' + Object.values(CM.maps).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
   else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'CAT GUY' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k]}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
+  else if (ED.panel === 'guns') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>PICK A WEAPON</span></div><div class="row">' + Object.keys(WEAPONS).filter(k => k !== 'para').map(k => B('gun:' + k, WEAPONS[k].name)).join('') + '</div>'; }
   else { P.style.display = 'none'; }
 }
 function edDraw() {
@@ -7027,6 +7122,7 @@ function edDraw() {
   d.walls.forEach((q, i) => { x.fillStyle = q.c; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('wall', i) ? '#fff' : 'rgba(0,0,0,0.6)'; x.lineWidth = isS('wall', i) ? 2 : 1; x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); });
   d.gates.forEach((q, i) => { x.fillStyle = 'rgba(224,176,32,0.55)'; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('gate', i) ? '#fff' : '#e0b020'; x.lineWidth = 2; x.setLineDash([5, 4]); x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.setLineDash([]); x.fillStyle = '#fff'; x.font = 'bold 10px monospace'; x.textAlign = 'center'; x.fillText(q.cost, X(q.x), Z(q.z) + 4); });
   const sq = (px, pz, c, L, on, ry) => { const s = Math.max(10, 1.6 * sc); x.fillStyle = c; x.fillRect(X(px) - s / 2, Z(pz) - s / 2, s, s); x.strokeStyle = on ? '#fff' : '#000'; x.lineWidth = on ? 2 : 1; x.strokeRect(X(px) - s / 2, Z(pz) - s / 2, s, s); if (ry !== undefined) { x.fillStyle = '#fff'; x.fillRect(X(px) + Math.sin(ry) * s * 0.5 - 3, Z(pz) + Math.cos(ry) * s * 0.5 - 3, 6, 6); } x.fillStyle = '#fff'; x.font = 'bold 11px monospace'; x.textAlign = 'center'; x.fillText(L, X(px), Z(pz) + 4); };
+  (d.wb || []).forEach((q, i) => sq(q.x, q.z, '#7a2a2a', 'W', isS('wb', i), q.ry || 0));
   d.perks.forEach((q, i) => sq(q.x, q.z, CM_PD[q.k].ec, CM_PD[q.k].L, isS('perk', i), q.ry || 0));
   d.boxes.forEach((q, i) => sq(q.x, q.z, '#8a5a2a', i === 0 ? 'B*' : 'B', isS('box', i), q.rot || 0));
   d.zs.forEach((q, i) => { x.fillStyle = '#b02020'; x.beginPath(); x.arc(X(q.x), Z(q.z), Math.max(6, 0.9 * sc), 0, 7); x.fill(); x.strokeStyle = isS('zs', i) ? '#fff' : '#000'; x.lineWidth = 2; x.stroke(); x.fillStyle = '#fff'; x.font = 'bold 10px monospace'; x.textAlign = 'center'; x.fillText('Z', X(q.x), Z(q.z) + 4); });
