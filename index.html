@@ -2315,7 +2315,7 @@ for (const k in WEAPONS) if (!player.ammo[k]) player.ammo[k] = { mag: WEAPONS[k]
 /* ---------- voice chat (WebRTC mesh, signalled over the game's MQTT topic) ---------- */
 const Voice = {
   pcs: new Map(), stream: null, track: null, on: false, busy: false, ctx: null, level: new Map(), talking: new Set(), err: '', lastLvl: 0,
-  CFG: { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:global.stun.twilio.com:3478'] }, { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }] },
+  CFG: { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:global.stun.twilio.com:3478', 'stun:stun.cloudflare.com:3478'] }, { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }] },
   sig(to, k, d) { MP.send({ t: 'vs', to, k, d }); },
   ensure(id) {
     if (this.pcs.has(id) || typeof RTCPeerConnection === 'undefined') return this.pcs.get(id);
@@ -2349,6 +2349,41 @@ const Voice = {
       else if (m.k === 'c') { if (pc.remoteDescription) pc.addIceCandidate(m.d).catch(() => {}); else e.q.push(m.d); }
     } catch (x) {}
   },
+  /* Relay fallback: if the direct WebRTC link to a friend can't connect (school / mobile networks, dead TURN server) the mic is
+     also sent as small 8kHz u-law chunks through the game's own MQTT topic, which works everywhere multiplayer works. */
+  rl: { node: null, src: null, sink: null, acc: 0, ph: 0, out: [], next: new Map(), last: new Map(), seq: 0 },
+  needRelay() { for (const id of MP.peers.keys()) { const e = this.pcs.get(id); if (!e || e.pc.connectionState !== 'connected') return true; } return false; },
+  relayStart() {
+    const R = this.rl; if (R.node || !this.stream) return; initAudio(); const ctx = audioCtx; if (!ctx || !ctx.createScriptProcessor) return;
+    try {
+      R.src = ctx.createMediaStreamSource(this.stream); R.node = ctx.createScriptProcessor(2048, 1, 1); R.sink = ctx.createGain(); R.sink.gain.value = 0;
+      R.src.connect(R.node); R.node.connect(R.sink); R.sink.connect(ctx.destination);
+      const ratio = ctx.sampleRate / 8000;
+      R.node.onaudioprocess = ev => {
+        if (!this.on || !MP.on || !this.needRelay()) { R.out.length = 0; R.acc = R.ph = 0; return; }
+        const inp = ev.inputBuffer.getChannelData(0);
+        for (let i = 0; i < inp.length; i++) { R.acc += inp[i]; R.ph += 1; if (R.ph >= ratio) { R.out.push(R.acc / R.ph); R.acc = 0; R.ph -= ratio; } }
+        while (R.out.length >= 800) {
+          const ch = R.out.splice(0, 800); let mx = 0; for (let i = 0; i < 800; i++) mx = Math.max(mx, Math.abs(ch[i]));
+          if (mx < 0.015) continue;   // silence: send nothing
+          let str = ''; const ln = Math.log(256);
+          for (let i = 0; i < 800; i++) { const x = Math.max(-1, Math.min(1, ch[i])), y = Math.round(Math.log(1 + 255 * Math.abs(x)) / ln * 127); str += String.fromCharCode(y | (x < 0 ? 128 : 0)); }
+          MP.send({ t: 'va', d: btoa(str), q: ++R.seq });
+        }
+      };
+    } catch (x) { R.node = null; }
+  },
+  relayRx(m) {
+    const id = m.i, e = this.pcs.get(id); if (e && e.pc.connectionState === 'connected') return;   // direct link works - ignore the relay copy
+    if (typeof m.d !== 'string' || m.d.length > 1400 || !audioCtx) return; const ctx = audioCtx; if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    let str; try { str = atob(m.d); } catch (x) { return; } const n = str.length; if (n < 50 || n > 1000) return;
+    const buf = ctx.createBuffer(1, n, 8000), ch = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) { const b = str.charCodeAt(i), y = (b & 127) / 127; ch[i] = (b & 128 ? -1 : 1) * (Math.pow(256, y) - 1) / 255; }
+    const src = ctx.createBufferSource(), g = ctx.createGain(), p = MP.peers.get(id); src.buffer = buf; src.connect(g); g.connect(ctx.destination);
+    g.gain.value = (p && p.x !== undefined ? Math.max(0.35, Math.min(1, 1.2 - Math.hypot(p.x - player.pos.x, p.z - player.pos.z) / 90)) : 1) * 1.4;
+    const R = this.rl, now = ctx.currentTime; let t = R.next.get(id) || 0; if (t < now + 0.03 || t > now + 1.2) t = now + 0.18;   // small jitter buffer
+    src.start(t); R.next.set(id, t + n / 8000); R.last.set(id, performance.now());
+  },
   drop(id) { const e = this.pcs.get(id); if (!e) return; if (e.audio) e.audio.pause(); try { e.pc.close(); } catch (x) {} if (e.audio) { e.audio.srcObject = null; } this.pcs.delete(id); this.talking.delete(id); },
   async toggle() {
     if (!MP.on || this.busy) return;
@@ -2358,13 +2393,14 @@ const Voice = {
       this.busy = true;
       try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); this.track = this.stream.getAudioTracks()[0]; }
       catch (x) { this.busy = false; this.err = 'MIC BLOCKED - ALLOW IT IN BROWSER'; notice(this.err, 3500); return; }
-      this.busy = false;
-      for (const e of this.pcs.values()) e.sender.replaceTrack(this.track).catch(() => {});
+      this.busy = false; this.relayStart();
+      for (const e of this.pcs.values()) if (e.sender) e.sender.replaceTrack(this.track).catch(() => {});
     }
     this.setOn(true);
   },
   setOn(v) { this.on = v; if (this.track) this.track.enabled = v; notice(v ? 'MIC ON' : 'MIC OFF', 1200); },
-  stop() { for (const id of [...this.pcs.keys()]) this.drop(id); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = this.track = null; this.on = false; this.talking.clear(); },
+  stop() { const R = this.rl; try { if (R.node) { R.node.onaudioprocess = null; R.node.disconnect(); R.src.disconnect(); R.sink.disconnect(); } } catch (x) {} R.node = R.src = R.sink = null; R.out.length = 0; R.next.clear(); R.last.clear();
+    for (const id of [...this.pcs.keys()]) this.drop(id); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = this.track = null; this.on = false; this.talking.clear(); },
   tick(dt) {
     if (!MP.on) { if (this.pcs.size || this.stream) this.stop(); return; }
     for (const id of MP.peers.keys()) this.ensure(id);
@@ -2377,6 +2413,7 @@ const Voice = {
     for (const id of [...this.pcs.keys()]) if (!MP.peers.has(id)) this.drop(id);
     this.lastLvl -= dt; if (this.lastLvl > 0) return; this.lastLvl = 0.15;
     for (const [id, e] of this.pcs) { if (!e.an) continue; e.an.getByteTimeDomainData(e.buf); let mx = 0; for (let i = 0; i < e.buf.length; i++) mx = Math.max(mx, Math.abs(e.buf[i] - 128)); if (mx > 10) this.talking.add(id); else this.talking.delete(id); }
+    { const nw2 = performance.now(); for (const [id, t] of this.rl.last) if (nw2 - t < 450) this.talking.add(id); }
     // quieter with distance so you hear people near you best
     for (const [id, e] of this.pcs) { const p = MP.peers.get(id); if (p && e.audio && p.x !== undefined) e.audio.volume = Math.max(0.35, Math.min(1, 1.2 - Math.hypot(p.x - player.pos.x, p.z - player.pos.z) / 90)); }
   },
@@ -2472,6 +2509,7 @@ const MP = {
         let p = this.peers.get(m.i); if (!p) { p = { n: '', x: m.x, y: 0, z: m.z, seen: now }; this.peers.set(m.i, p); }
         Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, h: m.h, w: m.w, lk: m.lk, cm: m.cm | 0, hid: m.hid, sc: m.sc, kk: m.kk, dn: m.dn, rv: m.rv, hs: m.hs, seen: now }); break; }
       case 'vs': Voice.rx(m); break;
+      case 'va': Voice.relayRx(m); break;
       case 'chat': chatAdd(this.esc(m.n) || 'PLAYER', String(m.m).slice(0, 80)); break;
       case 'bye': { const p = this.peers.get(m.i); if (p && p.g) scene.remove(p.g); this.peers.delete(m.i); Voice.drop(m.i); this.beat(); this.sendRoster(); if (menuView === 'lobby') this.draw(); break; }
       case 's': if (this.client) this.sync(m); break;
@@ -3827,7 +3865,7 @@ function drawMapArt(id) {
 }
 function showPreview(id) {
   const m = MAPS[id]; if (!m) return;
-  mprev.innerHTML = `<img src="${drawMapArt(id)}" alt=""><b>${m.name}</b><span>${MAP_DESC[id] || m.sub}</span>`; mprev.style.display = 'block';
+  mprev.innerHTML = `<img src="${m.thumb || drawMapArt(id)}" alt=""><b>${m.name}</b><span>${MAP_DESC[id] || m.sub}</span>`; mprev.style.display = 'block';
 }
 menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('[data-a^="map:"],[data-a^="host:"]'); if (b) showPreview(b.dataset.a.slice(b.dataset.a.indexOf(':') + 1)); else mprev.style.display = 'none'; });
 menuButtons.addEventListener('mouseleave', () => { mprev.style.display = 'none'; });
@@ -3912,7 +3950,7 @@ function renderMenu(view) {
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
   else if (view === 'shop') h = btn('main', '&lt; BACK', '', 'back') + shopGuiHTML();
-  else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + btn('start', 'START GAME') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
+  else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
   else if (view === 'review') h = rvHTML();
   else if (view === 'users') h = usHTML();
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
@@ -6822,6 +6860,13 @@ function cmStairSteps(s) {   // r = which way the stairs go up: 0 -z, 1 +x, 2 +z
   for (let k = 0; k < n; k++) { const c = (k + 0.5) * sl - len / 2, h = top * (k + 1) / n; out.push({ x: s.x + v[0] * c, z: s.z + v[1] * c, w: r % 2 === 0 ? s.w : sl, d: r % 2 === 0 ? sl : s.d, y: h, th: Math.min(h, 0.45) }); }
   return out;
 }
+const CM_TOD = {
+  night: { n: 'NIGHT' },
+  dusk: { n: 'DUSK', f: 0.9, env: { bg: 0x4a3248, fog: 0x7a4a50, hemiS: 0xe0987a, hemiG: 0x3a2a20, hemiI: 0.85, sunC: 0xffa068, sunI: 1.3, cave: false } },
+  day: { n: 'DAY', f: 0.5, env: { bg: 0x9cc4ee, fog: 0xbcd2e6, hemiS: 0xd0e4ff, hemiG: 0x6a6a52, hemiI: 1.1, sunC: 0xfff4de, sunI: 1.9, cave: true } },
+  dark: { n: 'PITCH BLACK', f: 1.8, env: { bg: 0x010204, fog: 0x040508, hemiS: 0x3a4666, hemiG: 0x0c0a08, hemiI: 0.4, sunC: 0x6a7aa0, sunI: 0.35, cave: true } },
+};
+const cmThumb = d => (typeof d.thumb === 'string' && d.thumb.length < 90000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(d.thumb)) ? d.thumb : '';
 function cmEnsure(d) { d.floors = d.floors || []; d.stairs = d.stairs || []; d.wb = d.wb || []; return d; }
 function cmNewData() { return { floors: [], stairs: [], id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], wb: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 5, v: 0, t: 0, c: 0 }, boss: 1, ts: 0 }; }
 function pickZK(z) { const a = [[null, z.n], ['verity', z.v], ['tung', z.t], ['cat', z.c]], tot = a.reduce((s, q) => s + q[1], 0); if (tot <= 0) return null; let r = Math.random() * tot; for (const [k, w] of a) { if ((r -= w) < 0) return k; } return null; }
@@ -6884,7 +6929,7 @@ function buildCustomMap(d) {
   const root = new THREE.Group(); for (const c of scene.children.slice(w0)) root.add(c); scene.add(root);
   obstacles = sv.o; obstacleMeshes = sv.m;
   const mm = {
-    id, ax: AXc, az: AZc, fog: 0.012, shadowX: AXc + 6, shadowZ: AZc + 6, spawn: { x: d.spawn.x, z: d.spawn.z, yaw: d.spawn.yaw || 0 },
+    id, ax: AXc, az: AZc, fog: 0.012 * ((CM_TOD[d.tod] || {}).f || 1), env: (CM_TOD[d.tod] || {}).env, shadowX: AXc + 6, shadowZ: AZc + 6, spawn: { x: d.spawn.x, z: d.spawn.z, yaw: d.spawn.yaw || 0 },
     menuCam: { cx: 0, cz: 0, r: Math.max(AXc, AZc) * 1.3, rv: 4, h: Math.max(AXc, AZc) * 0.6, look: 2 },
     root, obs, occ, decks: decks.length ? decks : undefined, jugPos, papPos, papGear: gear, boxPos: V(bs[0].x, bs[0].z), boxRot: bs[0].rot || 0, perks, gates,
     boxSpots: bs.map(b => ({ x: b.x, z: b.z, rot: b.rot || 0 })), custom: true, zk: d.zk, boss: d.boss, wallBuys: wbs,
@@ -6899,7 +6944,7 @@ function cmRegister(d) {
   const id = 'cm_' + d.id, old = MAPS[id];
   if (old && curMap && curMap.id === id && state.phase !== 'menu') return false;
   if (old && old.root) scene.remove(old.root);
-  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: clEsc(String(d.sub || 'CUSTOM MAP').toUpperCase().slice(0, 40)), built: false, build: () => buildCustomMap(d), custom: true };
+  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: clEsc(String(d.sub || 'CUSTOM MAP').toUpperCase().slice(0, 40)), built: false, build: () => buildCustomMap(d), custom: true, thumb: cmThumb(d) };
   if (d.desc) MAP_DESC[id] = clEsc(String(d.desc).slice(0, 220)); else delete MAP_DESC[id];
   if (!MAP_ORDER.includes(id)) MAP_ORDER.push(id);
   CM.maps[d.id] = d; cmRebuildPages(); return true;
@@ -7049,7 +7094,7 @@ function rvRemote(id, s) {
   if (!d.spawn || !Number.isFinite(d.spawn.x) || !Number.isFinite(d.spawn.z) || !Number.isFinite(d.ax) || !Number.isFinite(d.az) || d.ax < 10 || d.ax > 100 || d.az < 10 || d.az > 100) return;
   const fin = (q, ks) => q && ks.every(k => Number.isFinite(q[k]));
   d.walls = d.walls.filter(q => fin(q, ['x', 'z', 'w', 'd', 'h'])); d.gates = d.gates.filter(q => fin(q, ['x', 'z', 'w', 'd', 'cost']));
-  d.perks = d.perks.filter(q => fin(q, ['x', 'z']) && CM_PD[q.k]); d.boxes = d.boxes.filter(q => fin(q, ['x', 'z'])); d.wb = (Array.isArray(d.wb) ? d.wb : []).filter(q => fin(q, ['x', 'z', 'cost']) && WEAPONS[q.type] && q.type !== 'para').slice(0, 60).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, type: q.type, cost: Math.max(0, Math.min(99999, Math.round(q.cost))) })); d.zs = d.zs.filter(q => fin(q, ['x', 'z']));
+  d.perks = d.perks.filter(q => fin(q, ['x', 'z']) && CM_PD[q.k]); d.boxes = d.boxes.filter(q => fin(q, ['x', 'z'])); d.wb = (Array.isArray(d.wb) ? d.wb : []).filter(q => fin(q, ['x', 'z', 'cost']) && WEAPONS[q.type] && q.type !== 'para').slice(0, 60).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, type: q.type, cost: Math.max(0, Math.min(99999, Math.round(q.cost))) })); d.zs = d.zs.filter(q => fin(q, ['x', 'z'])); d.tod = CM_TOD[d.tod] ? d.tod : 'night'; d.thumb = cmThumb(d);
   { const mk = v => CM_MATK.includes(v) ? v : 'concrete', col = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined, cl = (v, a, b) => Math.max(a, Math.min(b, +v));
     d.walls = d.walls.map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), h: cl(q.h, 0.5, 20), y: Number.isFinite(q.y) ? cl(q.y, 0, 12) : 0, m: mk(q.m), c: col(q.c) }));
     d.floors = (Array.isArray(d.floors) ? d.floors : []).filter(q => fin(q, ['x', 'z', 'w', 'd', 'y'])).slice(0, 200).map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), y: cl(q.y, 0.5, 12), m: mk(q.m), c: col(q.c) }));
@@ -7067,7 +7112,7 @@ function rvHTML() {
   if (!ids.length) h += '<div class="clnote">NOTHING TO REVIEW RIGHT NOW</div>';
   else {
     const d = RV.subs[ids[RV.i]];
-    h += '<div class="clnote">' + clEsc(d.name) + '<br>BY ' + clEsc(d.creator) + '<br>' + d.ax * 2 + 'M - ' + d.walls.length + ' WALLS - ' + d.gates.length + ' DOORS - ' + d.perks.length + ' PERKS</div>'
+    h += (d.thumb ? '<img src="' + d.thumb + '" style="width:100%;max-width:320px;display:block;margin:8px 0" alt="">' : '') + '<div class="clnote">' + clEsc(d.name) + '<br>BY ' + clEsc(d.creator) + '<br>' + d.ax * 2 + 'M - ' + d.walls.length + ' WALLS - ' + d.gates.length + ' DOORS - ' + d.perks.length + ' PERKS</div>'
       + btn('rv:play', 'PLAYTEST', 'try it before publishing') + btn('rv:ok', 'APPROVE &amp; PUBLISH', 'adds it to the map list with credits') + btn('rv:no', 'REJECT', 'removes the submission')
       + `<div class="pager"><button class="btn ${RV.i <= 0 ? 'off' : ''}" data-a="rvp:-1">&lt; PREV</button><em>${RV.i + 1}/${ids.length}</em><button class="btn ${RV.i >= ids.length - 1 ? 'off' : ''}" data-a="rvp:1">NEXT &gt;</button></div>`;
   }
@@ -7076,7 +7121,7 @@ function rvHTML() {
 function cmTemp(d) {   // playtest registration: usable by selectMap but not listed and not saved
   const id = 'cm_' + d.id; if (curMap && curMap.id === id && state.phase !== 'menu') return false;
   const old = MAPS[id]; if (old && old.root) scene.remove(old.root);
-  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: clEsc(String(d.sub || 'CUSTOM MAP').toUpperCase().slice(0, 40)), built: false, build: () => buildCustomMap(d), custom: true };
+  MAPS[id] = { id, name: String(d.name || 'CUSTOM').toUpperCase().slice(0, 18), sub: clEsc(String(d.sub || 'CUSTOM MAP').toUpperCase().slice(0, 40)), built: false, build: () => buildCustomMap(d), custom: true, thumb: cmThumb(d) };
   if (d.desc) MAP_DESC[id] = clEsc(String(d.desc).slice(0, 220)); else delete MAP_DESC[id];
   return true;
 }
@@ -7099,7 +7144,7 @@ function rvAct(k) {
 }
 
 /* ---------- editor (top-down 2D, works with touch) ---------- */
-const ED = { d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
+const ED = { undo: [], redo: [], clip: null, d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
 const ED_TOOLS = [['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['wb', '+WALLBUY'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['floor', '+FLOOR/ROOF'], ['stairs', '+STAIRS'], ['del', 'DELETE']];
 function edBuild() {
   const css = document.createElement('style'); css.textContent = `
@@ -7124,6 +7169,11 @@ function edBuild() {
   cv.addEventListener('wheel', ev => { ev.preventDefault(); ED.sc = Math.max(2, Math.min(40, ED.sc * (ev.deltaY < 0 ? 1.12 : 0.89))); edDraw(); }, { passive: false });
   window.addEventListener('resize', () => { if (ED.el && ED.el.style.display === 'flex') edDraw(); });
   e3Bind();
+  window.addEventListener('keydown', ev => {
+    if (!ED.el || ED.el.style.display !== 'flex' || (ev.target && /INPUT|TEXTAREA/.test(ev.target.tagName))) return; const k = ev.key.toLowerCase(), c = ev.ctrlKey || ev.metaKey;
+    if (c && k === 'z') edAct(ev.shiftKey ? 'redo' : 'undo'); else if (c && k === 'y') edAct('redo'); else if (c && k === 'c') edAct('copy'); else if (c && k === 'v') edAct('paste'); else if ((k === 'delete' || k === 'backspace') && ED.sel && ED.sel.t !== 'spawn') edAct('del'); else return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+  }, true);
 }
 function edXY(ev) { const r = $('edCv').getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
 function edW(p) { const cv = $('edCv'), r = cv.getBoundingClientRect(); return { x: ED.cx + (p.x - r.width / 2) / ED.sc, z: ED.cz + (p.y - r.height / 2) / ED.sc }; }
@@ -7141,7 +7191,19 @@ function edHit(x, z) {
   return null;
 }
 function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ wall: d.walls, gate: d.gates, floor: d.floors || [], stairs: d.stairs || [], perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
+function edArr(t) { const d = ED.d; return { wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, wb: d.wb, box: d.boxes, zs: d.zs }[t]; }
+function edPush(clr) { const j = JSON.stringify(ED.d); if (ED.undo[ED.undo.length - 1] !== j) { ED.undo.push(j); if (ED.undo.length > 40) ED.undo.shift(); } if (clr) ED.redo = []; }
+function edUndo() { const cur = JSON.stringify(ED.d); let p; while ((p = ED.undo.pop()) !== undefined && p === cur); if (p === undefined) { ED.msg = 'NOTHING TO UNDO'; return; } ED.redo.push(cur); ED.d = JSON.parse(p); ED.sel = null; ED.msg = 'UNDONE'; }
+function edRedo() { const cur = JSON.stringify(ED.d); let p; while ((p = ED.redo.pop()) !== undefined && p === cur); if (p === undefined) { ED.msg = 'NOTHING TO REDO'; return; } ED.undo.push(cur); ED.d = JSON.parse(p); ED.sel = null; ED.msg = 'REDONE'; }
+function edThumb() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => { try { const c = document.createElement('canvas'); c.width = 380; c.height = 214; const x = c.getContext('2d'), r = Math.max(380 / img.width, 214 / img.height), w = img.width * r, h = img.height * r; x.drawImage(img, (380 - w) / 2, (214 - h) / 2, w, h); edPush(true); ED.d.thumb = c.toDataURL('image/jpeg', 0.7); ED.msg = 'THUMBNAIL SET'; } catch (e) { ED.msg = 'COULD NOT USE THAT IMAGE'; } URL.revokeObjectURL(url); edUI(); };
+    img.onerror = () => { ED.msg = 'COULD NOT READ THAT IMAGE'; URL.revokeObjectURL(url); edUI(); }; img.src = url; };
+  inp.click();
+}
 function edDown(ev) {
+  edPush(ED.tool !== 'sel');
   const p = edXY(ev), w = edW(p), t = ED.tool, d = ED.d; ED.msg = '';
   if (t === 'sel') {
     const it = edItem(ED.sel);
@@ -7176,7 +7238,15 @@ function edUp() {
 function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; ({ wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t]).splice(s.i, 1); ED.sel = null; }
 function edAct(a) {
   const d = ED.d; initAudio(); sfx.click();
-  if (ED.pub && a === 'save') { edSubmit(); return; }
+  if (a === 'undo') { edUndo(); edUI(); edDraw(); return; }
+  if (a === 'redo') { edRedo(); edUI(); edDraw(); return; }
+  if (a === 'copy') { const s = ED.sel; if (!s || s.t === 'spawn' || s.t === 'perk') ED.msg = 'SELECT A WALL, FLOOR, STAIRS, DOOR, WALLBUY, BOX OR ZSPAWN TO COPY'; else { ED.clip = { t: s.t, o: JSON.parse(JSON.stringify(edItem(s))), n: 0 }; ED.msg = 'COPIED - TAP PASTE (WORKS IN OTHER MAPS TOO)'; } edUI(); return; }
+  if (a === 'thumb') { edThumb(); return; }
+  if (!/^(v3|tool:|zoomin|zoomout|maps|zmb|guns|exit|sync|bkp|rst|perk:|paste)/.test(a)) edPush(true);
+  if (a === 'paste') { const c = ED.clip; if (!c) ED.msg = 'NOTHING COPIED'; else { edPush(true); c.n++; const o = JSON.parse(JSON.stringify(c.o)); o.x = edSn(o.x + 2 * c.n); o.z = edSn(o.z + 2 * c.n); const arr = edArr(c.t); arr.push(o); ED.sel = { t: c.t, i: arr.length - 1 }; ED.msg = 'PASTED'; } edUI(); edDraw(); return; }
+  if (a === 'thumbx') { d.thumb = ''; ED.msg = 'THUMBNAIL REMOVED'; }
+  else if (a === 'tod') { const K = Object.keys(CM_TOD), i = K.indexOf(d.tod || 'night'); d.tod = K[(i + 1) % K.length]; }
+  else if (ED.pub && a === 'save') { edSubmit(); return; }
   if (ED.pub && a === 'play') { ED.msg = 'PLAY IS NOT AVAILABLE YET - COMING SOON'; edUI(); return; }
   if (ED.pub && (a === 'maps' || a.startsWith('load:') || a.startsWith('del:'))) return;
   if (a === 'v3') { edSetView(!ED.v3); return; }
@@ -7193,8 +7263,8 @@ function edAct(a) {
   else if (a === 'ground') { d.ground = CM_GND[(CM_GND.indexOf(d.ground) + 1) % CM_GND.length]; }
   else if (a === 'zoomin') ED.sc = Math.min(40, ED.sc * 1.3); else if (a === 'zoomout') ED.sc = Math.max(2, ED.sc / 1.3);
   else if (a === 'maps' || a === 'zmb') ED.panel = ED.panel === a ? '' : a;
-  else if (a === 'new') { ED.d = cmEnsure(cmNewData()); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; }
-  else if (a.startsWith('load:')) { const o = CM.maps[a.slice(5)]; if (o) { ED.d = cmEnsure(JSON.parse(JSON.stringify(o))); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; } }
+  else if (a === 'new') { ED.undo = []; ED.redo = []; ED.d = cmEnsure(cmNewData()); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; }
+  else if (a.startsWith('load:')) { const o = CM.maps[a.slice(5)]; if (o) { ED.undo = []; ED.redo = []; ED.d = cmEnsure(JSON.parse(JSON.stringify(o))); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; } }
   else if (a === 'sync') { let n = 0; SY.cl.forEach((c, i) => { SY.seen[i] = {}; n += syHeal(i); }); ED.msg = syOK() ? 'RE-UPLOADED EVERYTHING TO BOTH SERVERS (' + n + ' ITEMS)' : 'NOT CONNECTED - TRY AGAIN'; }
   else if (a === 'bkp') edBackup();
   else if (a === 'rst') edRestore();
@@ -7254,8 +7324,8 @@ function edSubmit() {
 }
 function edUI() {
   const d = ED.d, B = (a, t, on, cls = '') => `<button class="edb ${on ? 'on' : ''} ${cls}" data-ea="${a}">${t}</button>`;
-  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('sub', 'SUBTITLE') + B('desc', 'DESCRIPTION') + B('v3', ED.v3 ? '2D VIEW' : '3D VIEW', ED.v3) + B('size', d.ax * 2 + 'M') + B('ground', d.ground.toUpperCase()) + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + (ED.pub ? '' : B('maps', 'MAPS', ED.panel === 'maps')) + B('save', ED.pub ? 'SUBMIT' : 'SAVE') + B('play', 'PLAY', 0, ED.pub ? 'dis' : '') + B('zoomin', '+') + B('zoomout', '-');
-  $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : (CM_PD[k].nm || k.toUpperCase())), ED.perk === k)).join('') : '');
+  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('sub', 'SUBTITLE') + B('desc', 'DESCRIPTION') + B('v3', ED.v3 ? '2D VIEW' : '3D VIEW', ED.v3) + B('size', d.ax * 2 + 'M') + B('ground', d.ground.toUpperCase()) + B('tod', 'TIME: ' + CM_TOD[d.tod || 'night'].n) + B('thumb', d.thumb ? 'THUMBNAIL OK' : 'THUMBNAIL', !!d.thumb) + (d.thumb ? B('thumbx', 'X', 0, 'red') : '') + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + (ED.pub ? '' : B('maps', 'MAPS', ED.panel === 'maps')) + B('save', ED.pub ? 'SUBMIT' : 'SAVE') + B('play', 'PLAY', 0, ED.pub ? 'dis' : '') + B('zoomin', '+') + B('zoomout', '-');
+  $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + B('undo', 'UNDO', 0, ED.undo.length ? '' : 'dis') + B('redo', 'REDO', 0, ED.redo.length ? '' : 'dis') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : (CM_PD[k].nm || k.toUpperCase())), ED.perk === k)).join('') : '');
   const s = ED.sel, it = edItem(s); let h = '';
   if (it) {
     const MN = () => (CM_MAT.find(q => q[0] === (it.m || 'concrete')) || ['', 'CONCRETE'])[1], SZ = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+');
@@ -7269,6 +7339,7 @@ function edUI() {
     else if (s.t === 'box') h = '<span>MYSTERY BOX ' + (s.i === 0 ? '(START)' : '') + '</span>' + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'zs') h = '<span>ZOMBIE SPAWN</span>' + B('del', 'DEL', 0, 'red');
   } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', wb: 'TAP TO PLACE A WALL BUY (STAND IT AGAINST A WALL).', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', floor: 'DRAG A RECTANGLE: FLOOR / ROOF / BRIDGE (TOP Y = HEIGHT)', stairs: 'DRAG A RECTANGLE: STAIRS (TURN = WHICH WAY THEY GO UP)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
+  h += (it && s.t !== 'spawn' && s.t !== 'perk' ? B('copy', 'COPY') : '') + (ED.clip ? B('paste', 'PASTE') : '');
   $('edSel').innerHTML = h; $('edMsg').textContent = ED.msg;
   const P = $('edPanel');
   if (ED.tool === 'wb' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A WALL BUY</span>' + B('guns', 'GUN: ' + WEAPONS[ED.wbType || 'ak'].name);
@@ -7335,7 +7406,7 @@ function e3Bind() {
 function e3Soon() { if (E3.raf) return; E3.raf = requestAnimationFrame(() => { E3.raf = 0; e3Render(); }); }
 function e3Mat(c, o = {}) { const k = c + JSON.stringify(o); return E3.mc[k] || (E3.mc[k] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, ...o })); }
 function e3Rebuild() {
-  const d = ED.d; if (!d || !E3.r) return;
+  const d = ED.d; if (!d || !E3.r) return; E3.sc.background.setHex((CM_TOD[d.tod || 'night'].env || { bg: 0x151a24 }).bg);
   if (E3.grp) { E3.sc.remove(E3.grp); E3.grp.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   const g = E3.grp = new THREE.Group(); E3.sc.add(g);
   const add = (t, i, geo, mat, x, y, z, ry) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; m.userData = { t, i }; g.add(m); return m; };
@@ -7374,7 +7445,7 @@ function edSetView(on) {
 function edOpen(pub) {
   if (!ED.el) edBuild();
   if (ED.d) { if (ED.pub) ED.pubD = ED.d; else ED.devD = ED.d; }
-  ED.pub = !!pub; ED.d = cmEnsure((pub ? ED.pubD : ED.devD) || cmNewData()); ED.sel = null; ED.tool = 'sel'; if (ED.v3) { ED.v3 = false; $('edCv').style.display = 'block'; $('ed3').style.display = 'none'; }
+  ED.pub = !!pub; ED.undo = []; ED.redo = []; ED.d = cmEnsure((pub ? ED.pubD : ED.devD) || cmNewData()); ED.sel = null; ED.tool = 'sel'; if (ED.v3) { ED.v3 = false; $('edCv').style.display = 'block'; $('ed3').style.display = 'none'; }
   ED.el.style.display = 'flex'; ED.panel = ''; ED.msg = pub ? 'PUBLISH MAP BETA - SUBMIT SENDS YOUR MAP TO REVIEW. PLAY COMING SOON' : ''; ED.sc = Math.min(innerWidth, innerHeight * 0.7) / (ED.d.ax * 2.3); edUI(); requestAnimationFrame(() => { edUI(); edDraw(); });
 }
 
