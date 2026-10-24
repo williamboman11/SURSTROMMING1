@@ -614,7 +614,7 @@ let obstacles = [];          // collision boxes (current map)
 let obstacleMeshes = [];     // bullet occluders (current map)
 const MAPS = {};
 let factoryExtraPerks = [];
-const boxObs = {}; const cottageDoors = []; let cdHold = 0, swHold = 0, instaT = 0, doubleT = 0, noPts = false;
+const boxObs = {}; const cottageDoors = []; let wbHold = 0, swMax = 4, cdHold = 0, swHold = 0, instaT = 0, doubleT = 0, noPts = false;
 function inBox(H, x, z, pad = 0) { return x > H.cx - H.w / 2 - pad && x < H.cx + H.w / 2 + pad && z > H.cz - H.d / 2 - pad && z < H.cz + H.d / 2 + pad; }
 function addScore(n) { state.score += n * (doubleT > 0 ? 2 : 1) * (boughtExtraPerks.has('cash') ? 1.25 : 1); }
 function groundAt(x, z, y = 0) {
@@ -638,9 +638,62 @@ function updateClouds(dt) {
   }
 }
 const boughtExtraPerks = new Set();
+/* ---------- window barriers: zombies tear the planks off, players hold E to nail them back on (+10 each, max 200 a round) ---------- */
+function winLocal(W, x, z) { const dx = x - W.x, dz = z - W.z, c = Math.cos(W.ry), sn = Math.sin(W.ry); return { t: dx * c - dz * sn, n: dx * sn + dz * c }; }
+function winSet(W, n, silent) {
+  W.n = Math.max(0, Math.min(W.max, n)); W.planks.forEach((p, i) => { p.visible = i < W.n; });
+  const i = W.obs.indexOf(W.ob); if (W.n > 0 && i < 0) W.obs.push(W.ob); else if (W.n === 0 && i >= 0) W.obs.splice(i, 1);
+  if (!silent && MP.on) MP.send({ t: 'wp', i: W.i, n: W.n });
+}
+function winBreak(W) { if (W.n <= 0) return; winSet(W, W.n - 1); noiseBurst(0.14, 1400, 300, 0.32, 'lowpass'); tone('sawtooth', 150, 55, 0.12, 0.14); if (W.n === 0 && curMap.nav) NAV.last = -1; }
+function winRebuild(W) {
+  winSet(W, W.n + 1); tone('square', 210, 95, 0.07, 0.14); noiseBurst(0.07, 900, 350, 0.22, 'lowpass');
+  if (!isDowned()) { const got = state.plankPts || 0; if (got < 200) { state.score += 10; state.plankPts = got + 10; if (state.plankPts >= 200) notice('MAX PLANK POINTS THIS ROUND', 1800); } }
+}
+function winZombieAt(W) { for (const z of zombies) { if (z.spawnT < 0.9) continue; const l = winLocal(W, z.root.position.x, z.root.position.z); if (Math.abs(l.t) < W.w / 2 + 0.5 && Math.abs(l.n) < 1.7) return true; } return false; }
+function winNear() { const P = player.pos; return (curMap.windows || []).find(W => W.n < W.max && Math.hypot(P.x - W.x, P.z - W.z) < Math.max(2.4, W.w / 2 + 1.2) && player.jumpY < 1.5) || null; }
+/* ---------- teleporters (BO3 The Giant style): hold R at a pad to start the link, reach the other pad before the clock runs out ---------- */
+const TL = { pad: null, t: 0, hold: 0 }, TELE_COST = 1000, TELE_TIME = 30;
+const tlClock = document.createElement('div'); tlClock.style.cssText = 'position:fixed;right:20px;top:18px;z-index:30;font:15px "Press Start 2P",monospace;color:#fff;text-shadow:0 0 8px #000,0 0 3px #000;display:none;text-align:right;line-height:1.7;pointer-events:none'; document.body.appendChild(tlClock);
+const tlFlash = document.createElement('div'); tlFlash.style.cssText = 'position:fixed;inset:0;z-index:29;background:radial-gradient(circle,#dff4ff,#6ab8ff);opacity:0;pointer-events:none;transition:opacity .5s'; document.body.appendChild(tlFlash);
+const tlPads = () => curMap.tele || [];
+const tlById = id => tlPads().find(p => p.id === id) || null;
+const tlColor = (p, hex) => { for (const m of p.mats) m.color.set(hex); };
+function tlInitNear() { if (state.phase !== 'playing' || TL.pad) return null; const P = player.pos; return tlPads().find(p => p.to && !p.linked && Math.hypot(P.x - p.x, P.z - p.z) < 2.4) || null; }
+function tlGates() {   // each linked pad lifts the doors that need it a bit more; the last one opens it
+  for (const g of curMap.gates || []) {
+    if (!g.tp || g.open) continue; const n = g.tp.filter(id => { const p = tlById(id); return p && p.linked; }).length;
+    g.grp.position.y = n / g.tp.length * 2.6;
+    if (n >= g.tp.length) { g.open = true; g.open_fn(); notice('THE DOOR OPENS', 2500); sfx.door(); }
+  }
+}
+function tlStart(p, send) { if (TL.pad) return; const d = tlById(p.to); if (!d) return; TL.pad = p; TL.t = TELE_TIME; tlColor(p, 0xffb020); tlColor(d, 0xffb020); notice(`LINKING TO ${d.name} - ${TELE_TIME} SECONDS, GET THERE!`, 3600); sfx.chime(); if (send && MP.on) MP.send({ t: 'tl', id: p.id, s: 1 }); }
+function tlEnd(p, ok, send) {
+  const d = tlById(p.to); TL.pad = null; tlClock.style.display = 'none';
+  if (ok) { p.linked = true; tlColor(p, 0x3dff6a); if (d) tlColor(d, 0x3dff6a); notice(`${p.name} LINKED TO ${d ? d.name : '?'}`, 3200); sfx.door(); sfx.chime(); tlGates(); }
+  else { tlColor(p, 0xff2a1a); if (d && !tlPads().some(q => q.linked && (q.to === d.id || q.id === d.id))) tlColor(d, 0xff2a1a); notice('LINK FAILED - TRY AGAIN', 2600); sfx.deny(); }
+  if (send && MP.on) MP.send({ t: 'tl', id: p.id, s: ok ? 2 : 0 });
+}
+function tlTick(dt) {
+  if (!TL.pad) return; const d = tlById(TL.pad.to); if (!d) { TL.pad = null; tlClock.style.display = 'none'; return; }
+  TL.t -= dt;
+  if (!isDowned() && Math.hypot(player.pos.x - d.x, player.pos.z - d.z) < 2.4) { tlEnd(TL.pad, true, true); return; }
+  if (TL.t <= 0) { tlEnd(TL.pad, false, true); return; }
+  tlClock.style.display = 'block'; tlClock.style.color = TL.t < 10 ? '#ff5a4a' : '#fff'; tlClock.innerHTML = `<small style="font-size:9px;color:#bcd">LINK TO ${d.name}</small><br>${TL.t.toFixed(1)}`;
+}
+function tlGo(d) {
+  tlFlash.style.transition = 'none'; tlFlash.style.opacity = '0.95'; requestAnimationFrame(() => { tlFlash.style.transition = 'opacity .7s'; tlFlash.style.opacity = '0'; });
+  player.pos.set(d.x + Math.sin(d.ry) * 2.4, 0, d.z + Math.cos(d.ry) * 2.4); player.vel.set(0, 0, 0); player.jumpY = 0; player.jumpVel = 0; player.onGround = true; resolvePlayerCircle(player.pos, PLAYER_RADIUS, 0); NAV.last = -1;
+  tone('sine', 220, 1400, 0.5, 0.2); noiseBurst(0.4, 4000, 300, 0.25, 'highpass');
+}
+function tlUse(p) {
+  if (p.to) { if (!p.linked) return; if (state.score < TELE_COST) { notice(`NEED ${TELE_COST} POINTS`); sfx.deny(); return; } const d = tlById(p.to); if (!d) return; state.score -= TELE_COST; tlGo(d); }
+  else { const src = tlPads().find(q => q.to === p.id && q.linked); if (src) tlGo(src); }
+}
+function tlReset() { TL.pad = null; TL.hold = 0; tlClock.style.display = 'none'; for (const p of tlPads()) { p.linked = false; tlColor(p, 0xff2a1a); } }
 const powerOk = id => !id || !!(curMap.power && curMap.power[id]);
 let playerAntiCamp = [];
-function resolvePlayerCircle(pos, r) { resolveCircle(pos, r); for (const o of playerAntiCamp) { const cx=Math.max(o.minX,Math.min(pos.x,o.maxX)), cz=Math.max(o.minZ,Math.min(pos.z,o.maxZ)), dx=pos.x-cx, dz=pos.z-cz, d2=dx*dx+dz*dz; if(d2<r*r){ if(d2>1e-8){const d=Math.sqrt(d2), p=r-d; pos.x+=dx/d*p; pos.z+=dz/d*p;} else { const l=pos.x-o.minX, rr=o.maxX-pos.x, t=pos.z-o.minZ, b=o.maxZ-pos.z, m=Math.min(l,rr,t,b); if(m===l)pos.x=o.minX-r; else if(m===rr)pos.x=o.maxX+r; else if(m===t)pos.z=o.minZ-r; else pos.z=o.maxZ+r; } } } }
+function resolvePlayerCircle(pos, r, y = 0) { resolveCircle(pos, r, y); for (const o of playerAntiCamp) { const cx=Math.max(o.minX,Math.min(pos.x,o.maxX)), cz=Math.max(o.minZ,Math.min(pos.z,o.maxZ)), dx=pos.x-cx, dz=pos.z-cz, d2=dx*dx+dz*dz; if(d2<r*r){ if(d2>1e-8){const d=Math.sqrt(d2), p=r-d; pos.x+=dx/d*p; pos.z+=dz/d*p;} else { const l=pos.x-o.minX, rr=o.maxX-pos.x, t=pos.z-o.minZ, b=o.maxZ-pos.z, m=Math.min(l,rr,t,b); if(m===l)pos.x=o.minX-r; else if(m===rr)pos.x=o.maxX+r; else if(m===t)pos.z=o.minZ-r; else pos.z=o.maxZ+r; } } } }
 let curMap = { id: 'factory' };
 const _w0 = scene.children.length;   // everything added after this point belongs to the factory map
 
@@ -1278,8 +1331,9 @@ for (const c of scene.children.slice(_w0)) if (c !== factoryRoot) factoryRoot.ad
 scene.add(mbox.group);   // the mystery box is shared between maps
 
 /* ---------- collision ---------- */
-function resolveCircle(pos, r) {
+function resolveCircle(pos, r, y = 0) {
   for (const o of obstacles) {
+    if (o.top !== undefined && y >= o.top - 0.05) continue;   // standing above this wall (on stairs / a bridge / its top): walk right over it
     const cx = Math.max(o.minX, Math.min(pos.x, o.maxX)), cz = Math.max(o.minZ, Math.min(pos.z, o.maxZ));
     const dx = pos.x - cx, dz = pos.z - cz, d2 = dx * dx + dz * dz;
     if (d2 < r * r) {
@@ -2525,6 +2579,8 @@ const MP = {
       case 'gr': if (m.a && m.v) spawnGrenade(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.v[0], m.v[1], m.v[2]), true); break;
       case 'door': if (state.phase === 'playing') applyDoor(m.id, false); else (this.pend = this.pend || {}).dr = ((this.pend.dr) || []).concat([m.id]); break;
       case 'box': boxRx(m); break;
+      case 'tl': { const p = tlById(m.id); if (p) { if (m.s === 1) tlStart(p, false); else if (TL.pad === p || m.s === 2) tlEnd(p, m.s === 2, false); } break; }
+      case 'wp': { const W = (curMap.windows || [])[m.i]; if (W && Number.isFinite(m.n)) winSet(W, m.n | 0, true); break; }
       case 'pw': if (state.phase === 'playing') applyPower(m.id); else (this.pend = this.pend || {}).pw = ((this.pend.pw) || []).concat([m.id]); break;
       case 'tr': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; } this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2]), m.k); this.rx = false; break;
     }
@@ -2557,7 +2613,7 @@ const MP = {
     if (!this.host) return;
     if (tp.me) hurtPlayer(z.dmg || ZOMBIE_DAMAGE); else if (tp.id) this.send({ t: 'hurt', to: tp.id, d: z.dmg || ZOMBIE_DAMAGE });
   },
-  alive() { const a = []; for (const [id, p] of this.peers) if (!p.d && !p.hid && p.tx !== undefined) a.push({ x: p.x, z: p.z, id, me: false }); if (!this.down && !(state.qr > 0) && !(gasClouds.length && playerHidden())) { this.me.x = player.pos.x; this.me.z = player.pos.z; a.push(this.me); } return a; },
+  alive() { const a = []; for (const [id, p] of this.peers) if (!p.d && !p.hid && p.tx !== undefined) a.push({ x: p.x, z: p.z, y: p.ty || 0, id, me: false }); if (!this.down && !(state.qr > 0) && !(gasClouds.length && playerHidden())) { this.me.x = player.pos.x; this.me.z = player.pos.z; a.push(this.me); } return a; },
   nearest(g) {
     this.me.x = player.pos.x; this.me.z = player.pos.z; if (!this.on) return this.me;
     let best = null, bd = 1e9; for (const c of this.alive()) { const d = (c.x - g.x) ** 2 + (c.z - g.z) ** 2; if (d < bd) { bd = d; best = c; } }
@@ -2689,7 +2745,7 @@ function updateHUD() {
   const PERKC = { jug: ['#d6242c', 'J', 'JUGGER-NOG'], quick: ['#2b86e6', 'Q', 'QUICK REVIVE'], speed: ['#33b05a', 'S', 'SPEED COLA'], double: ['#e0b52a', '2', 'DOUBLE TAP'], stamin: ['#8fb43a', '↑', 'STAMIN-UP'], mule: ['#d4631f', 'M', 'MULE KICK'], vulture: ['#5aa02a', 'V', 'VULTURE AID'], lunar: ['#7a8cff', 'L', 'LUNAR LEGS'], head: ['#d6242c', 'H', 'HEADHUNTER'], cash: ['#e0b52a', '$', 'CASHBACK COLA'] };
   setHTML(el.perks, [jug.bought ? 'jug' : null, ...boughtExtraPerks].filter(Boolean).map(k => `<i class="pk" style="--c:${PERKC[k][0]}" title="${PERKC[k][2]}"><u>${PERKC[k][1]}</u></i>`).join(''));
   setHTML(puHud, (instaT > 0 ? `<span>INSTA-KILL ${Math.ceil(instaT)}</span>` : '') + (doubleT > 0 ? `<span>2X POINTS ${Math.ceil(doubleT)}</span>` : '') + (gasClouds.length && playerHidden() ? '<span>HIDDEN IN GAS</span>' : ''));
-  const hv = Math.max(house.hold / 0.7, cdHold / 0.7, swHold / 4, (MP.rt || 0) / 3); el.hold.style.display = hv > 0.02 ? 'block' : 'none'; el.hold.firstChild.style.width = Math.min(100, hv * 100) + '%';
+  const hv = Math.max(house.hold / 0.7, cdHold / 0.7, swHold / swMax, wbHold / 0.55, TL.hold / 1.5, (MP.rt || 0) / 3); el.hold.style.display = hv > 0.02 ? 'block' : 'none'; el.hold.firstChild.style.width = Math.min(100, hv * 100) + '%';
 }
 let noticeTimer = 0;
 function notice(text, ms = 2600) { el.notice.textContent = text; el.notice.classList.add('on'); clearTimeout(noticeTimer); noticeTimer = setTimeout(() => el.notice.classList.remove('on'), ms); }
@@ -3659,6 +3715,7 @@ function nearestUse() {
   for (const q of L) if (!boughtExtraPerks.has(q.id) && !(q.cd && !q.cd.open)) c(Math.hypot(P.x - q.pos.x, P.z - q.pos.z), 2.6, powerOk(q.power) ? { k: 'perk', q } : { k: 'nopower' });
   if (!jug.bought && !(curMap.jugGate && !curMap.jugGate.open)) c(Math.hypot(P.x - jug.pos.x, P.z - jug.pos.z), 2.4, powerOk(curMap.jugPower) ? { k: 'jug' } : { k: 'nopower' });
   c(Math.hypot(P.x - pap.pos.x, P.z - pap.pos.z), 2.6, powerOk(curMap.papPower) ? { k: 'pap' } : { k: 'nopower' });
+  for (const q of tlPads()) c(Math.hypot(P.x - q.x, P.z - q.z), 2.4, { k: 'tele', t: q });
   for (const w of curMap.switches || []) if (!w.on) c(Math.hypot(P.x - w.pos.x, P.z - w.pos.z), 2.2, { k: 'switch', w });
   if (mbox.state !== 'fly' && mbox.state !== 'gone') c(Math.hypot(P.x - mbox.pos.x, P.z - mbox.pos.z), 2.6, { k: 'box' });
   for (const q of curMap.wallBuys || []) c(Math.hypot(P.x - q.pos.x, P.z - q.pos.z), 2.2, { k: 'wall', q });
@@ -3682,6 +3739,7 @@ function interact() {
   if (u.k === 'jug') { buyJug(); return; }
   if (u.k === 'pap') { buyPap(); return; }
   if (u.k === 'wall') { buyWall(u.q); return; }
+  if (u.k === 'tele') { tlUse(u.t); return; }
   if (mbox.state === 'closed') {
     if (state.score < BOX_COST) { notice(`NEED ${BOX_COST} POINTS`); sfx.deny(); return; }
     state.score -= BOX_COST; sfx.buy(); mbox.owner = MP.id;
@@ -3784,7 +3842,7 @@ function resetWorld() {
     fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 100, ads: 0, rmb: false, god: false, cheated: false, coinNext: 10, downs: 0, revives: 0, heads: 0,
   });
   camera.fov = 75; camera.updateProjectionMatrix();
-  player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.bowie = false; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
+  player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.jumpY = curMap.spawn.y || 0; player.jumpVel = 0; player.onGround = true; player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.bowie = false; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
   player.ammo.pistol = { mag: 12, res: Infinity }; player.ammo.ak = { mag: 30, res: 120 }; player.ammo.crossbow = { mag: 3, res: 12 }; player.ammo.raygun = { mag: 20, res: 160 }; player.ammo.shotgun = { mag: 6, res: 36 }; player.ammo.raygun2 = { mag: 24, res: 120 }; player.ammo.smg = { mag: 32, res: 192 }; player.ammo.galil = { mag: 35, res: 210 }; player.ammo.rpg = { mag: 1, res: 6 }; player.ammo.revolver = { mag: 6, res: 36 }; player.ammo.sniper = { mag: 5, res: 30 }; player.ammo.minigun = { mag: 150, res: 450 }; player.ammo.dbl = { mag: 2, res: 28 }; player.ammo.thumper = { mag: 4, res: 16 }; player.ammo.para = { mag: Infinity, res: Infinity };
   vm.crossbow.userData.bolt.visible = true;
   mbox.state = 'closed'; mbox.group.visible = true; mbox.display.visible = false; mbox.lid.rotation.x = 0; placeBox(curMap.boxPos.x, curMap.boxPos.z, curMap.boxRot); mbox.uses = 0;
@@ -3798,7 +3856,7 @@ function resetWorld() {
 
 function startRound() {
   MP.hostRound();
-  state.wave++; state.roundState = 'active'; state.spawned = 0; state.spawnT = 0.6;
+  state.plankPts = 0; state.wave++; state.roundState = 'active'; state.spawned = 0; state.spawnT = 0.6;
   state.roundTotal = Math.round((6 + (state.wave - 1) * 3) * (1 + 0.6 * Math.min(MP.peers.size, 5) + 0.15 * Math.max(0, MP.peers.size - 5)));
   state.houndRound = state.wave >= 7 && state.wave % 7 === 0 && state.wave % 10 !== 0;
   if (state.houndRound) { state.roundTotal = 8 + Math.floor(state.wave * 0.7); playSnd('hound', 1); }
@@ -3956,7 +4014,7 @@ function renderMenu(view) {
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'lobby') h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
-  else if (view === 'lobbyc') h = '<div class="label">LOBBY: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">WAITING FOR HOST TO START...</div>' + btn('ffview', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'set by the host', 'off') + btn('mpleave', '&lt; LEAVE', '', 'back');
+  else if (view === 'lobbyc') h = '<div class="label">MAP: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">PASSWORD (OPTIONAL)</div><input class="mpin" disabled autocomplete="off" value="" placeholder="HOST ONLY" style="opacity:.5">' + btn('ffview', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'only the host can change this', 'off') + btn('startview', 'START MATCH', 'waiting for the host to start...', 'off') + btn('mpleave', '&lt; LEAVE SERVER', '', 'back');
   else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
   menuButtons.innerHTML = h; MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
 }
@@ -4237,7 +4295,7 @@ function updatePlayer(dt) {
   const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * (boughtExtraPerks.has('stamin') ? 1.3 : 1) * (state.fast ? 1.7 : 1) * (1 - 0.35 * state.ads), k = 1 - Math.exp(-12 * dt);
   player.vel.x += (wish.x * speed - player.vel.x) * k; player.vel.z += (wish.z * speed - player.vel.z) * k;
   player.pos.x += player.vel.x * dt; player.pos.z += player.vel.z * dt;
-  resolvePlayerCircle(player.pos, PLAYER_RADIUS);
+  resolvePlayerCircle(player.pos, PLAYER_RADIUS, player.jumpY);
   const gY = groundAt(player.pos.x, player.pos.z, player.jumpY);
   if (player.onGround && gY < player.jumpY - 0.02) { player.onGround = false; player.jumpVel = 0; }
   else if (player.onGround) player.jumpY += (gY - player.jumpY) * Math.min(1, dt * 16);
@@ -4308,7 +4366,19 @@ function updateZombies(dt) {
         tx = w[0]; tz = w[1]; break;
       }
     }
-    if (NAV.on && TP.me && !hid) {   // flow-field navigation around buildings (ÖSTERLED)
+    let vsep = false, navOff = false;
+    if (curMap.custom && curMap.decks && !hid) {   // player on another level: zombies walk to the stairs and climb them; they can't hit you through the floor
+      const zy = z.gy || 0, py = TP.me ? player.jumpY : (TP.y || 0), dyy = py - zy;
+      if (Math.abs(dyy) > 1.1) {
+        vsep = true;
+        if (dyy > 0) {
+          let S = z.stS && zy < z.stS.topY - 0.12 ? z.stS : null;
+          if (!S) { let bd = 1e9; for (const q of (curMap.stairs || [])) { if (Math.abs(q.botY - zy) > 1.1 || q.topY < zy + 1.0) continue; const d0 = Math.hypot(q.bx - gp.x, q.bz - gp.z) + Math.hypot(q.tx - TP.x, q.tz - TP.z) + (q.topY >= py - 1.1 ? 0 : 60); if (d0 < bd) { bd = d0; S = q; } } z.stS = S; }
+          if (S) { navOff = true; if (zy > S.botY + 0.3 || Math.hypot(S.bx - gp.x, S.bz - gp.z) < 1.0) { tx = S.tx; tz = S.tz; } else { tx = S.bx; tz = S.bz; } }
+        } else z.stS = null;
+      } else z.stS = null;
+    }
+    if (NAV.on && TP.me && !hid && !navOff && !(curMap.custom && (z.gy || 0) > 1.0)) {   // flow-field navigation around buildings (ÖSTERLED)
       const pdx = TP.x - gp.x, pdz = TP.z - gp.z, pd = Math.hypot(pdx, pdz);
       if (pd > 2.2 && (pd > 22 || !navLOS(gp.x, gp.z, TP.x, TP.z))) { const w = navStep(gp.x, gp.z); if (w) { tx = w[0]; tz = w[1]; } }
     }
@@ -4317,14 +4387,18 @@ function updateZombies(dt) {
     while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
     z.root.rotation.y += dy * Math.min(1, dt * 8);
 
+    if (curMap.windows && !MP.client) {   // trapped behind a window barrier: tear the planks off one by one
+      for (const W of curMap.windows) { if (W.n <= 0) continue; const l = winLocal(W, gp.x, gp.z);
+        if (Math.abs(l.t) < W.w / 2 + 0.25 && Math.abs(l.n) < 1.5) { z.winT = (z.winT === undefined ? 1.2 : z.winT) - dt; if (z.winT <= 0) { z.winT = 1.3 + Math.random() * 0.9; winBreak(W); } break; } }
+    }
     z.stagger = Math.max(0, z.stagger - dt);
     const sp = z.speed * (z.stagger > 0 ? 0.25 : 1) * (z.para > 0 ? (z.boss ? PARA.slowBoss : PARA.slow) : 1) * (z.runner || z.boss || z.hound ? 1 : 0.65 + 0.7 * Math.abs(Math.sin(z.phase * 0.9)));
-    if (dist > (z.reach || 1.2)) {
+    if (dist > (z.reach || 1.2) || vsep) {
       let mx = dx / td, mz = dz / td;
-      if (z.stuck > 0.25) { const a = z.side * 1.15, c = Math.cos(a), s = Math.sin(a); const nx = mx * c - mz * s, nz = mx * s + mz * c; mx = nx; mz = nz; }
+      if (z.stuck > 0.25 && !navOff) { const a = z.side * 1.15, c = Math.cos(a), s = Math.sin(a); const nx = mx * c - mz * s, nz = mx * s + mz * c; mx = nx; mz = nz; }
       const px = gp.x, pz = gp.z;
       gp.x += mx * sp * dt; gp.z += mz * sp * dt;
-      resolveCircle(gp, 0.45);
+      resolveCircle(gp, 0.45, z.gy || 0);
       const moved = Math.hypot(gp.x - px, gp.z - pz);
       if (moved < sp * dt * 0.35) { z.stuck += dt; if (z.stuck > 1.4) { z.side *= -1; z.stuck = 0.3; } } else z.stuck = Math.max(0, z.stuck - dt * 2);
       z.phase += dt * sp * (z.hound ? 0.7 : 2.6);
@@ -4461,9 +4535,9 @@ function updateAmbient(dt) {
 }
 
 function doorNear() { return curMap.id === 'factory' && !house.open && Math.hypot(player.pos.x - house.doorX, player.pos.z - (house.cz + house.d / 2)) < 3; }
-function cdNear() { return curMap.id === 'factory' ? (cottageDoors.find(c => !c.open && Math.hypot(player.pos.x - c.doorX, player.pos.z - c.doorZ) < 2.4) || (curMap.gates || []).find(g => !g.open && g.near(player.pos.x, player.pos.z)) || null) : ((curMap.gates || []).find(g => !g.open && g.near(player.pos.x, player.pos.z)) || null); }
+function cdNear() { return curMap.id === 'factory' ? (cottageDoors.find(c => !c.open && Math.hypot(player.pos.x - c.doorX, player.pos.z - c.doorZ) < 2.4) || (curMap.gates || []).find(g => !g.open && g.near(player.pos.x, player.pos.z) && powerOk(g.power) && !g.tp) || null) : ((curMap.gates || []).find(g => !g.open && g.near(player.pos.x, player.pos.z) && powerOk(g.power) && !g.tp) || null); }
 function resetHouse() {
-  cdHold = 0; swHold = 0; if (curMap.onReset) curMap.onReset(); const FF = MAPS.factory;
+  cdHold = 0; swHold = 0; wbHold = 0; TL.hold = 0; if (curMap.onReset) curMap.onReset(); const FF = MAPS.factory;
   for (const c of cottageDoors) { c.open = false; c.t = 0; c.pivot.rotation.y = 0; if (!FF.obs.includes(c.obs)) FF.obs.push(c.obs); if (!FF.occ.includes(c.mesh)) FF.occ.push(c.mesh); }
   house.open = false; house.t = 0; house.hold = 0; jug.bought = false; doorMesh.visible = true; doorMesh.position.y = house.dh / 2;
   const F = MAPS.factory;
@@ -4509,9 +4583,12 @@ function updatePerks(dt) {
   if (house.open && house.t < 1) { house.t = Math.min(1, house.t + dt * 0.45); doorMesh.position.y = house.dh / 2 + house.t * house.dh; if (house.t >= 1) doorMesh.visible = false; }
   const sw = (curMap.switches || []).find(w => !w.on && Math.hypot(player.pos.x - w.pos.x, player.pos.z - w.pos.z) < 2.2);
   if (sw && keys['KeyE']) {
-    swHold += dt;
-    if (swHold >= 4) { swHold = 0; sw.on = true; curMap.power[sw.id] = true; if (curMap.onPower) curMap.onPower(sw.id); if (MP.on) MP.send({ t: 'pw', id: sw.id }); sfx.door(); sfx.chime(); notice(`POWER ON: ${sw.name}`, 3200); }
+    swHold += dt; swMax = sw.hold || 4;
+    if (swHold >= swMax) { swHold = 0; sw.on = true; curMap.power[sw.id] = true; if (curMap.onPower) curMap.onPower(sw.id); if (MP.on) MP.send({ t: 'pw', id: sw.id }); sfx.door(); sfx.chime(); notice(`POWER ON: ${sw.name}`, 3200); }
   } else swHold = Math.max(0, swHold - dt * 2);
+  { const pd = tlInitNear(); if (pd && keys['KeyE'] && !isDowned()) { TL.hold += dt; if (TL.hold >= 1.5) { TL.hold = 0; tlStart(pd, true); } } else TL.hold = Math.max(0, TL.hold - dt * 3); tlTick(dt); }
+  { const W = state.phase === 'playing' ? winNear() : null;   // hold E to rebuild a window barrier plank by plank
+    if (W && keys['KeyE'] && !isDowned() && !winZombieAt(W)) { wbHold += dt; if (wbHold >= 0.55) { wbHold = 0; winRebuild(W); } } else wbHold = Math.max(0, wbHold - dt * 3); }
   const cd = cdNear();
   if (cd && keys['KeyE']) { cdHold += dt; if (cdHold >= 0.7) { if (state.score < cd.cost) { notice(`NEED ${cd.cost} POINTS`); sfx.deny(); cdHold = -0.8; } else { cdHold = 0; state.score -= cd.cost; cd.open = true; sfx.door(); if (MP.on) MP.send({ t: 'door', id: cd.id }); if (cd.open_fn) { notice('BARRICADE OPENED'); cd.open_fn(); } else { notice('DOOR OPENED'); const FF = MAPS.factory; FF.obs.splice(FF.obs.indexOf(cd.obs), 1); FF.occ.splice(FF.occ.indexOf(cd.mesh), 1); navRefresh(FF); } } } } else cdHold = Math.max(0, cdHold - dt * 3);
   for (const c of cottageDoors) if (c.open && c.t < 1) { c.t = Math.min(1, c.t + dt * 1.2); c.pivot.rotation.y = -c.t * Math.PI * 0.5; }
@@ -4521,9 +4598,14 @@ function updateInteractions() {
   let p = '';
   const cd = cdNear(), u = nearestUse();
   if (doorNear()) p = `HOLD E: OPEN DOOR [${DOOR_COST}]`;
+  else if (!cd && (curMap.gates || []).some(g => !g.open && g.power && !powerOk(g.power) && g.near(player.pos.x, player.pos.z))) p = 'NO POWER - FIND THE POWER SWITCH';
   else if (cd) p = `HOLD E: ${cd.label || 'OPEN DOOR'} [${cd.cost}]`;
+  else if ((curMap.gates || []).some(g => !g.open && g.tp && g.near(player.pos.x, player.pos.z))) { const g = (curMap.gates || []).find(q => !q.open && q.tp && q.near(player.pos.x, player.pos.z)); p = `OPENS WHEN THE TELEPORTERS ARE LINKED (${g.tp.filter(id => (tlById(id) || {}).linked).length}/${g.tp.length})`; }
+  else if (!u && winNear()) { const W = winNear(); p = winZombieAt(W) ? 'ZOMBIE AT THE BARRIER' : `HOLD E: REBUILD BARRIER [${W.n}/${W.max}]`; }
   else if (u) {
-    if (u.k === 'nopower') p = 'NO POWER - FIND THE POWER SWITCH';
+    if (u.k === 'tele') { const t = u.t, d = t.to && tlById(t.to), src = !t.to && tlPads().find(q => q.to === t.id && q.linked);
+      p = t.to ? (t.linked ? `PRESS E: TELEPORT TO ${d ? d.name : '?'} [${TELE_COST}]` : TL.pad === t ? `LINKING - GET TO ${d ? d.name : '?'}: ${TL.t.toFixed(0)}S` : TL.pad ? 'ANOTHER LINK IS IN PROGRESS' : `HOLD E: LINK TO ${d ? d.name : '?'}`) : src ? `PRESS E: TELEPORT BACK TO ${src.name}` : 'NOT LINKED YET'; }
+    else if (u.k === 'nopower') p = 'NO POWER - FIND THE POWER SWITCH';
     else if (u.k === 'switch') p = `HOLD E: START POWER (${u.w.name})`;
     else if (u.k === 'perk') p = `PRESS E: BUY ${u.q.title} [${u.q.cost}]`;
     else if (u.k === 'jug') p = `PRESS E: BUY JUGGER-NOG [${JUG_COST}]`;
@@ -4620,6 +4702,7 @@ function buildNav(m) {
   const W = Math.ceil(m.ax * 2), H = Math.ceil(m.az * 2), N = W * H, infl = 0.5;
   const blocked = new Uint8Array(N);
   for (const o of m.obs) {
+    if (o.nonav) continue;   // window barriers don't count as walls for zombie pathing
     const x0 = Math.max(0, Math.floor(o.minX - infl + m.ax)), x1 = Math.min(W - 1, Math.floor(o.maxX + infl + m.ax));
     const z0 = Math.max(0, Math.floor(o.minZ - infl + m.az)), z1 = Math.min(H - 1, Math.floor(o.maxZ + infl + m.az));
     for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) blocked[zz * W + xx] = 1;
@@ -6867,7 +6950,7 @@ const CM_TOD = {
   dark: { n: 'PITCH BLACK', f: 1.8, env: { bg: 0x010204, fog: 0x040508, hemiS: 0x3a4666, hemiG: 0x0c0a08, hemiI: 0.4, sunC: 0x6a7aa0, sunI: 0.35, cave: true } },
 };
 const cmThumb = d => (typeof d.thumb === 'string' && d.thumb.length < 90000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(d.thumb)) ? d.thumb : '';
-function cmEnsure(d) { d.floors = d.floors || []; d.stairs = d.stairs || []; d.wb = d.wb || []; return d; }
+function cmEnsure(d) { d.tele = d.tele || []; d.windows = d.windows || []; d.switches = d.switches || []; d.floors = d.floors || []; d.stairs = d.stairs || []; d.wb = d.wb || []; return d; }
 function cmNewData() { return { floors: [], stairs: [], id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], wb: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 5, v: 0, t: 0, c: 0 }, boss: 1, ts: 0 }; }
 function pickZK(z) { const a = [[null, z.n], ['verity', z.v], ['tung', z.t], ['cat', z.c]], tot = a.reduce((s, q) => s + q[1], 0); if (tot <= 0) return null; let r = Math.random() * tot; for (const [k, w] of a) { if ((r -= w) < 0) return k; } return null; }
 function buildCustomMap(d) {
@@ -6880,11 +6963,11 @@ function buildCustomMap(d) {
   gtex.wrapS = gtex.wrapT = THREE.RepeatWrapping; gtex.repeat.set((AXc * 2 + 60) / 8, (AZc * 2 + 60) / 8);
   const gm = new THREE.Mesh(new THREE.PlaneGeometry(AXc * 2 + 60, AZc * 2 + 60), new THREE.MeshStandardMaterial({ map: gtex, roughness: 1 })); gm.rotation.x = -PI / 2; gm.receiveShadow = true; scene.add(gm);
   addBox(0, -AZc - 0.5, AXc * 2 + 2, 1, 3, MAT.fence); addBox(0, AZc + 0.5, AXc * 2 + 2, 1, 3, MAT.fence); addBox(-AXc - 0.5, 0, 1, AZc * 2, 3, MAT.fence); addBox(AXc + 0.5, 0, 1, AZc * 2, 3, MAT.fence);
-  const decks = [];
+  const decks = [], teleIds = new Set((d.tele || []).map(q => q.id)), swIds = new Set((d.switches || []).map(q => q.id)), pwOk = id => (id && swIds.has(id)) ? id : undefined;
   const cmBoxM = (x, y0, z, w, h, dd, mk, col) => { const m = new THREE.Mesh(boxGeo(w, h, dd, CM_DEN[mk] || 3), cmMat(mk, col)); m.position.set(x, y0 + h / 2, z); m.castShadow = m.receiveShadow = true; scene.add(m); occ.push(m); return m; };
   for (const w of d.walls) {
     const y0 = Math.max(0, +w.y || 0), mk = CM_MATK.includes(w.m) ? w.m : 'concrete'; cmBoxM(w.x, y0, w.z, w.w, w.h, w.d, mk, cmCol(w));
-    if (!(y0 > 0)) obs.push({ minX: w.x - w.w / 2, maxX: w.x + w.w / 2, minZ: w.z - w.d / 2, maxZ: w.z + w.d / 2 });
+    if (!(y0 > 0)) { obs.push({ minX: w.x - w.w / 2, maxX: w.x + w.w / 2, minZ: w.z - w.d / 2, maxZ: w.z + w.d / 2, top: w.h }); decks.push({ minX: w.x - w.w / 2, maxX: w.x + w.w / 2, minZ: w.z - w.d / 2, maxZ: w.z + w.d / 2, y: w.h }); }
   }
   for (const f of (d.floors || [])) {
     const top = Math.max(0.5, +f.y || 3.6), t = Math.min(0.3, top), mk = CM_MATK.includes(f.m) ? f.m : 'concrete'; cmBoxM(f.x, top - t, f.z, f.w, t, f.d, mk, cmCol(f));
@@ -6900,18 +6983,19 @@ function buildCustomMap(d) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(q.w, 3, q.d), plank); m.position.set(q.x, 1.5, q.z); m.castShadow = true; grp.add(m);
     const st = new THREE.Mesh(new THREE.BoxGeometry(q.w + 0.04, 0.3, q.d + 0.04), strip); st.position.set(q.x, 2.4, q.z); grp.add(st);
     const ob = { minX: q.x - q.w / 2, maxX: q.x + q.w / 2, minZ: q.z - q.d / 2, maxZ: q.z + q.d / 2 }; obs.push(ob); occ.push(m);
-    const g = { id: 'cg' + i, label: 'OPEN DOOR', cost: q.cost, open: false, grp, ob, doorX: q.x, doorZ: q.z, t: 0, mesh: null, obs: ob };
+    const g = { id: 'cg' + i, label: 'OPEN DOOR', cost: q.cost, open: false, grp, ob, doorX: q.x, doorZ: q.z, t: 0, mesh: null, obs: ob, power: pwOk(q.pw), strip: st, tp: (Array.isArray(q.tp) && q.tp.filter(id => teleIds.has(id)).length) ? q.tp.filter(id => teleIds.has(id)) : undefined };
+    if (g.power) st.material = new THREE.MeshStandardMaterial({ color: 0xcc2a1a, roughness: 0.6 });
     g.near = (px, pz) => px > ob.minX - 2.2 && px < ob.maxX + 2.2 && pz > ob.minZ - 2.2 && pz < ob.maxZ + 2.2;
     g.open_fn = () => { g.open = true; grp.visible = false; let k = obs.indexOf(ob); if (k >= 0) obs.splice(k, 1); k = occ.indexOf(m); if (k >= 0) occ.splice(k, 1); if (mm.nav) navRefresh(mm); };
-    g.reset = () => { g.open = false; grp.visible = true; if (!obs.includes(ob)) obs.push(ob); if (!occ.includes(m)) occ.push(m); };
+    g.reset = () => { g.open = false; grp.visible = true; grp.position.y = 0; if (!obs.includes(ob)) obs.push(ob); if (!occ.includes(m)) occ.push(m); };
     gates.push(g);
   });
   const V = (x, z) => new THREE.Vector3(x, 0, z);
-  let jugPos = V(9999, 9999), papPos = V(9999, 9999), gear = null; const perks = []; let lights = 0;
+  let jugPw, papPw, jugPos = V(9999, 9999), papPos = V(9999, 9999), gear = null; const perks = []; let lights = 0;
   const lamp = (x, z, c) => { if (lights++ < 6) { const pl = new THREE.PointLight(c, 12, 11, 2); pl.position.set(x, 2.8, z); scene.add(pl); } };
   for (const p of d.perks) {
     const P = CM_PD[p.k]; if (!P) continue; const g = addPerk(p.x, p.z, p.ry || 0, P); lamp(p.x + Math.sin(p.ry || 0) * 1.4, p.z + Math.cos(p.ry || 0) * 1.4, P === CM_PD.pap ? 0x7a6bff : 0xffe0b0);
-    if (p.k === 'jug') jugPos = V(p.x, p.z); else if (p.k === 'pap') { gear = makePapGear(g); papPos = V(p.x, p.z); } else perks.push({ ...P, x: p.x, z: p.z, pos: V(p.x, p.z) });
+    if (p.k === 'jug') { jugPos = V(p.x, p.z); jugPw = pwOk(p.pw); } else if (p.k === 'pap') { gear = makePapGear(g); papPos = V(p.x, p.z); papPw = pwOk(p.pw); } else perks.push({ ...P, x: p.x, z: p.z, pos: V(p.x, p.z), power: pwOk(p.pw) });
   }
   if (!gear) gear = makePapGear(addPerk(9999, 9999, 0, CM_PD.pap));
   const wbs = [], postM = new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.7 });
@@ -6922,18 +7006,49 @@ function buildCustomMap(d) {
     const po = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), postM); po.position.set(q.x - fx * 0.06, 0.55, q.z - fz * 0.06); scene.add(po);
     wbs.push({ pos: V(q.x, q.z), type: q.type, cost: q.cost });
   }
+  const pads = [];
+  (d.tele || []).forEach((q, i) => {
+    const g = new THREE.Group(); g.position.set(q.x, 0, q.z); scene.add(g);
+    const ringM = new THREE.MeshBasicMaterial({ color: 0xff2a1a }), glowM = new THREE.MeshBasicMaterial({ color: 0xff2a1a, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.0, 0.2, 28), MAT.steelDark); base.position.y = 0.1; base.receiveShadow = true; g.add(base);
+    const r1 = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.09, 8, 36), ringM); r1.rotation.x = Math.PI / 2; r1.position.y = 0.26; g.add(r1);
+    const r2 = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.09, 8, 36), ringM); r2.rotation.x = Math.PI / 2; r2.position.y = 3.0; g.add(r2);
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4, pl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.0, 0.22), MAT.steelDark); pl.position.set(Math.cos(a) * 1.55, 1.5, Math.sin(a) * 1.55); pl.castShadow = true; g.add(pl); }
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 2.7, 24, 1, true), glowM); cyl.position.y = 1.6; g.add(cyl);
+    pads.push({ id: q.id, name: String(q.n || 'TELEPORTER').toUpperCase().slice(0, 16), x: q.x, z: q.z, ry: q.ry || 0, to: teleIds.has(q.to) && q.to !== q.id ? q.to : undefined, linked: false, mats: [ringM, glowM] });
+  });
+  const windows = [];
+  (d.windows || []).forEach((q, i) => {
+    const ry = q.ry || 0, c = Math.cos(ry), w = Math.max(1, Math.min(10, +q.w || 3)), nmax = Math.max(2, Math.min(8, (q.n | 0) || 6)), g = new THREE.Group(); g.position.set(q.x, 0, q.z); g.rotation.y = ry; scene.add(g);
+    const wood = cmMat('planks', '#ffffff'), dark = cmMat('planks', '#8a7458'), bx = (bw, bh, bd, px, py, pz, mt, rz = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mt); m.position.set(px, py, pz); m.rotation.z = rz; m.castShadow = true; g.add(m); return m; };
+    bx(0.28, 3.2, 0.5, -w / 2 - 0.14, 1.6, 0, dark); bx(0.28, 3.2, 0.5, w / 2 + 0.14, 1.6, 0, dark); bx(w + 0.56, 0.3, 0.5, 0, 3.05, 0, dark); bx(w, 0.3, 0.56, 0, 0.15, 0, dark);
+    const planks = []; for (let k = 0; k < nmax; k++) planks.push(bx(w - 0.1, 0.3, 0.1, 0, 0.6 + k * (2.3 / (nmax - 1)), (k % 2 ? 0.07 : -0.07), wood, ((k % 3) - 1) * 0.025));
+    const hx = Math.abs(c) > 0.5 ? w / 2 + 0.1 : 0.35, hz = Math.abs(c) > 0.5 ? 0.35 : w / 2 + 0.1, ob = { minX: q.x - hx, maxX: q.x + hx, minZ: q.z - hz, maxZ: q.z + hz, nonav: true, top: 3 };
+    obs.push(ob); windows.push({ i, x: q.x, z: q.z, ry, w, n: nmax, max: nmax, planks, ob, obs });
+  });
+  const switches = [];
+  for (const q of (d.switches || [])) {   // power switches: hold E to turn on whatever is wired to them
+    const g = new THREE.Group(); g.position.set(q.x, 0, q.z); g.rotation.y = q.ry || 0; scene.add(g);
+    const b0 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.5, 0.35), MAT.steelDark); b0.position.y = 1.1; b0.castShadow = true; g.add(b0);
+    const lamp = new THREE.MeshBasicMaterial({ color: 0xff2a1a }), bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), lamp); bulb.position.set(0, 1.65, 0.2); g.add(bulb);
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), MAT.fence); lever.position.set(0, 1.1, 0.26); lever.rotation.z = 0.9; g.add(lever);
+    switches.push({ id: q.id, name: String(q.n || 'POWER').toUpperCase().slice(0, 16), pos: V(q.x, q.z), on: false, lamp, lever, hold: Math.max(1, Math.min(15, +q.hold || 4)) });
+  }
   const bs = d.boxes.length ? d.boxes : [{ x: 0, z: -4, rot: 0 }];
   const boxOb = b => { const sw = Math.abs(Math.sin(b.rot || 0)) > 0.7, hw = sw ? 0.55 : 0.85, hd = sw ? 0.85 : 0.55; return { minX: b.x - hw, maxX: b.x + hw, minZ: b.z - hd, maxZ: b.z + hd }; };
   const bo = boxOb(bs[0]); obs.push(bo); boxObs[id] = bo; occ.push(mbox.body);
   lamp(d.spawn.x, d.spawn.z - 2, 0xcfd8ff);
+  for (const o of obs) if (o.top === undefined) o.top = 3;   // perks, doors and the box don't block anyone walking on a bridge above them
   const root = new THREE.Group(); for (const c of scene.children.slice(w0)) root.add(c); scene.add(root);
   obstacles = sv.o; obstacleMeshes = sv.m;
   const mm = {
-    id, ax: AXc, az: AZc, fog: 0.012 * ((CM_TOD[d.tod] || {}).f || 1), env: (CM_TOD[d.tod] || {}).env, shadowX: AXc + 6, shadowZ: AZc + 6, spawn: { x: d.spawn.x, z: d.spawn.z, yaw: d.spawn.yaw || 0 },
+    stairs: (d.stairs || []).length ? (d.stairs || []).map(q => { const r = (((q.r | 0) % 4) + 4) % 4, v = [[0, -1], [1, 0], [0, 1], [-1, 0]][r], len = r % 2 === 0 ? q.d : q.w; return { botY: 0, topY: Math.max(0.4, +q.y || 3.6), bx: q.x - v[0] * (len / 2 + 1.3), bz: q.z - v[1] * (len / 2 + 1.3), tx: q.x + v[0] * (len / 2 - 0.2), tz: q.z + v[1] * (len / 2 - 0.2) }; }) : undefined,
+    id, ax: AXc, az: AZc, fog: 0.012 * ((CM_TOD[d.tod] || {}).f || 1), env: (CM_TOD[d.tod] || {}).env, shadowX: AXc + 6, shadowZ: AZc + 6, spawn: { x: d.spawn.x, z: d.spawn.z, yaw: d.spawn.yaw || 0, y: Math.max(0, Math.min(12, +d.spawn.y || 0)) },
     menuCam: { cx: 0, cz: 0, r: Math.max(AXc, AZc) * 1.3, rv: 4, h: Math.max(AXc, AZc) * 0.6, look: 2 },
-    root, obs, occ, decks: decks.length ? decks : undefined, jugPos, papPos, papGear: gear, boxPos: V(bs[0].x, bs[0].z), boxRot: bs[0].rot || 0, perks, gates,
+    root, obs, occ, decks: decks.length ? decks : undefined, jugPos, papPos, papGear: gear, jugPower: jugPw, papPower: papPw, tele: pads, windows, switches, power: {}, boxPos: V(bs[0].x, bs[0].z), boxRot: bs[0].rot || 0, perks, gates,
     boxSpots: bs.map(b => ({ x: b.x, z: b.z, rot: b.rot || 0 })), custom: true, zk: d.zk, boss: d.boss, wallBuys: wbs,
-    onReset() { for (const g of gates) g.reset(); if (mm.nav) navRefresh(mm); },
+    onPower(id) { const w = switches.find(q => q.id === id); if (w) { w.lamp.color.set(0x3dff6a); w.lever.rotation.z = -0.9; } for (const g of gates) if (g.power === id) g.strip.material.color.set(0x3dff6a); },
+    onReset() { tlReset(); for (const W of windows) winSet(W, W.max, true); this.power = {}; for (const w of switches) { w.on = false; w.lamp.color.set(0xff2a1a); w.lever.rotation.z = 0.9; } for (const g of gates) { g.reset(); if (g.power) g.strip.material.color.set(0xcc2a1a); } if (mm.nav) navRefresh(mm); },
   };
   if (d.zs && d.zs.length) mm.spawnPts = d.zs.map(q => ({ x: q.x, z: q.z }));
   mm.nav = buildNav(mm);
@@ -7094,7 +7209,10 @@ function rvRemote(id, s) {
   if (!d.spawn || !Number.isFinite(d.spawn.x) || !Number.isFinite(d.spawn.z) || !Number.isFinite(d.ax) || !Number.isFinite(d.az) || d.ax < 10 || d.ax > 100 || d.az < 10 || d.az > 100) return;
   const fin = (q, ks) => q && ks.every(k => Number.isFinite(q[k]));
   d.walls = d.walls.filter(q => fin(q, ['x', 'z', 'w', 'd', 'h'])); d.gates = d.gates.filter(q => fin(q, ['x', 'z', 'w', 'd', 'cost']));
-  d.perks = d.perks.filter(q => fin(q, ['x', 'z']) && CM_PD[q.k]); d.boxes = d.boxes.filter(q => fin(q, ['x', 'z'])); d.wb = (Array.isArray(d.wb) ? d.wb : []).filter(q => fin(q, ['x', 'z', 'cost']) && WEAPONS[q.type] && q.type !== 'para').slice(0, 60).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, type: q.type, cost: Math.max(0, Math.min(99999, Math.round(q.cost))) })); d.zs = d.zs.filter(q => fin(q, ['x', 'z'])); d.tod = CM_TOD[d.tod] ? d.tod : 'night'; d.thumb = cmThumb(d);
+  d.perks = d.perks.filter(q => fin(q, ['x', 'z']) && CM_PD[q.k]); d.boxes = d.boxes.filter(q => fin(q, ['x', 'z'])); d.wb = (Array.isArray(d.wb) ? d.wb : []).filter(q => fin(q, ['x', 'z', 'cost']) && WEAPONS[q.type] && q.type !== 'para').slice(0, 60).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, type: q.type, cost: Math.max(0, Math.min(99999, Math.round(q.cost))) })); d.zs = d.zs.filter(q => fin(q, ['x', 'z'])); d.tele = (Array.isArray(d.tele) ? d.tele : []).filter(q => fin(q, ['x', 'z']) && /^[a-z0-9]{1,8}$/.test(q.id || '')).slice(0, 12).map(q => ({ id: q.id, x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, n: rvClean(q.n).toUpperCase().slice(0, 16) || 'TELEPORTER', to: /^[a-z0-9]{1,8}$/.test(q.to || '') ? q.to : undefined }));
+  { const tid = new Set(d.tele.map(q => q.id)); for (const q of d.tele) if (!tid.has(q.to) || q.to === q.id) delete q.to; d.gates = d.gates.map(q => Array.isArray(q.tp) ? { ...q, tp: q.tp.filter(i => tid.has(i)).slice(0, 6) } : q); }
+  d.windows = (Array.isArray(d.windows) ? d.windows : []).filter(q => fin(q, ['x', 'z', 'w'])).slice(0, 24).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, w: Math.max(1, Math.min(10, +q.w)), n: Math.max(2, Math.min(8, Math.round(+q.n || 6))) }));
+  d.switches = (Array.isArray(d.switches) ? d.switches : []).filter(q => fin(q, ['x', 'z']) && /^[a-z0-9]{1,8}$/.test(q.id || '')).slice(0, 12).map(q => ({ id: q.id, x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, n: rvClean(q.n).toUpperCase().slice(0, 16) || 'POWER', hold: Math.max(1, Math.min(15, Math.round(+q.hold || 4))) })); d.tod = CM_TOD[d.tod] ? d.tod : 'night'; d.thumb = cmThumb(d); d.spawn = { x: d.spawn.x, z: d.spawn.z, yaw: Number.isFinite(d.spawn.yaw) ? d.spawn.yaw : 0, y: Number.isFinite(d.spawn.y) ? Math.max(0, Math.min(12, d.spawn.y)) : 0 };
   { const mk = v => CM_MATK.includes(v) ? v : 'concrete', col = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined, cl = (v, a, b) => Math.max(a, Math.min(b, +v));
     d.walls = d.walls.map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), h: cl(q.h, 0.5, 20), y: Number.isFinite(q.y) ? cl(q.y, 0, 12) : 0, m: mk(q.m), c: col(q.c) }));
     d.floors = (Array.isArray(d.floors) ? d.floors : []).filter(q => fin(q, ['x', 'z', 'w', 'd', 'y'])).slice(0, 200).map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), y: cl(q.y, 0.5, 12), m: mk(q.m), c: col(q.c) }));
@@ -7145,7 +7263,7 @@ function rvAct(k) {
 
 /* ---------- editor (top-down 2D, works with touch) ---------- */
 const ED = { undo: [], redo: [], clip: null, d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
-const ED_TOOLS = [['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['wb', '+WALLBUY'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['floor', '+FLOOR/ROOF'], ['stairs', '+STAIRS'], ['del', 'DELETE']];
+const ED_TOOLS = [['tele', '+TELEPORT'], ['win', '+WINDOW'], ['sw', '+POWER'], ['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['wb', '+WALLBUY'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['floor', '+FLOOR/ROOF'], ['stairs', '+STAIRS'], ['del', 'DELETE']];
 function edBuild() {
   const css = document.createElement('style'); css.textContent = `
   #ed{position:fixed;inset:0;z-index:70;background:#0b0d12;display:none;flex-direction:column;font:8px "Press Start 2P",monospace;color:#cfd2d6}
@@ -7182,6 +7300,9 @@ function edPinchMove() { const a = [...ED.ptrs.values()]; if (a.length < 2 || !E
 const edSn = v => Math.round(v * 2) / 2;
 function edHit(x, z) {
   const d = ED.d, r = Math.max(1.3, 16 / ED.sc);
+  for (let i = (d.tele || []).length - 1; i >= 0; i--) if (Math.hypot(d.tele[i].x - x, d.tele[i].z - z) < Math.max(r, 2)) return { t: 'tele', i };
+  for (let i = (d.windows || []).length - 1; i >= 0; i--) { const q = d.windows[i], c = Math.cos(q.ry || 0), sn = Math.sin(q.ry || 0), dx = x - q.x, dz = z - q.z; if (Math.abs(dx * c - dz * sn) <= q.w / 2 + 0.4 && Math.abs(dx * sn + dz * c) <= 0.9) return { t: 'win', i }; }
+  for (let i = (d.switches || []).length - 1; i >= 0; i--) if (Math.hypot(d.switches[i].x - x, d.switches[i].z - z) < r) return { t: 'sw', i };
   for (let i = d.perks.length - 1; i >= 0; i--) if (Math.hypot(d.perks[i].x - x, d.perks[i].z - z) < r) return { t: 'perk', i };
   for (let i = (d.wb || []).length - 1; i >= 0; i--) if (Math.hypot(d.wb[i].x - x, d.wb[i].z - z) < r) return { t: 'wb', i };
   for (let i = d.boxes.length - 1; i >= 0; i--) if (Math.hypot(d.boxes[i].x - x, d.boxes[i].z - z) < r) return { t: 'box', i };
@@ -7190,8 +7311,8 @@ function edHit(x, z) {
   for (const [t, arr] of [['gate', d.gates], ['stairs', d.stairs || []], ['wall', d.walls], ['floor', d.floors || []]]) for (let i = arr.length - 1; i >= 0; i--) { const q = arr[i]; if (Math.abs(q.x - x) <= q.w / 2 + 0.3 && Math.abs(q.z - z) <= q.d / 2 + 0.3) return { t, i }; }
   return null;
 }
-function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ wall: d.walls, gate: d.gates, floor: d.floors || [], stairs: d.stairs || [], perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
-function edArr(t) { const d = ED.d; return { wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, wb: d.wb, box: d.boxes, zs: d.zs }[t]; }
+function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ tele: d.tele || [], win: d.windows || [], sw: d.switches || [], wall: d.walls, gate: d.gates, floor: d.floors || [], stairs: d.stairs || [], perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
+function edArr(t) { const d = ED.d; return { tele: d.tele, win: d.windows, sw: d.switches, wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, wb: d.wb, box: d.boxes, zs: d.zs }[t]; }
 function edPush(clr) { const j = JSON.stringify(ED.d); if (ED.undo[ED.undo.length - 1] !== j) { ED.undo.push(j); if (ED.undo.length > 40) ED.undo.shift(); } if (clr) ED.redo = []; }
 function edUndo() { const cur = JSON.stringify(ED.d); let p; while ((p = ED.undo.pop()) !== undefined && p === cur); if (p === undefined) { ED.msg = 'NOTHING TO UNDO'; return; } ED.redo.push(cur); ED.d = JSON.parse(p); ED.sel = null; ED.msg = 'UNDONE'; }
 function edRedo() { const cur = JSON.stringify(ED.d); let p; while ((p = ED.redo.pop()) !== undefined && p === cur); if (p === undefined) { ED.msg = 'NOTHING TO REDO'; return; } ED.undo.push(cur); ED.d = JSON.parse(p); ED.sel = null; ED.msg = 'REDONE'; }
@@ -7211,6 +7332,9 @@ function edDown(ev) {
     const h = edHit(w.x, w.z); ED.sel = h;
     if (h) { const q = edItem(h); ED.drag = { m: 'move', ox: q.x - w.x, oz: q.z - w.z }; } else ED.drag = { m: 'pan', sx: p.x, sy: p.y, cx: ED.cx, cz: ED.cz };
   } else if (t === 'wall' || t === 'gate' || t === 'floor' || t === 'stairs') ED.drag = { m: 'rect', x0: edSn(w.x), z0: edSn(w.z), x1: edSn(w.x), z1: edSn(w.z) };
+  else if (t === 'tele') { d.tele = d.tele || []; const n = d.tele.length; d.tele.push({ id: Math.random().toString(36).slice(2, 7), x: edSn(w.x), z: edSn(w.z), ry: 0, n: 'TELEPORTER ' + String.fromCharCode(65 + (n % 26)) }); ED.sel = { t: 'tele', i: n }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'win') { d.windows = d.windows || []; d.windows.push({ x: edSn(w.x), z: edSn(w.z), ry: 0, w: 3, n: 6 }); ED.sel = { t: 'win', i: d.windows.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
+  else if (t === 'sw') { d.switches = d.switches || []; let n = 1; while (d.switches.some(q => q.n === 'POWER ' + n)) n++; d.switches.push({ id: Math.random().toString(36).slice(2, 7), x: edSn(w.x), z: edSn(w.z), ry: 0, n: 'POWER ' + n, hold: 4 }); ED.sel = { t: 'sw', i: d.switches.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
   else if (t === 'perk') { const k = ED.perk; d.perks = d.perks.filter(q => q.k !== k); d.perks.push({ k, x: edSn(w.x), z: edSn(w.z), ry: 0 }); ED.sel = { t: 'perk', i: d.perks.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
   else if (t === 'wb') { d.wb = d.wb || []; d.wb.push({ x: edSn(w.x), z: edSn(w.z), ry: 0, type: ED.wbType || 'ak', cost: ED.wbCost || 1000 }); ED.sel = { t: 'wb', i: d.wb.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
   else if (t === 'box') { d.boxes.push({ x: edSn(w.x), z: edSn(w.z), rot: 0 }); ED.sel = { t: 'box', i: d.boxes.length - 1 }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
@@ -7235,16 +7359,24 @@ function edUp() {
   }
   edUI(); edDraw();
 }
-function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; ({ wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t]).splice(s.i, 1); ED.sel = null; }
+function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; if (s.t === 'tele') { const id = d.tele[s.i] && d.tele[s.i].id; for (const q of d.tele) if (q.to === id) delete q.to; for (const q of d.gates) if (q.tp) q.tp = q.tp.filter(x => x !== id); } if (s.t === 'sw') { const id = d.switches[s.i] && d.switches[s.i].id; for (const q of d.perks.concat(d.gates)) if (q.pw === id) delete q.pw; } ({ tele: d.tele, win: d.windows, sw: d.switches, wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs }[s.t]).splice(s.i, 1); ED.sel = null; }
 function edAct(a) {
   const d = ED.d; initAudio(); sfx.click();
   if (a === 'undo') { edUndo(); edUI(); edDraw(); return; }
   if (a === 'redo') { edRedo(); edUI(); edDraw(); return; }
-  if (a === 'copy') { const s = ED.sel; if (!s || s.t === 'spawn' || s.t === 'perk') ED.msg = 'SELECT A WALL, FLOOR, STAIRS, DOOR, WALLBUY, BOX OR ZSPAWN TO COPY'; else { ED.clip = { t: s.t, o: JSON.parse(JSON.stringify(edItem(s))), n: 0 }; ED.msg = 'COPIED - TAP PASTE (WORKS IN OTHER MAPS TOO)'; } edUI(); return; }
+  if (a === 'copy') { const s = ED.sel; if (!s || s.t === 'spawn' || s.t === 'perk' || s.t === 'sw' || s.t === 'tele') ED.msg = 'SELECT A WALL, FLOOR, STAIRS, DOOR, WALLBUY, BOX OR ZSPAWN TO COPY'; else { ED.clip = { t: s.t, o: JSON.parse(JSON.stringify(edItem(s))), n: 0 }; ED.msg = 'COPIED - TAP PASTE (WORKS IN OTHER MAPS TOO)'; } edUI(); return; }
   if (a === 'thumb') { edThumb(); return; }
-  if (!/^(v3|tool:|zoomin|zoomout|maps|zmb|guns|exit|sync|bkp|rst|perk:|paste)/.test(a)) edPush(true);
+  if (!/^(tpl|v3|tool:|zoomin|zoomout|maps|zmb|guns|exit|sync|bkp|rst|perk:|paste)/.test(a)) edPush(true);
   if (a === 'paste') { const c = ED.clip; if (!c) ED.msg = 'NOTHING COPIED'; else { edPush(true); c.n++; const o = JSON.parse(JSON.stringify(c.o)); o.x = edSn(o.x + 2 * c.n); o.z = edSn(o.z + 2 * c.n); const arr = edArr(c.t); arr.push(o); ED.sel = { t: c.t, i: arr.length - 1 }; ED.msg = 'PASTED'; } edUI(); edDraw(); return; }
-  if (a === 'thumbx') { d.thumb = ''; ED.msg = 'THUMBNAIL REMOVED'; }
+  if (a === 'tpl') { ED.panel = ED.panel === 'tpl' ? '' : 'tpl'; }
+  else if (a.startsWith('tpt:')) { const it = edItem(ED.sel); if (it && ED.sel.t === 'gate') { const id = a.slice(4); it.tp = it.tp || []; const i = it.tp.indexOf(id); if (i >= 0) it.tp.splice(i, 1); else it.tp.push(id); if (!it.tp.length) delete it.tp; } }
+  else if (a === 'ten') { const it = edItem(ED.sel); if (it) { const n = prompt('TELEPORTER NAME', it.n || ''); if (n !== null) it.n = rvClean(n).toUpperCase().slice(0, 16) || 'TELEPORTER'; } }
+  else if (a === 'tto') { const it = edItem(ED.sel); if (it) { const L = [undefined].concat((d.tele || []).filter(q => q.id !== it.id).map(q => q.id)); if (L.length < 2) ED.msg = 'PLACE A SECOND TELEPORTER FIRST'; else { const nx = L[(L.indexOf(it.to) + 1) % L.length]; if (nx) it.to = nx; else delete it.to; } } }
+  else if (a === 'pl') { const it = edItem(ED.sel); if (it) { const L = [3, 4, 5, 6, 8]; it.n = L[(L.indexOf(it.n || 6) + 1) % L.length]; } }
+  else if (a === 'pw') { const it = edItem(ED.sel); if (it) { const L = [undefined].concat((d.switches || []).map(q => q.id)); if (L.length < 2) ED.msg = 'PLACE A POWER SWITCH FIRST (+POWER TOOL)'; else { const i = L.indexOf(it.pw); const nx = L[(i + 1) % L.length]; if (nx) it.pw = nx; else delete it.pw; } } }
+  else if (a === 'swn') { const it = edItem(ED.sel); if (it) { const n = prompt('SWITCH NAME (SHOWN WHEN YOU WALK UP TO IT)', it.n || ''); if (n !== null) it.n = rvClean(n).toUpperCase().slice(0, 16) || 'POWER'; } }
+  else if (a === 'swh') { const it = edItem(ED.sel); if (it) { const L = [2, 4, 6, 10]; it.hold = L[(L.indexOf(it.hold) + 1) % L.length] || 4; } }
+  else if (a === 'thumbx') { d.thumb = ''; ED.msg = 'THUMBNAIL REMOVED'; }
   else if (a === 'tod') { const K = Object.keys(CM_TOD), i = K.indexOf(d.tod || 'night'); d.tod = K[(i + 1) % K.length]; }
   else if (ED.pub && a === 'save') { edSubmit(); return; }
   if (ED.pub && a === 'play') { ED.msg = 'PLAY IS NOT AVAILABLE YET - COMING SOON'; edUI(); return; }
@@ -7282,6 +7414,7 @@ function edAct(a) {
     else if (a === 'h') { const L = [1, 2, 3.6, 6, 10]; it.h = L[(L.indexOf(it.h) + 1) % L.length]; }
     else if (a === 'col') it.c = CM_COL[(CM_COL.indexOf(it.c) + 1) % CM_COL.length];
     else if (a === 'mat') { const i = CM_MATK.indexOf(it.m || 'concrete'); it.m = CM_MATK[(i + 1) % CM_MATK.length]; it.c = it.m === 'concrete' ? '#8a8c8e' : '#ffffff'; }
+    else if (a === 'y' && ED.sel.t === 'spawn') { const L = [0, 0.5, 1, 2, 3, 3.6, 4.5, 6, 8, 10], i = L.findIndex(v => v > (it.y || 0) + 1e-6); it.y = L[i < 0 ? 0 : i]; }
     else if (a === 'y') { const L = ED.sel.t === 'wall' ? [0, 1, 2, 3, 3.6, 5, 6, 8] : [0.5, 1, 1.5, 2, 3, 3.6, 4.5, 6, 8, 10], cur = ED.sel.t === 'wall' ? (it.y || 0) : it.y, i = L.findIndex(v => v > cur + 1e-6); it.y = L[i < 0 ? 0 : i]; }
     else if (a === 'c-') it.cost = Math.max(0, it.cost - 250); else if (a === 'c+') it.cost = Math.min(9000, it.cost + 250);
     else if (a === 'rot') { if (ED.sel.t === 'stairs') it.r = ((it.r || 0) + 1) % 4; else if (ED.sel.t === 'spawn') it.yaw = ((it.yaw || 0) + Math.PI / 2) % (Math.PI * 2); else if (ED.sel.t === 'box') it.rot = ((it.rot || 0) + Math.PI / 2) % (Math.PI * 2); else it.ry = ((it.ry || 0) + Math.PI / 2) % (Math.PI * 2); }
@@ -7328,23 +7461,28 @@ function edUI() {
   $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + B('undo', 'UNDO', 0, ED.undo.length ? '' : 'dis') + B('redo', 'REDO', 0, ED.redo.length ? '' : 'dis') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : (CM_PD[k].nm || k.toUpperCase())), ED.perk === k)).join('') : '');
   const s = ED.sel, it = edItem(s); let h = '';
   if (it) {
+    const PW = q => 'POWER: ' + ((d.switches || []).find(w => w.id === q.pw) || { n: 'ALWAYS ON' }).n;
     const MN = () => (CM_MAT.find(q => q[0] === (it.m || 'concrete')) || ['', 'CONCRETE'])[1], SZ = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+');
     if (s.t === 'wall') h = SZ + B('h', 'H ' + it.h) + B('y', 'RAISE ' + (it.y || 0)) + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'floor') h = SZ + B('y', 'TOP Y ' + it.y) + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'stairs') h = SZ + B('y', 'TOP Y ' + it.y) + B('rot', 'TURN') + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
-    else if (s.t === 'gate') h = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+') + B('c-', '-250') + `<span>COST ${it.cost}</span>` + B('c+', '+250') + B('del', 'DEL', 0, 'red');
-    else if (s.t === 'spawn') h = '<span>PLAYER SPAWN</span>' + B('rot', 'TURN');
-    else if (s.t === 'perk') h = `<span>${CM_PD[it.k].title}</span>` + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'gate') h = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+') + B('c-', '-250') + `<span>COST ${it.cost}</span>` + B('c+', '+250') + B('pw', PW(it)) + B('tpl', 'TELEPORT LINKS: ' + ((it.tp || []).length || 'NONE'), ED.panel === 'tpl') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'tele') h = B('ten', 'NAME: ' + (it.n || 'TELEPORTER')) + B('tto', 'LINKS TO: ' + (((d.tele || []).find(q => q.id === it.to) || {}).n || 'NONE')) + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'win') h = B('w-', 'W-') + B('w+', 'W+') + B('pl', 'PLANKS ' + (it.n || 6)) + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'sw') h = B('swn', 'NAME: ' + (it.n || 'POWER')) + B('swh', 'HOLD ' + (it.hold || 4) + 'S') + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
+    else if (s.t === 'spawn') h = '<span>PLAYER SPAWN</span>' + B('rot', 'TURN') + B('y', 'HEIGHT ' + (it.y || 0));
+    else if (s.t === 'perk') h = `<span>${CM_PD[it.k].title}</span>` + B('rot', 'TURN') + B('pw', PW(it)) + B('del', 'DEL', 0, 'red');
     else if (s.t === 'wb') h = B('guns', 'GUN: ' + WEAPONS[it.type].name) + B('c-', '-250') + B('cset', 'PRICE ' + it.cost) + B('c+', '+250') + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'box') h = '<span>MYSTERY BOX ' + (s.i === 0 ? '(START)' : '') + '</span>' + B('rot', 'TURN') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'zs') h = '<span>ZOMBIE SPAWN</span>' + B('del', 'DEL', 0, 'red');
-  } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', wb: 'TAP TO PLACE A WALL BUY (STAND IT AGAINST A WALL).', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', floor: 'DRAG A RECTANGLE: FLOOR / ROOF / BRIDGE (TOP Y = HEIGHT)', stairs: 'DRAG A RECTANGLE: STAIRS (TURN = WHICH WAY THEY GO UP)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
-  h += (it && s.t !== 'spawn' && s.t !== 'perk' ? B('copy', 'COPY') : '') + (ED.clip ? B('paste', 'PASTE') : '');
+  } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', wb: 'TAP TO PLACE A WALL BUY (STAND IT AGAINST A WALL).', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', tele: 'TAP TO PLACE A TELEPORTER. SET WHERE IT LINKS TO. DOORS CAN OPEN WHEN PADS ARE LINKED', win: 'TAP TO PLACE A WINDOW BARRIER IN A GAP IN A WALL (TURN IT TO FACE THE WALL). ZOMBIES TEAR THE PLANKS OFF, PLAYERS REBUILD THEM', sw: 'TAP TO PLACE A POWER SWITCH. THEN SELECT A PERK OR DOOR AND TAP POWER TO WIRE IT', floor: 'DRAG A RECTANGLE: FLOOR / ROOF / BRIDGE (TOP Y = HEIGHT)', stairs: 'DRAG A RECTANGLE: STAIRS (TURN = WHICH WAY THEY GO UP)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
+  h += (it && s.t !== 'spawn' && s.t !== 'perk' && s.t !== 'sw' && s.t !== 'tele' ? B('copy', 'COPY') : '') + (ED.clip ? B('paste', 'PASTE') : '');
   $('edSel').innerHTML = h; $('edMsg').textContent = ED.msg;
   const P = $('edPanel');
   if (ED.tool === 'wb' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A WALL BUY</span>' + B('guns', 'GUN: ' + WEAPONS[ED.wbType || 'ak'].name);
   if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div><div class="row"><span>SYNC</span>' + B('sync', 'PUSH ALL') + B('bkp', 'BACKUP') + B('rst', 'RESTORE') + '</div>' + Object.values(CM.maps).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
   else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'CAT GUY' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k]}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
+  else if (ED.panel === 'tpl' && ED.sel && ED.sel.t === 'gate') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>THIS DOOR OPENS WHEN THESE TELEPORTERS ARE LINKED (EACH ONE OPENS IT A BIT MORE, NO PURCHASE NEEDED)</span></div>' + ((d.tele || []).length ? d.tele.map(q => '<div class="row">' + B('tpt:' + q.id, ((it && it.tp && it.tp.includes(q.id)) ? '[X] ' : '[ ] ') + q.n) + '</div>').join('') : '<div class="row"><span>PLACE TELEPORTERS FIRST (+TELEPORT)</span></div>'); }
   else if (ED.panel === 'guns') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>PICK A WEAPON</span></div><div class="row">' + Object.keys(WEAPONS).filter(k => k !== 'para').map(k => B('gun:' + k, WEAPONS[k].name)).join('') + '</div>'; }
   else { P.style.display = 'none'; }
 }
@@ -7371,6 +7509,11 @@ function edDraw() {
   d.gates.forEach((q, i) => { x.fillStyle = 'rgba(224,176,32,0.55)'; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('gate', i) ? '#fff' : '#e0b020'; x.lineWidth = 2; x.setLineDash([5, 4]); x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.setLineDash([]); x.fillStyle = '#fff'; x.font = 'bold 10px monospace'; x.textAlign = 'center'; x.fillText(q.cost, X(q.x), Z(q.z) + 4); });
   const sq = (px, pz, c, L, on, ry) => { const s = Math.max(10, 1.6 * sc); x.fillStyle = c; x.fillRect(X(px) - s / 2, Z(pz) - s / 2, s, s); x.strokeStyle = on ? '#fff' : '#000'; x.lineWidth = on ? 2 : 1; x.strokeRect(X(px) - s / 2, Z(pz) - s / 2, s, s); if (ry !== undefined) { x.fillStyle = '#fff'; x.fillRect(X(px) + Math.sin(ry) * s * 0.5 - 3, Z(pz) + Math.cos(ry) * s * 0.5 - 3, 6, 6); } x.fillStyle = '#fff'; x.font = 'bold 11px monospace'; x.textAlign = 'center'; x.fillText(L, X(px), Z(pz) + 4); };
   (d.wb || []).forEach((q, i) => sq(q.x, q.z, '#7a2a2a', 'W', isS('wb', i), q.ry || 0));
+  { x.strokeStyle = 'rgba(255,220,60,0.55)'; x.lineWidth = 1.5; x.setLineDash([3, 4]); for (const q of d.perks.concat(d.gates)) { const w = q.pw && (d.switches || []).find(v => v.id === q.pw); if (w) { x.beginPath(); x.moveTo(X(q.x), Z(q.z)); x.lineTo(X(w.x), Z(w.z)); x.stroke(); } } x.setLineDash([]); }
+  { x.lineWidth = 1.5; x.setLineDash([5, 4]); for (const q of d.tele || []) { const t = q.to && d.tele.find(v => v.id === q.to); if (t) { x.strokeStyle = 'rgba(80,200,255,0.8)'; x.beginPath(); x.moveTo(X(q.x), Z(q.z)); x.lineTo(X(t.x), Z(t.z)); x.stroke(); } } for (const g of d.gates) for (const id of (g.tp || [])) { const t = d.tele.find(v => v.id === id); if (t) { x.strokeStyle = 'rgba(255,150,40,0.8)'; x.beginPath(); x.moveTo(X(g.x), Z(g.z)); x.lineTo(X(t.x), Z(t.z)); x.stroke(); } } x.setLineDash([]); }
+  (d.tele || []).forEach((q, i) => { x.fillStyle = '#1e7fb0'; x.beginPath(); x.arc(X(q.x), Z(q.z), Math.max(8, 1.7 * sc), 0, 7); x.fill(); x.strokeStyle = isS('tele', i) ? '#fff' : '#9be0ff'; x.lineWidth = isS('tele', i) ? 3 : 1.5; x.stroke(); x.fillStyle = '#fff'; x.font = 'bold 9px monospace'; x.textAlign = 'center'; x.fillText((q.n || 'TP').replace('TELEPORTER ', ''), X(q.x), Z(q.z) + 3); });
+  (d.windows || []).forEach((q, i) => { x.save(); x.translate(X(q.x), Z(q.z)); x.rotate(-(q.ry || 0)); x.fillStyle = '#8a6a42'; x.fillRect(-q.w / 2 * sc, -0.35 * sc, q.w * sc, 0.7 * sc); x.strokeStyle = '#3a2a18'; x.lineWidth = 1; for (let k = 1; k < 5; k++) { x.beginPath(); x.moveTo(-q.w / 2 * sc, (-0.35 + 0.14 * k) * sc); x.lineTo(q.w / 2 * sc, (-0.35 + 0.14 * k) * sc); x.stroke(); } x.strokeStyle = isS('win', i) ? '#fff' : '#000'; x.lineWidth = isS('win', i) ? 3 : 1.5; x.strokeRect(-q.w / 2 * sc, -0.35 * sc, q.w * sc, 0.7 * sc); x.restore(); });
+  (d.switches || []).forEach((q, i) => sq(q.x, q.z, '#c9a800', 'PW', isS('sw', i), q.ry || 0));
   d.perks.forEach((q, i) => sq(q.x, q.z, CM_PD[q.k].ec, CM_PD[q.k].L, isS('perk', i), q.ry || 0));
   d.boxes.forEach((q, i) => sq(q.x, q.z, '#8a5a2a', i === 0 ? 'B*' : 'B', isS('box', i), q.rot || 0));
   d.zs.forEach((q, i) => { x.fillStyle = '#b02020'; x.beginPath(); x.arc(X(q.x), Z(q.z), Math.max(6, 0.9 * sc), 0, 7); x.fill(); x.strokeStyle = isS('zs', i) ? '#fff' : '#000'; x.lineWidth = 2; x.stroke(); x.fillStyle = '#fff'; x.font = 'bold 10px monospace'; x.textAlign = 'center'; x.fillText('Z', X(q.x), Z(q.z) + 4); });
@@ -7416,11 +7559,14 @@ function e3Rebuild() {
   (d.floors || []).forEach((q, i) => { const mk = CM_MATK.includes(q.m) ? q.m : 'concrete', top = Math.max(0.5, +q.y || 3.6), t = Math.min(0.3, top); add('floor', i, boxGeo(q.w, t, q.d, CM_DEN[mk] || 3), cmMat(mk, cmCol(q)), q.x, top - t / 2, q.z); });
   (d.stairs || []).forEach((q, i) => { const mk = CM_MATK.includes(q.m) ? q.m : 'concrete', mat = cmMat(mk, cmCol(q)); for (const st of cmStairSteps(q)) add('stairs', i, boxGeo(st.w, st.th, st.d, CM_DEN[mk] || 3), mat, st.x, st.y - st.th / 2, st.z); });
   d.gates.forEach((q, i) => add('gate', i, new THREE.BoxGeometry(q.w, 3, q.d), e3Mat('#e0b020', { transparent: true, opacity: 0.65 }), q.x, 1.5, q.z));
+  (d.tele || []).forEach((q, i) => add('tele', i, new THREE.CylinderGeometry(1.6, 1.8, 3, 20), e3Mat('#1e9fd0', { transparent: true, opacity: 0.75 }), q.x, 1.5, q.z));
+  (d.windows || []).forEach((q, i) => add('win', i, new THREE.BoxGeometry(q.w, 3, 0.35), e3Mat('#8a6a42', { transparent: true, opacity: 0.8 }), q.x, 1.5, q.z, q.ry || 0));
+  (d.switches || []).forEach((q, i) => add('sw', i, new THREE.BoxGeometry(0.9, 1.5, 0.35), e3Mat('#c9a800'), q.x, 1.1, q.z, q.ry || 0));
   d.perks.forEach((q, i) => add('perk', i, new THREE.BoxGeometry(1.4, 2.4, 1), e3Mat(CM_PD[q.k] ? CM_PD[q.k].ec : '#888'), q.x, 1.2, q.z, q.ry || 0));
   (d.wb || []).forEach((q, i) => add('wb', i, new THREE.BoxGeometry(1.5, 0.95, 0.2), e3Mat('#a33a3a'), q.x, 1.55, q.z, q.ry || 0));
   d.boxes.forEach((q, i) => add('box', i, new THREE.BoxGeometry(1.7, 1, 1.1), e3Mat('#8a5a2a'), q.x, 0.5, q.z, q.rot || 0));
   d.zs.forEach((q, i) => add('zs', i, new THREE.ConeGeometry(0.7, 1.8, 8), e3Mat('#c02424'), q.x, 0.9, q.z));
-  add('spawn', 0, new THREE.CylinderGeometry(0.6, 0.6, 1.8, 12), e3Mat('#2aa84a'), d.spawn.x, 0.9, d.spawn.z);
+  add('spawn', 0, new THREE.CylinderGeometry(0.6, 0.6, 1.8, 12), e3Mat('#2aa84a'), d.spawn.x, 0.9 + (d.spawn.y || 0), d.spawn.z);
   if (ED.sel) for (const m of g.children) if (m.userData.t === ED.sel.t && m.userData.i === ED.sel.i) { const l = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false })); l.renderOrder = 9; m.add(l); }
 }
 function e3Render() {
