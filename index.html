@@ -2679,7 +2679,7 @@ const MP = {
     if (!this.panel) {
       const p = this.panel = document.createElement('div');
       p.style.cssText = 'position:fixed;right:3vw;top:50%;transform:translateY(-50%);width:min(400px,42vw);max-height:80vh;overflow:auto;padding:18px;background:rgba(8,10,16,.88);border:2px solid #e8d27a;z-index:50;font-size:10px;line-height:1.8';
-      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); const sv = this.servers.get(b.dataset.join); let pw = ''; if (sv && sv.k) { pw = prompt('SERVER PASSWORD'); if (pw === null) return; } this.join(b.dataset.join, pw); } });
+      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); if (banBlock()) return; const sv = this.servers.get(b.dataset.join); let pw = ''; if (sv && sv.k) { pw = prompt('SERVER PASSWORD'); if (pw === null) return; } this.join(b.dataset.join, pw); } });
       document.body.appendChild(p);
     }
     this.panel.style.display = show ? 'block' : 'none'; if (show) { this.init(); this.draw(); }
@@ -2701,6 +2701,7 @@ const MP = {
     this.panel.innerHTML = h;
   },
   click(a) {
+    if ((a === 'mp' || a === 'mpcreate' || a.startsWith('host:')) && banBlock()) return true;
     if (a === 'mp') { this.keepName(); renderMenu('mp'); return true; }
     if (a === 'mpcreate') { this.keepName(); mapPage = 0; renderMenu('mpmaps'); return true; }
     if (a === 'mpback') { renderMenu('mp'); return true; }
@@ -4003,14 +4004,16 @@ document.addEventListener('keydown', e => {
 function showLobbyClient() { menuEl.classList.remove('hidden'); renderMenu('lobbyc'); }
 function renderMenu(view) {
   let h = ''; menuView = view; mprev.style.display = 'none'; if (view !== 'start' && view !== 'review') RV.testing = false;
-  if (view === 'main') h = btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + (CL.dev ? btn('editor', 'MAP EDITOR') + btn('rvopen', 'REVIEW MAPS', Object.keys(RV.subs).length + ' waiting') + btn('users', 'USERS', Object.keys(US.users).length + ' visitors') : '') + btn('pubmap', 'PUBLISH MAP', 'build your own map') + btn('changelog', 'CHANGELOG') + btn('controls', 'CONTROLS');
+  if (view === 'main') h = (banActive() ? '<div class="clnote">BANNED FROM MULTIPLAYER AND PUBLISHING UNTIL ' + usTm(BAN.until) + '</div>' : '') + btn('new', 'START NEW GAME') + btn('mp', 'MULTIPLAYER', 'play with friends') + btn('locker', 'LOCKER', 'customize your character &amp; guns') + btn('shop', 'SHOP', WALLET.coins + ' coins') + (CL.dev ? btn('editor', 'MAP EDITOR') + btn('rvopen', 'REVIEW MAPS', Object.keys(RV.subs).length + ' waiting') + btn('users', 'USERS', Object.keys(US.users).length + ' visitors') + btn('reports', 'REPORTS', Object.keys(RP.list).length + ' open') : '') + btn('pubmap', 'PUBLISH MAP', 'build your own map') + btn('changelog', 'CHANGELOG') + btn('controls', 'CONTROLS');
   else if (view === 'changelog') h = (CL.dev ? '<div class="clnote">DEVMODE: EDIT BELOW. FIRST LINE OF EACH BLOCK IS THE TITLE, BLANK LINE BETWEEN UPDATES.</div><textarea id="clText" class="clin" spellcheck="false">' + clEsc(CL.text) + '</textarea>' + btn('clsave', 'SAVE FOR EVERYONE') : clHTML()) + (CL.msg ? '<div class="clnote">' + CL.msg + '</div>' : '') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
   else if (view === 'shop') h = btn('main', '&lt; BACK', '', 'back') + shopGuiHTML();
-  else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
+  else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + (MAPS[curMap.id] && MAPS[curMap.id].custom && !RV.testing ? btn('rpm', 'REPORT THIS MAP', 'something wrong with it?') : '') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
   else if (view === 'review') h = rvHTML();
   else if (view === 'users') h = usHTML();
+  else if (view === 'usd') h = usdHTML();
+  else if (view === 'reports') h = rpHTML();
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'lobby') h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
@@ -4026,6 +4029,21 @@ menuButtons.addEventListener('click', e => {
   if (a === 'editor') { edOpen(false); return; }
   if (a === 'pubmap') { edOpen(true); return; }
   if (a === 'users') { US.page = 0; renderMenu('users'); return; }
+  if (a === 'reports') { RP.i = 0; renderMenu('reports'); return; }
+  if (a.startsWith('rpp:')) { RP.i += +a.slice(4); renderMenu('reports'); return; }
+  if (a === 'rpd' || a === 'rpu' || a === 'rpb') {
+    const id = Object.keys(RP.list).sort((x, y) => RP.list[x].ts - RP.list[y].ts)[RP.i], r = RP.list[id]; if (!r) return;
+    if (a === 'rpb') { if (US.users[r.by]) { US.sel = r.by; renderMenu('usd'); } else notice('THAT PLAYER IS NOT IN THE USERS LIST', 2500); return; }
+    if (a === 'rpu') { if (!confirm('UNPUBLISH THIS MAP FOR EVERYONE?')) return; if (CM.maps[r.t]) { syDel('cm', r.t); cmRemove(r.t); cmStore(); } }
+    syPub('rep/' + id, ''); delete RP.list[id]; renderMenu('reports'); return;
+  }
+  if (a === 'rpm') { const id = curMap.id.slice(3), d = CM.maps[id]; repSend('map', id, curMap.name, d && d.creator); return; }
+  if (a.startsWith('us:')) { US.sel = a.slice(3); renderMenu('usd'); return; }
+  if (a.startsWith('ubn:')) { banSet(US.sel, +a.slice(4)); renderMenu('usd'); return; }
+  if (a === 'ubc') { const v = prompt('BAN LENGTH (EXAMPLES: 30M, 5H, 3D)', '1H'); if (v === null) return; const m = /^\s*(\d+)\s*([mhd]?)\s*$/i.exec(v); if (!m) { notice('USE A NUMBER AND M, H OR D', 2500); return; } banSet(US.sel, +m[1] * ({ m: 1, h: 60, d: 1440 }[(m[2] || 'm').toLowerCase()])); renderMenu('usd'); return; }
+  if (a === 'ubu') { banClear(US.sel); renderMenu('usd'); return; }
+  if (a === 'usf') { US.all = !US.all; US.page = 0; renderMenu('users'); return; }
+  if (a === 'usdel') { const ids = Object.keys(US.users).filter(id => !US.users[id].n); if (ids.length && confirm('DELETE ' + ids.length + ' VISITORS WITH NO NAME?')) { for (const id of ids) { syPub('user/' + id, ''); delete US.users[id]; } } renderMenu('users'); return; }
   if (a.startsWith('usp:')) { US.page += +a.slice(4); renderMenu('users'); return; }
   if (a === 'rvopen') { RV.i = 0; RV.msg = ''; renderMenu('review'); return; }
   if (a === 'review') { renderMenu('review'); return; }
@@ -7134,6 +7152,8 @@ function syMsg(i, t, s) {
   else if (k.startsWith('sub/')) rvRemote(k.slice(4), s);
   else if (k.startsWith('user/')) usRemote(k.slice(5), s);
   else if (k.startsWith('like/')) lkRemote(k.slice(5), s);
+  else if (k.startsWith('ban/')) banRemote(k.slice(4), s);
+  else if (k.startsWith('rep/')) repRemote(k.slice(4), s);
   else if (k.startsWith('tomb/')) syTomb(k.slice(5), +s);
 }
 function syHeal(i) {   // devmode only: re-upload anything this server is missing or has an older copy of
@@ -7144,10 +7164,11 @@ function syHeal(i) {   // devmode only: re-upload anything this server is missin
   for (const id in CM.maps) { const d = CM.maps[id]; if ((SY.tomb['cm-' + id] || 0) >= (d.ts || 0)) continue; if (need('cmap/' + id, d.ts || 0)) pub('cmap/' + id, JSON.stringify(d)); }
   for (const id in RV.subs) { const d = RV.subs[id]; if ((SY.tomb['sub-' + id] || 0) >= (d.ts || 0)) continue; if (need('sub/' + id, d.ts || 0)) pub('sub/' + id, JSON.stringify(d)); }
   if (CL.ts && need('changelog', CL.ts)) pub('changelog', JSON.stringify({ text: CL.text, ts: CL.ts }));
+  for (const id in US.bans) { const b = US.bans[id]; if (b.until > Date.now() && need('ban/' + id, b.ts || 0)) pub('ban/' + id, JSON.stringify(b)); }
   for (const k in SY.tomb) if (need('tomb/' + k, SY.tomb[k])) pub('tomb/' + k, String(SY.tomb[k]));
   return n;
 }
-function syDevSub() { for (const c of SY.cl) if (c && c.connected) c.subscribe(MP.PRE + 'user/+'); }
+function syDevSub() { for (const c of SY.cl) if (c && c.connected) { c.subscribe(MP.PRE + 'user/+'); c.subscribe(MP.PRE + 'ban/+'); c.subscribe(MP.PRE + 'rep/+'); } }
 function syInit() {
   if (typeof mqtt === 'undefined' || SY.cl.length) return;
   if (CL.dev) { try { const o = JSON.parse(localStorage.getItem('zrv') || '{}'); for (const id in o) rvRemote(id, JSON.stringify(o[id])); } catch (e) {} }
@@ -7157,7 +7178,7 @@ function syInit() {
     c.on('connect', () => {
       SY.seen[i] = {};
       for (const t of ['changelog', 'cmap/+', 'sub/+', 'tomb/+', 'like/+/+']) c.subscribe(MP.PRE + t);
-      if (CL.dev) c.subscribe(MP.PRE + 'user/+');
+      if (CL.dev) { c.subscribe(MP.PRE + 'user/+'); c.subscribe(MP.PRE + 'ban/+'); c.subscribe(MP.PRE + 'rep/+'); } else { try { c.subscribe(MP.PRE + 'ban/' + lkUid()); } catch (e) {} }
       clearTimeout(SY.tm[i]); SY.tm[i] = setTimeout(() => syHeal(i), 8000);
       try { usAnnounce(); } catch (e) {}
       try { lkSync(); } catch (e) {}
@@ -7168,32 +7189,87 @@ function syInit() {
 }
 
 /* ---------- USERS (every browser that ever opened the game, counted once; shown in devmode only) ---------- */
-const US = { users: {}, page: 0 };
+const US = { users: {}, page: 0, all: false, bans: {}, sel: '' };
+const RP = { list: {}, i: 0, last: 0 };
+const BAN = { until: 0 };
+try { BAN.until = +localStorage.getItem('zban') || 0; } catch (e) {}
+const banActive = () => BAN.until > Date.now();
+const usTm = t => t ? new Date(t).toLocaleString('sv-SE').slice(0, 16) : '?';
+const usLeft = ms => { const m = Math.max(1, Math.ceil(ms / 60000)); return m >= 1440 ? Math.floor(m / 1440) + 'D ' + Math.floor(m % 1440 / 60) + 'H' : m >= 60 ? Math.floor(m / 60) + 'H ' + (m % 60) + 'M' : m + ' MIN'; };
+function banBlock() { if (!banActive()) return false; notice('YOU ARE BANNED UNTIL ' + usTm(BAN.until) + ' (' + usLeft(BAN.until - Date.now()) + ' LEFT)', 4200); sfx.deny(); return true; }
+function banRemote(id, s) {
+  if (!/^[a-z0-9]{8,12}$/.test(id)) return;
+  let d = null; if (s) { try { d = JSON.parse(s); } catch (e) { return; } if (!d || !Number.isFinite(d.until)) d = null; }
+  if (CL.dev) { if (d) US.bans[id] = { until: d.until, ts: d.ts || 0 }; else delete US.bans[id]; if (menuView === 'usd' || menuView === 'users') renderMenu(menuView); }
+  let me = ''; try { me = localStorage.getItem('zuid') || ''; } catch (e) {}
+  if (id === me) { const was = banActive(); BAN.until = d ? d.until : 0; try { localStorage.setItem('zban', String(BAN.until)); } catch (e) {} if (banActive() && !was) { notice('YOU HAVE BEEN BANNED UNTIL ' + usTm(BAN.until), 5000); sfx.deny(); } if (menuView === 'main') renderMenu('main'); }
+}
+function banSet(id, minutes) {
+  if (!syOK()) { notice('NOT CONNECTED - TRY AGAIN'); return; }
+  const d = { until: Date.now() + Math.max(1, Math.min(525600, minutes)) * 60000, ts: Date.now() }; US.bans[id] = d; syPub('ban/' + id, JSON.stringify(d));
+}
+function banClear(id) { syPub('ban/' + id, ''); delete US.bans[id]; }
+function repSend(kind, target, targetName, creator) {
+  if (banBlock()) return; if (Date.now() - RP.last < 30000) { notice('WAIT A BIT BEFORE SENDING ANOTHER REPORT', 2500); return; }
+  if (!syOK()) { notice('NOT CONNECTED - TRY AGAIN', 2500); return; }
+  const r = prompt('WHAT IS THE PROBLEM? (SHORT)'); if (r === null) return; const why = rvClean(r).slice(0, 100); if (!why) { notice('WRITE WHAT IS WRONG FIRST', 2000); return; }
+  let nm = ''; try { nm = localStorage.getItem('zmb_name') || ''; } catch (e) {}
+  const id = Math.random().toString(36).slice(2, 10); RP.last = Date.now();
+  syPub('rep/' + id, JSON.stringify({ id, k: kind, t: String(target).slice(0, 20), tn: rvClean(targetName).slice(0, 30), c: rvClean(creator || '').slice(0, 20), r: why, by: lkUid(), bn: rvClean(nm).slice(0, 14), ts: Date.now() }));
+  notice('REPORT SENT - THANK YOU', 2500); sfx.chime();
+}
+function repRemote(id, s) {
+  if (!CL.dev || !/^[a-z0-9]{4,12}$/.test(id)) return;
+  if (!s) { delete RP.list[id]; if (menuView === 'reports') renderMenu('reports'); return; }
+  let d; try { d = JSON.parse(s); } catch (e) { return; } if (!d || d.id !== id || !['map', 'player'].includes(d.k)) return;
+  RP.list[id] = { id, k: d.k, t: rvClean(d.t).slice(0, 20), tn: rvClean(d.tn).slice(0, 30), c: rvClean(d.c).slice(0, 20), r: rvClean(d.r).slice(0, 100), by: /^[a-z0-9]{8,12}$/.test(d.by || '') ? d.by : '', bn: rvClean(d.bn).slice(0, 14), ts: Number.isFinite(d.ts) ? d.ts : 0 };
+  if (menuView === 'reports') renderMenu('reports'); else if (menuView === 'main') { const b = menuButtons.querySelector('[data-a="reports"] small'); if (b) b.textContent = Object.keys(RP.list).length + ' open'; }
+}
+function rpHTML() {
+  const ids = Object.keys(RP.list).sort((a, b) => RP.list[a].ts - RP.list[b].ts); RP.i = Math.max(0, Math.min(ids.length - 1, RP.i));
+  let h = '<div class="label">REPORTS FROM PLAYERS</div>';
+  if (!ids.length) h += '<div class="clnote">NO REPORTS RIGHT NOW</div>';
+  else {
+    const r = RP.list[ids[RP.i]];
+    h += '<div class="clnote">' + (r.k === 'map' ? 'MAP: ' + clEsc(r.tn) + (r.c ? '<br>CREATOR: ' + clEsc(r.c) : '') : 'PLAYER: ' + clEsc(r.tn)) + '<br>REASON: ' + clEsc(r.r) + '<br>FROM: ' + clEsc(r.bn || 'NO NAME') + (r.by ? ' (' + r.by.slice(0, 4).toUpperCase() + ')' : '') + '<br>' + usTm(r.ts) + '</div>'
+      + (r.k === 'map' && CM.maps[r.t] ? btn('rpu', 'UNPUBLISH THIS MAP', 'removes it for everyone') : '') + (r.by ? btn('rpb', 'OPEN REPORTER IN USERS', 'to ban them if they spam') : '') + btn('rpd', 'DISMISS', 'deletes the report')
+      + `<div class="pager"><button class="btn ${RP.i <= 0 ? 'off' : ''}" data-a="rpp:-1">&lt; PREV</button><em>${RP.i + 1}/${ids.length}</em><button class="btn ${RP.i >= ids.length - 1 ? 'off' : ''}" data-a="rpp:1">NEXT &gt;</button></div>`;
+  }
+  return h + btn('main', '&lt; BACK', '', 'back');
+}
+function usdHTML() {
+  const id = US.sel, u = US.users[id]; if (!u) return '<div class="label">VISITOR NOT FOUND</div>' + btn('users', '&lt; BACK', '', 'back');
+  const b = US.bans[id], on = b && b.until > Date.now();
+  return '<div class="label">' + clEsc(u.n || 'NO NAME') + ' (' + id.slice(0, 4).toUpperCase() + ')</div><div class="clnote">' + (u.d || 'UNKNOWN DEVICE') + '<br>FIRST ' + usTm(u.f) + '<br>LAST ' + usTm(u.l) + '<br>' + (on ? 'BANNED UNTIL ' + usTm(b.until) + ' (' + usLeft(b.until - Date.now()) + ' LEFT)' : 'NOT BANNED') + '</div>'
+    + '<div class="label">BAN FROM MULTIPLAYER + PUBLISHING</div>' + btn('ubn:10', '10 MINUTES') + btn('ubn:60', '1 HOUR') + btn('ubn:1440', '1 DAY') + btn('ubn:10080', '7 DAYS') + btn('ubc', 'CUSTOM LENGTH', 'like 30M, 5H or 3D') + (on ? btn('ubu', 'UNBAN') : '') + btn('users', '&lt; BACK', '', 'back');
+}
+
 function usAnnounce() {
   if (!syOK()) return;
   let uid = '', first = 0, nm = '';
   try { uid = localStorage.getItem('zuid') || ''; first = +localStorage.getItem('zuidf') || 0; nm = localStorage.getItem('zmb_name') || ''; } catch (e) {}
   if (!/^[a-z0-9]{8,12}$/.test(uid)) { uid = ''; while (uid.length < 10) uid += Math.random().toString(36).slice(2); uid = uid.slice(0, 10); try { localStorage.setItem('zuid', uid); } catch (e) {} }
   if (!first) { first = Date.now(); try { localStorage.setItem('zuidf', String(first)); } catch (e) {} }
-  syPub('user/' + uid, JSON.stringify({ id: uid, n: nm.slice(0, 14), f: first, l: Date.now() }));
+  syPub('user/' + uid, JSON.stringify({ id: uid, n: nm.slice(0, 14), f: first, l: Date.now(), d: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') ? 'PHONE' : /CrOS/.test(navigator.userAgent || '') ? 'CHROMEBOOK' : 'PC' }));
 }
 function usRemote(id, s) {
   if (!CL.dev || !/^[a-z0-9]{8,12}$/.test(id)) return;
   if (!s) { delete US.users[id]; if (menuView === 'users') renderMenu('users'); return; }
   let d; try { d = JSON.parse(s); } catch (e) { return; }
   if (!d || d.id !== id) return;
-  US.users[id] = { n: rvClean(d.n).slice(0, 14), f: Number.isFinite(d.f) ? d.f : 0, l: Number.isFinite(d.l) ? d.l : 0 };
+  US.users[id] = { n: rvClean(d.n).slice(0, 14), f: Number.isFinite(d.f) ? d.f : 0, l: Number.isFinite(d.l) ? d.l : 0, d: ['PHONE', 'PC', 'CHROMEBOOK'].includes(d.d) ? d.d : '' };
   if (menuView === 'users') renderMenu('users'); else if (menuView === 'main') { const b = menuButtons.querySelector('[data-a="users"] small'); if (b) b.textContent = Object.keys(US.users).length + ' visitors'; }
 }
 function usHTML() {
-  const ids = Object.keys(US.users).sort((a, b) => US.users[b].l - US.users[a].l), per = 7, pages = Math.max(1, Math.ceil(ids.length / per));
+  const all = Object.keys(US.users), named = all.filter(id => US.users[id].n), anon = all.length - named.length;
+  const ids = (US.all ? all : named).sort((a, b) => US.users[b].l - US.users[a].l), per = 6, pages = Math.max(1, Math.ceil(ids.length / per));
   US.page = Math.max(0, Math.min(pages - 1, US.page));
-  const day = t => t ? new Date(t).toISOString().slice(0, 10) : '?';
-  let h = '<div class="label">' + ids.length + ' UNIQUE VISITORS</div>';
-  if (!ids.length) h += '<div class="clnote">NONE LOADED YET - IF THE SERVER IS CONNECTED THEY ARRIVE IN A MOMENT</div>';
-  for (const id of ids.slice(US.page * per, US.page * per + per)) { const u = US.users[id]; h += '<div class="clnote">' + clEsc(u.n || 'NO NAME') + ' (' + id.slice(0, 4).toUpperCase() + ')<br>FIRST ' + day(u.f) + ' - LAST ' + day(u.l) + '</div>'; }
+  const tm = t => t ? new Date(t).toLocaleString('sv-SE').slice(0, 16) : '?';
+  let h = '<div class="label">' + named.length + ' NAMED - ' + anon + ' NO NAME</div>' + btn('usf', US.all ? 'SHOWING: EVERYONE' : 'SHOWING: NAMED ONLY', 'tap to switch') ;
+  if (!ids.length) h += '<div class="clnote">' + (all.length ? 'NOBODY WITH A NAME YET' : 'NONE LOADED YET - IF THE SERVER IS CONNECTED THEY ARRIVE IN A MOMENT') + '</div>';
+  for (const id of ids.slice(US.page * per, US.page * per + per)) { const u = US.users[id], bn = US.bans[id] && US.bans[id].until > Date.now(); h += btn('us:' + id, clEsc(u.n || 'NO NAME') + ' (' + id.slice(0, 4).toUpperCase() + ')' + (u.d ? ' - ' + u.d : '') + (bn ? ' - BANNED' : ''), 'FIRST ' + tm(u.f) + ' - LAST ' + tm(u.l)); }
   h += `<div class="pager"><button class="btn ${US.page <= 0 ? 'off' : ''}" data-a="usp:-1">&lt; PREV</button><em>${US.page + 1}/${pages}</em><button class="btn ${US.page >= pages - 1 ? 'off' : ''}" data-a="usp:1">NEXT &gt;</button></div>`;
-  return h + btn('main', '&lt; BACK', '', 'back');
+  return h + (anon ? btn('usdel', 'DELETE NO-NAME VISITORS', anon + ' (they come back if they open the game again)') : '') + btn('main', '&lt; BACK', '', 'back');
 }
 
 /* ---------- PUBLISH MAP review queue (players submit, devmode reviews / playtests / approves) ---------- */
@@ -7446,6 +7522,7 @@ function edRestore() {
   inp.click();
 }
 function edSubmit() {
+  if (banBlock()) return;
   const d = ED.d; let n = prompt('MAP NAME', d.name === 'MY MAP' ? '' : d.name); if (n === null) return;
   n = rvClean(n).toUpperCase().slice(0, 18); if (!n) { ED.msg = 'MAP NAME REQUIRED'; edUI(); return; }
   let c = prompt('YOUR CREATOR NAME (SHOWN IN THE CREDITS)', ED.creator || ''); if (c === null) return;
@@ -7481,7 +7558,7 @@ function edUI() {
   const P = $('edPanel');
   if (ED.tool === 'wb' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A WALL BUY</span>' + B('guns', 'GUN: ' + WEAPONS[ED.wbType || 'ak'].name);
   if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div><div class="row"><span>SYNC</span>' + B('sync', 'PUSH ALL') + B('bkp', 'BACKUP') + B('rst', 'RESTORE') + '</div>' + Object.values(CM.maps).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
-  else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'CAT GUY' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k]}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
+  else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'VANDRANDE PINNE' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k]}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
   else if (ED.panel === 'tpl' && ED.sel && ED.sel.t === 'gate') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>THIS DOOR OPENS WHEN THESE TELEPORTERS ARE LINKED (EACH ONE OPENS IT A BIT MORE, NO PURCHASE NEEDED)</span></div>' + ((d.tele || []).length ? d.tele.map(q => '<div class="row">' + B('tpt:' + q.id, ((it && it.tp && it.tp.includes(q.id)) ? '[X] ' : '[ ] ') + q.n) + '</div>').join('') : '<div class="row"><span>PLACE TELEPORTERS FIRST (+TELEPORT)</span></div>'); }
   else if (ED.panel === 'guns') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>PICK A WEAPON</span></div><div class="row">' + Object.keys(WEAPONS).filter(k => k !== 'para').map(k => B('gun:' + k, WEAPONS[k].name)).join('') + '</div>'; }
   else { P.style.display = 'none'; }
@@ -7602,6 +7679,7 @@ showMenu('main');
 try {   // online counter: if the browser blocks the connection the game must still start
   MP.init();   // connect right away so the main menu can show who is online
   setInterval(() => { try { MP.presence(); } catch (e) {} }, 20000);
+  setInterval(() => { try { usAnnounce(); } catch (e) {} }, 300000);   // keeps 'last seen' fresh while the game stays open
   window.addEventListener('pagehide', () => { try { if (MP.c && MP.c.connected) MP.c.publish(MP.PRE + 'online/' + MP.id, ''); } catch (e) {} });
   const oe = document.getElementById('online'), on = document.getElementById('onlineN');
   setInterval(() => { try { oe.style.display = state.phase === 'menu' ? 'block' : 'none'; const n = MP.onlineCount(); on.textContent = n > 0 ? n : '--'; } catch (e) {} }, 700);
