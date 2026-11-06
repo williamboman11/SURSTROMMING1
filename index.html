@@ -285,6 +285,51 @@
   .pvend h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 4px; } .pvend h1.r { color: #ff5a5a; } .pvend h1.b { color: #5a9dff; } .pvend p { margin: 0 0 22px; font-size: 11px; letter-spacing: 3px; color: #cfd3d8; }
   .pvcols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; margin-bottom: 22px; } .pvcols .sbHead, .pvcols .sbRow { grid-template-columns: 1fr 16% 16%; font-size: 10px; }
   .pvend .hb { display: inline-block; font-family: inherit; font-size: 12px; letter-spacing: 3px; color: #fff; background: #c8560c; border: none; padding: 12px 26px; cursor: pointer; }
+
+  /* ---------- BO3-accurate main menu overrides ---------- */
+  body.home #online { display: none !important; }
+  #home .hbg { background:
+      radial-gradient(ellipse 34% 40% at 50% 14%, rgba(255,205,120,.5), rgba(255,140,40,.2) 40%, rgba(0,0,0,0) 72%),
+      radial-gradient(ellipse 70% 70% at 52% 55%, rgba(190,100,30,.38), rgba(80,36,10,.2) 55%, rgba(0,0,0,0) 80%),
+      radial-gradient(ellipse 60% 50% at 92% 55%, rgba(170,90,25,.3), rgba(0,0,0,0) 70%),
+      linear-gradient(180deg, #060403 0%, #0c0705 50%, #050302 100%); }
+  #home .hsmoke.s2 { animation-duration: 33s; animation-direction: alternate-reverse; background: radial-gradient(ellipse 36% 30% at 40% 60%, rgba(200,110,35,.2), rgba(0,0,0,0) 70%), radial-gradient(ellipse 30% 26% at 90% 30%, rgba(190,100,30,.22), rgba(0,0,0,0) 70%); }
+  #home .hvig { background: radial-gradient(ellipse at 52% 48%, rgba(0,0,0,0) 36%, rgba(0,0,0,.82) 100%); }
+  #home .hlines { left: 58px; } #home .hlines.r { left: auto; right: 62px; }
+  #homeCan { left: 62%; top: 56%; width: min(68vh, 42vw); height: min(68vh, 42vw); transform: translate(-50%, -50%); }
+  #homeCan:before { inset: -26%; border-radius: 50%; filter: blur(18px); background: radial-gradient(circle at 50% 18%, rgba(255,200,120,.55), rgba(255,130,30,.2) 40%, rgba(0,0,0,0) 70%); }
+  @keyframes hcan { from { transform: translate(-50%, -51.5%) rotate(-4deg); } to { transform: translate(-50%, -48.5%) rotate(1deg); } }
+  #homeCan canvas { filter: brightness(.82) contrast(1.1) saturate(1.1) drop-shadow(0 30px 50px rgba(0,0,0,.9)) drop-shadow(0 -6px 26px rgba(255,190,110,.45)); }
+  .hL { position: absolute; left: 0; top: 0; bottom: 0; width: min(640px, 48vw); transform-origin: left center; transform: perspective(1500px) rotateY(7deg); }
+  .hR { position: absolute; right: 0; top: 0; width: min(580px, 42vw); transform-origin: right center; transform: perspective(1500px) rotateY(-9deg); }
+  .hfeat { left: 70px; top: 44px; width: min(480px, 36vw); }
+  .hfeat .tag { font-size: 18px; letter-spacing: 4px; padding: 6px 18px 4px; margin-left: -4px; transform: skewX(-6deg) rotate(-1.5deg); }
+  .hfeat .box { margin-top: -2px; padding: 0; border: 1px solid rgba(190,205,230,.55); background: rgba(6,8,12,.7); transform: rotate(-1.5deg); box-shadow: 0 0 0 5px rgba(0,0,0,.35), 0 14px 30px rgba(0,0,0,.6); }
+  .hfeat .shot { height: min(150px, 17vh); background: radial-gradient(ellipse at 30% 40%, rgba(255,170,70,.65), rgba(60,30,12,.8) 60%), linear-gradient(120deg, #1a1410, #3a2410 50%, #120c08); position: relative; }
+  .hfeat .shot i { position: absolute; right: 10px; top: 10px; font-style: normal; font-size: 10px; letter-spacing: 3px; background: #ff7a1a; color: #120800; padding: 3px 8px; font-weight: 800; }
+  .hfeat .box b { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 14px 9px; background: linear-gradient(0deg, rgba(0,0,0,.85), rgba(0,0,0,0)); font-family: "Arial Narrow", "Bahnschrift", Arial, sans-serif; font-size: 18px; letter-spacing: 1px; font-weight: 600; text-transform: none; }
+  .htitle { left: 0; top: 33vh; width: 100%; height: 86px; }
+  .htitle .emb { position: absolute; left: -6px; top: -16px; width: 112px; height: 112px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: radial-gradient(circle, rgba(255,255,255,.1), rgba(255,255,255,0) 60%); box-shadow: inset 0 0 20px rgba(255,255,255,.08); }
+  .htitle .emb:after { content: ''; position: absolute; left: 12px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border: 2px solid #f3efe4; }
+  .htitle .bar { position: absolute; left: 60px; right: 40px; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(10,12,16,.82), rgba(10,12,16,.55) 70%, rgba(10,12,16,0)); border-top: 1px solid rgba(255,255,255,.14); border-bottom: 1px solid rgba(255,255,255,.14); display: flex; align-items: center; padding-left: 70px; }
+  .htitle .bar:before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 48px; background: linear-gradient(90deg, rgba(255,255,255,.14), rgba(255,255,255,0)); }
+  .htitle h1 { font-size: clamp(22px, 3.5vw, 46px); letter-spacing: 4px; white-space: nowrap; font-weight: 700; text-shadow: 0 2px 14px rgba(0,0,0,.8); }
+  .htitle h1 em { color: var(--acc); }
+  .hmenu { left: 84px; top: calc(33vh + 130px); width: auto; }
+  .hmenu .hb { display: block; width: auto; min-width: 150px; font-size: 25px; font-weight: 500; letter-spacing: 2px; padding: 5px 18px 4px 16px; margin: 0 0 8px; border: none; color: #8a8478; background: rgba(8,9,12,.72); clip-path: none; text-shadow: none; transform: rotate(-1.2deg); font-family: "Arial Narrow", "Bahnschrift Condensed", "Roboto Condensed", "Segoe UI", Arial, sans-serif; text-transform: uppercase; }
+  .hmenu .hb.on, .hmenu .hb:hover, #bonusWrap.open > .hb { background: #d4621a; color: #1a0c04; border: none; padding-left: 16px; font-weight: 700; box-shadow: 0 0 18px rgba(255,120,30,.45); }
+  .hmenu .hb.on:after, .hmenu .hb:hover:after { content: ''; position: absolute; right: -9px; top: 50%; width: 3px; height: 3px; background: #ff8a30; box-shadow: 0 0 6px #ff8a30; }
+  .hmenu:hover .hb.on:not(:hover) { background: rgba(8,9,12,.72); color: #8a8478; box-shadow: none; }
+  #bonusWrap .fly { margin-left: 14px; width: 210px; } .hmenu .hb.wip { font-size: 20px; } .hmenu .hb.wip small { font-size: 9px; }
+  .hfoot { left: 84px; bottom: 5vh; font-family: "Arial Narrow", Arial, sans-serif; font-size: 15px; letter-spacing: 1px; line-height: 1.7; color: #d6cfc0; transform: rotate(-1.2deg); text-shadow: 1px 1px 3px #000; }
+  .hpl { position: absolute; right: 70px; top: 40px; width: min(540px, 40vw); transform: rotate(-3.2deg); transform-origin: right top; font-family: "Arial Narrow", "Bahnschrift Condensed", "Roboto Condensed", Arial, sans-serif; }
+  .hph { background: linear-gradient(90deg, #aab2c4, #c9d0df); color: #10131a; font-size: 24px; padding: 4px 12px; box-shadow: 0 6px 16px rgba(0,0,0,.5); }
+  .hpn { background: rgba(6,7,10,.88); color: #d8e84a; font-size: 26px; padding: 10px 14px 10px 42px; margin-top: 2px; position: relative; }
+  .hpn i { position: absolute; left: 14px; top: 50%; margin-top: -8px; border: 8px solid transparent; border-left: 12px solid #dcdcdc; }
+  .hps { margin-top: 6px; border: 1px solid #c86a1c; color: #ff8a22; font-size: 22px; text-align: right; padding: 8px 14px; background: rgba(6,7,10,.7); letter-spacing: 1px; }
+  .hpt { position: absolute; right: -24px; top: 30px; width: 14px; height: 44px; background: #4a62d8; }
+  #home .hver { right: 74px; top: 8px; bottom: auto; font-family: "Arial Narrow", Arial, sans-serif; font-size: 13px; color: #cfc8b8; letter-spacing: 1px; }
+  #homeCl { left: 70px; }
 </style>
 </head>
 <body class="home">
@@ -310,19 +355,24 @@
 
 <div id="online"><i></i>PLAYERS ONLINE: <b id="onlineN">--</b></div>
 <div id="home">
-  <div class="hbg"></div><div class="hsmoke"></div>
+  <div class="hbg"></div><div class="hsmoke"></div><div class="hsmoke s2"></div>
   <div id="homeCan"><canvas id="homeCanvas"></canvas></div>
-  <div id="hembers"></div><div class="hvig"></div><div class="hlines"></div>
-  <div class="hfeat" data-h="cl"><span class="tag">CHANGELOG</span><div class="box"><b id="hfTitle">WHAT'S NEW</b><span>CLICK TO READ &gt;</span></div></div>
-  <div class="htitle"><h1>SURSTR&Ouml;MMING<br><em>ZOMBIES</em></h1><p>SURVIVE &middot; FIGHT &middot; REPEAT</p></div>
-  <div class="hmenu">
-    <button class="hb" data-h="mp">MULTIPLAYER<small>team deathmatch</small></button>
-    <button class="hb" data-h="zombies">ZOMBIES<small>survive the horde</small></button>
-    <div id="bonusWrap"><button class="hb" data-h="bonus">BONUS</button><div class="fly"><button class="hb wip" data-h="wip">WIP<small>coming soon</small></button><button class="hb wip" data-h="wip">WIP<small>coming soon</small></button></div></div>
+  <div id="hembers"></div><div class="hvig"></div><div class="hlines"></div><div class="hlines r"></div>
+  <div class="hL">
+    <div class="hfeat" data-h="cl"><span class="tag">CHANGELOG</span><div class="box"><div class="shot"><i>NEW</i></div><b id="hfTitle">WHAT'S NEW</b></div></div>
+    <div class="htitle"><div class="emb"></div><div class="bar"><h1>SURSTR&Ouml;MMING <em>ZOMBIES</em></h1></div></div>
+    <div class="hmenu">
+      <button class="hb on" data-h="mp">MULTIPLAYER</button>
+      <button class="hb" data-h="zombies">ZOMBIES</button>
+      <div id="bonusWrap"><button class="hb" data-h="bonus">BONUS</button><div class="fly"><button class="hb wip" data-h="wip">WIP<small>coming soon</small></button><button class="hb wip" data-h="wip">WIP<small>coming soon</small></button></div></div>
+    </div>
+    <div class="hfoot">YOU ARE PARTY LEADER<br>PARTY PRIVACY: OPEN<br>PLAYING AS <b id="hfName">GUEST</b></div>
+  </div>
+  <div class="hR">
+    <div class="hpl"><div class="hph"><span id="hpCount">1</span> PLAYERS ONLINE</div><div class="hpn"><i></i><span id="hpName">GUEST</span></div><div class="hps">SPLITSCREEN - WIP</div><div class="hpt"></div></div>
   </div>
   <div id="homeCl"></div>
-  <div class="hfoot">PLAYING AS <b id="hfName">GUEST</b></div>
-  <div class="hver">v0.5</div>
+  <div class="hver">33.11.9.0 &middot; v0.5</div>
 </div>
 <div id="pvp"></div><div id="pvpHud"></div><div id="pvpEnd"></div>
 <div id="menu">
@@ -8087,6 +8137,7 @@ activateMap('factory');
 showMenu('main');
 document.body.classList.add('home'); homeOpen();
 setTimeout(() => { fadeEl.style.opacity = '0'; setTimeout(() => { fadeEl.style.pointerEvents = 'none'; }, 460); }, 160);
+setInterval(() => { try { const n = MP.onlineCount(); document.getElementById('hpCount').textContent = n > 0 ? n : 1; const nm = (MP.name || (() => { try { return localStorage.getItem('zmb_name'); } catch (e) { return ''; } })() || 'GUEST'); document.getElementById('hpName').textContent = nm; document.getElementById('hfName').textContent = nm; } catch (e) {} }, 700);
 try {   // online counter: if the browser blocks the connection the game must still start
   MP.init();   // connect right away so the main menu can show who is online
   setInterval(() => { try { MP.presence(); } catch (e) {} }, 20000);
