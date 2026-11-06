@@ -6,7 +6,7 @@
 <title>SURSTRÖMMING FACTORY - Zombies</title>
 <link rel="icon" href="https://i.imgur.com/hUrgrQg.jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600&family=Michroma&display=swap" rel="stylesheet">
 <style>
   :root { --txt: #e6e6e6; --dim: #8e949b; --acc: #ffb02e; }
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -301,7 +301,7 @@
   @keyframes hcan { from { transform: translate(-50%, -51.5%) rotate(-4deg); } to { transform: translate(-50%, -48.5%) rotate(1deg); } }
   #homeCan canvas { filter: brightness(.82) contrast(1.1) saturate(1.1) drop-shadow(0 30px 50px rgba(0,0,0,.9)) drop-shadow(0 -6px 26px rgba(255,190,110,.45)); }
   .hL { position: absolute; left: 0; top: 0; bottom: 0; width: min(640px, 48vw); transform-origin: left center; transform: perspective(1500px) rotateY(7deg); }
-  .hR { position: absolute; right: 0; top: 0; width: min(580px, 42vw); transform-origin: right center; transform: perspective(1500px) rotateY(-9deg); }
+  .hR { position: absolute; right: 0; top: 0; width: min(580px, 42vw); transform-origin: right center; transform: none; }
   .hfeat { left: 70px; top: 44px; width: min(480px, 36vw); }
   .hfeat .tag { font-size: 18px; letter-spacing: 4px; padding: 6px 18px 4px; margin-left: -4px; transform: skewX(-6deg) rotate(-1.5deg); }
   .hfeat .box { margin-top: -2px; padding: 0; border: 1px solid rgba(190,205,230,.55); background: rgba(6,8,12,.7); transform: rotate(-1.5deg); box-shadow: 0 0 0 5px rgba(0,0,0,.35), 0 14px 30px rgba(0,0,0,.6); }
@@ -322,7 +322,7 @@
   .hmenu:hover .hb.on:not(:hover) { background: rgba(8,9,12,.72); color: #8a8478; box-shadow: none; }
   #bonusWrap .fly { margin-left: 14px; width: 210px; } .hmenu .hb.wip { font-size: 20px; } .hmenu .hb.wip small { font-size: 9px; }
   .hfoot { left: 84px; bottom: 5vh; font-family: "Arial Narrow", Arial, sans-serif; font-size: 15px; letter-spacing: 1px; line-height: 1.7; color: #d6cfc0; transform: rotate(-1.2deg); text-shadow: 1px 1px 3px #000; }
-  .hpl { position: absolute; right: 70px; top: 40px; width: min(540px, 40vw); transform: rotate(-3.2deg); transform-origin: right top; font-family: "Arial Narrow", "Bahnschrift Condensed", "Roboto Condensed", Arial, sans-serif; }
+  .hpl { position: absolute; right: 70px; top: 40px; width: min(540px, 40vw); font-family: "Arial Narrow", "Bahnschrift Condensed", "Roboto Condensed", Arial, sans-serif; }
   .hph { background: linear-gradient(90deg, #aab2c4, #c9d0df); color: #10131a; font-size: 24px; padding: 4px 12px; box-shadow: 0 6px 16px rgba(0,0,0,.5); }
   .hpn { background: rgba(6,7,10,.88); color: #d8e84a; font-size: 26px; padding: 10px 14px 10px 42px; margin-top: 2px; position: relative; }
   .hpn i { position: absolute; left: 14px; top: 50%; margin-top: -8px; border: 8px solid transparent; border-left: 12px solid #dcdcdc; }
@@ -401,6 +401,79 @@
   .zmm:hover .btn.on:not(:hover) { background: none; color: #d9dde6; box-shadow: none; font-weight: 500; }
   .zmm .btn.back { color: #9aa3b4; } .zmm .zgap { height: 18px; }
   .zpl { right: 70px; top: 40px; width: min(480px, 38vw); }
+
+  /* ---------- BO3-style MAPS page (zombies) ---------- */
+  body.zmaps #coinsEl, body.zmaps #online, body.zmaps #mprev { display: none !important; }
+  .zmw { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: radial-gradient(ellipse 80% 70% at 62% 38%, #0b111b 0%, #04070c 55%, #010204 100%); font-family: "Bahnschrift Condensed", "Bahnschrift", "DIN Condensed", "Oswald", "Arial Narrow", "Roboto Condensed", Arial, sans-serif; color: #e6e9ef; --u: min(1vw, 1.78vh); }
+  .zmw:before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px); pointer-events: none; }
+  .zmh { position: absolute; left: 4.7vw; top: 2.6vh; font-size: calc(var(--u) * 4.2); font-weight: 700; letter-spacing: .08em; color: #f1f1ee; font-family: "Bahnschrift", "Eurostile", "Segoe UI", Arial, sans-serif; text-shadow: 0 0 calc(var(--u) * .8) rgba(160,190,255,.35), 2px 2px 0 rgba(0,0,0,.8); line-height: 1; }
+  .zmhe { position: absolute; left: -2.9vw; top: -.4vh; width: 2.1vw; height: 6.4vh; background: linear-gradient(90deg, rgba(190,200,220,.5), rgba(190,200,220,.08) 70%, transparent); border-left: 2px solid rgba(240,240,240,.85); }
+  .zmhe:after { content: ''; position: absolute; left: .55vw; top: 0; bottom: 0; width: 2px; background: rgba(220,225,235,.45); }
+  .zmln { position: absolute; left: 0; right: 0; top: 11.6vh; height: 1px; background: linear-gradient(90deg, rgba(170,190,225,.85), rgba(170,190,225,.5) 60%, rgba(170,190,225,.25)); }
+  .zmcol { position: absolute; left: 4.9vw; top: 18vh; width: 28vw; }
+  .zml { max-height: 58vh; overflow-y: auto; scrollbar-width: none; padding-right: 4px; }
+  .zml::-webkit-scrollbar { display: none; }
+  .zmr { display: flex; align-items: center; gap: .5vw; height: 5.3vh; }
+  .zmi { font-family: inherit; text-align: left; font-size: calc(var(--u) * 1.75); letter-spacing: .05em; text-transform: uppercase; color: #dcdfe6; background: rgba(8,12,18,.78); border: none; padding: .45vh 1vw 0; height: 4.5vh; line-height: 4.1vh; cursor: pointer; white-space: nowrap; max-width: 100%; transition: none; }
+  .zmi.on { background: linear-gradient(180deg, #ff6a2a, #e24a12); color: #ffb48a; box-shadow: 0 0 calc(var(--u) * 1.3) rgba(255,90,30,.65), inset 0 0 0 1px rgba(255,170,120,.5); text-shadow: 0 0 6px rgba(255,200,150,.5); position: relative; }
+  .zmi.on:before { content: ''; position: absolute; left: -.9vw; top: 50%; margin-top: -4px; border: 4px solid transparent; border-left: 6px solid #ff7a2a; }
+  .zmlk { font-family: inherit; font-size: calc(var(--u) * 1.3); color: #8d97a8; background: rgba(8,12,18,.78); border: none; padding: .4vh .6vw; cursor: pointer; } .zmlk.on { color: #ff5a7a; }
+  .zmpg { margin-top: 1.4vh; display: flex; align-items: center; justify-content: center; gap: 1.6vw; font-size: calc(var(--u) * 1.7); color: #eceef2; }
+  .zmpg button { background: none; border: none; color: #ff7a2a; font-size: calc(var(--u) * 1.5); cursor: pointer; padding: 0 .4vw; text-shadow: 0 0 8px rgba(255,100,30,.7); }
+  .zmp { position: absolute; left: 35.2vw; right: 4.9vw; top: 18vh; bottom: 12vh; }
+  .zmimg { position: relative; width: 100%; aspect-ratio: 2.37 / 1; max-height: 48vh; overflow: hidden; border: 1px solid rgba(160,180,215,.3); box-shadow: 0 0 40px rgba(0,0,0,.8); background: #000; }
+  .zmimg img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.12) contrast(1.06) brightness(.95); }
+  .zmimg:after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.55) 60%, rgba(0,0,0,0)); }
+  .zmimg b { position: absolute; left: 1.2vw; bottom: 1.4vh; z-index: 2; background: #f2f2f2; color: #0c0c0c; font-size: calc(var(--u) * 2.9); padding: .3vh 1vw 0; font-weight: 600; text-transform: uppercase; line-height: 1.25; box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+  .zmimg em { position: absolute; right: 1vw; bottom: 9vh; z-index: 2; font-style: normal; font-size: calc(var(--u) * 1.55); color: #fff; text-shadow: 1px 1px 3px #000; }
+  .zmbr { padding: 3vh 1.2vw 0; } .zmbr h3 { margin: 0 0 1.8vh; font-size: calc(var(--u) * 1.95); font-weight: 600; letter-spacing: .02em; color: #fff; }
+  .zmbr p { margin: 0 0 1.6vh; font-size: calc(var(--u) * 1.5); line-height: 1.4; color: #d3d7df; max-width: 62vw; } .zmbr p.zmby { color: #ff8a4a; }
+  .zmf { position: absolute; left: 0; right: 0; bottom: 0; height: 6.6vh; border-top: 1px solid rgba(160,180,215,.4); background: linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.85)); display: flex; align-items: center; gap: 1.8vw; padding-left: 2.4vw; font-size: calc(var(--u) * 1.5); }
+  .zmf button { font-family: inherit; font-size: inherit; background: none; border: none; color: #e6e9ef; cursor: pointer; padding: 0; }
+  .zmf i { display: inline-block; width: 2.2vh; height: 2.2vh; line-height: 2vh; text-align: center; border: 2px solid #4f8cff; border-radius: 50%; font-style: normal; font-size: 1.3vh; margin-right: .5vw; vertical-align: middle; color: #4f8cff; } .zmf i.o { border-color: #ff5a5a; color: #ff5a5a; }
+
+  /* ---------- fonts + 80% scale for the BO3-style menus ---------- */
+  :root { --ft: "Michroma", "Bahnschrift", "Eurostile", "Segoe UI", sans-serif; --fm: "Barlow Condensed", "Bahnschrift Condensed", "DIN Condensed", "Arial Narrow", sans-serif; --fb: "Barlow Semi Condensed", "Barlow Condensed", "Arial Narrow", sans-serif; }
+  #home, #pvp, #menu, .zpl { zoom: .8; }
+  #pvp, #home, .zmw, body.zmain #menu, body.zmain #menu *, #home *, #pvp *, .zmw * { font-family: var(--fm) !important; }
+  .zmw .zmbr p, #home .hfoot, #home .hfoot *, #homeCl p, .pvnote, .pvrow span, .hpress, .hpress * { font-family: var(--fb) !important; }
+  .htitle h1, .pvt, .zmh, .zmtitle .bar, .zmtitle .bar *, #pvp .pvh, .zmw .zmimg b, .hfeat .tag, .hclh { font-family: var(--ft) !important; font-weight: 400 !important; letter-spacing: .04em; }
+  .zmw .zmimg b, .zmw .zmbr h3 { font-family: var(--fm) !important; font-weight: 700 !important; }
+  .zmh { font-size: calc(var(--u) * 3.6) !important; }
+
+  /* ---------- BO3-style in-game HUD ---------- */
+  #hud { --p: .0926vh; font-family: var(--fm) !important; }
+  #hud * { font-family: var(--fm) !important; }
+  #score { top: auto !important; left: auto !important; right: calc(var(--p) * 215); bottom: calc(var(--p) * 188); font-size: calc(var(--p) * 56); font-weight: 700; color: #f4f4f2; letter-spacing: 1px; text-align: right; text-shadow: 0 0 10px rgba(0,0,0,.9), 2px 2px 0 #000 !important; line-height: 1; }
+  #score .hudlabel { display: none; }
+  #teamPts { position: absolute; right: calc(var(--p) * 215); bottom: calc(var(--p) * 250); display: flex; flex-direction: column-reverse; align-items: flex-end; gap: calc(var(--p) * 4); font-size: calc(var(--p) * 40); font-weight: 700; line-height: 1; text-shadow: 0 0 8px rgba(0,0,0,.9), 2px 2px 0 #000; }
+  #teamPts small { font-size: calc(var(--p) * 17); font-weight: 600; letter-spacing: 1px; margin-right: calc(var(--p) * 10); opacity: .85; vertical-align: middle; text-transform: uppercase; }
+  body.pvp #teamPts { display: none; }
+  #weaponBox { right: calc(var(--p) * 215) !important; bottom: calc(var(--p) * 70) !important; }
+  #weaponBox:before { content: ''; position: absolute; right: calc(var(--p) * -110); bottom: calc(var(--p) * -60); width: calc(var(--p) * 330); height: calc(var(--p) * 230); background: radial-gradient(ellipse at 60% 55%, rgba(120,6,6,.55), rgba(90,0,0,.25) 45%, transparent 70%); filter: blur(2px); z-index: -1; pointer-events: none; }
+  #wAmmo { font-size: calc(var(--p) * 62); font-weight: 700; color: #f4f4f2; letter-spacing: 1px; line-height: 1; text-shadow: 0 0 10px rgba(0,0,0,.9), 2px 2px 0 #000; }
+  #wAmmo small { font-size: calc(var(--p) * 62); color: #f4f4f2; font-weight: 700; }
+  #wName { order: 2; font-size: calc(var(--p) * 18); letter-spacing: 2px; color: #b9bec8; margin: calc(var(--p) * 6) 0 0; text-transform: uppercase; }
+  #weaponBox { display: flex; flex-direction: column; align-items: flex-end; }
+  #wAmmo { order: 1; } #wSlots { order: 3; }
+  #roundNum { left: calc(var(--p) * 44) !important; bottom: calc(var(--p) * 14) !important; font: 700 calc(var(--p) * 124)/1 var(--fm) !important; letter-spacing: 3px; color: #8a1515 !important; opacity: .88; text-shadow: 0 0 18px rgba(120,0,0,.6), 2px 2px 0 rgba(0,0,0,.7) !important; }
+  #roundNum .t5::after { height: calc(var(--p) * 9); }
+  #perks { left: calc(var(--p) * 58) !important; bottom: calc(var(--p) * 160) !important; display: flex; gap: calc(var(--p) * 10); font-size: 0; }
+  .pk { width: calc(var(--p) * 54) !important; height: calc(var(--p) * 60) !important; margin: 0 !important; border: none !important; border-radius: 0 !important; background: #e4eaf1 !important; clip-path: polygon(0 0, 100% 0, 100% 66%, 50% 100%, 0 66%); filter: drop-shadow(0 2px 3px #000); }
+  .pk::before { content: '' !important; position: absolute !important; inset: calc(var(--p) * 3) !important; width: auto !important; height: auto !important; left: calc(var(--p) * 3) !important; top: calc(var(--p) * 3) !important; border: none !important; background: linear-gradient(160deg, color-mix(in srgb, var(--c) 78%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 55%, #000)) !important; clip-path: polygon(0 0, 100% 0, 100% 66%, 50% 100%, 0 66%); }
+  .pk u { line-height: calc(var(--p) * 44) !important; font: 700 calc(var(--p) * 28)/1 var(--fm) !important; z-index: 2; text-shadow: 0 2px 3px rgba(0,0,0,.7) !important; }
+  #puHud { bottom: calc(var(--p) * 36) !important; gap: calc(var(--p) * 44) !important; align-items: flex-end; }
+  #puHud .pu { position: relative; width: calc(var(--p) * 74); height: calc(var(--p) * 74); display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, #8a1d1d, #3a0707 80%); border: calc(var(--p) * 3) solid #f0f0f0; border-radius: 12% 12% 40% 40%; box-shadow: 0 0 14px rgba(255,60,40,.5), inset 0 0 12px rgba(0,0,0,.7); }
+  #puHud .pu.dbl { background: radial-gradient(circle at 50% 35%, #d8a21a, #5b3a04 80%); box-shadow: 0 0 14px rgba(255,190,40,.55), inset 0 0 12px rgba(0,0,0,.7); }
+  #puHud .pu.gas { background: radial-gradient(circle at 50% 35%, #3f6a2a, #12230b 80%); box-shadow: 0 0 14px rgba(120,220,80,.45); }
+  #puHud .pu b { font: 700 calc(var(--p) * 40)/1 var(--fm); color: #fff; font-weight: 700; text-shadow: 0 2px 3px #000; }
+  #puHud .pu em { position: absolute; right: calc(var(--p) * -6); top: calc(var(--p) * -10); font: 700 calc(var(--p) * 22)/1 var(--fm); font-style: normal; color: #ffe27a; background: rgba(0,0,0,.75); padding: 1px calc(var(--p) * 6); border-radius: 4px; }
+  #puHud .pu small { position: absolute; top: calc(var(--p) * 80); left: 50%; transform: translateX(-50%); font: 600 calc(var(--p) * 15)/1 var(--fm); letter-spacing: 1px; white-space: nowrap; color: #e8e8e8; opacity: .85; }
+
+  #testHud { position: fixed; left: 14px; top: 90px; z-index: 40; background: rgba(0,0,0,.62); border: 1px solid #ff8a22; padding: 8px 12px; font: 600 14px/1.45 "Barlow Condensed", Arial Narrow, sans-serif; color: #e9e9e9; letter-spacing: 1px; pointer-events: none; }
+  #testHud b { display: block; color: #ff8a22; font-size: 16px; margin-bottom: 4px; }
+  #testHud i { display: inline-block; min-width: 54px; font-style: normal; color: #ffd24a; }
+  #testHud small { display: block; margin-top: 4px; color: #9aa; font-size: 12px; }
 </style>
 </head>
 <body class="home">
@@ -3026,15 +3099,25 @@ function updateHUD() {
   const W = WEAPONS[player.cur], a = player.ammo[player.cur];
   setText(el.wName, W.name + (player.pap[player.cur] ? ' [PaP]' : ''));
   if (player.cur === 'para') setHTML(el.wAmmo, `<small>HEAT</small> <span class="heat"><i class="${state.over ? 'hot' : state.heat > 0.7 ? 'warm' : ''}" style="width:${Math.round(state.heat * 100)}%"></i></span>` + (state.over ? ' <small>OVERHEATED</small>' : ' <small>&infin;</small>'));
-  else setHTML(el.wAmmo, `${a.mag} <small>/ ${a.res === Infinity ? '&infin;' : a.res}</small>` + (state.reloading ? ' <small>RELOAD</small>' : ''));
+  else setHTML(el.wAmmo, `${a.mag}<small>/${a.res === Infinity ? '&infin;' : a.res}</small>` + (state.reloading ? ' <small>RELOAD</small>' : ''));
   setText(el.wSlots, '');
   const hr = state.health / state.maxHealth; $('lowhp').style.opacity = hr < 0.4 ? (1 - hr / 0.4).toFixed(2) : 0;
   el.cross.style.opacity = (1 - state.ads).toFixed(2);
   const PERKC = { jug: ['#d6242c', 'J', 'JUGGER-NOG'], quick: ['#2b86e6', 'Q', 'QUICK REVIVE'], speed: ['#33b05a', 'S', 'SPEED COLA'], double: ['#e0b52a', '2', 'DOUBLE TAP'], stamin: ['#8fb43a', '↑', 'STAMIN-UP'], mule: ['#d4631f', 'M', 'MULE KICK'], vulture: ['#5aa02a', 'V', 'VULTURE AID'], lunar: ['#7a8cff', 'L', 'LUNAR LEGS'], head: ['#d6242c', 'H', 'HEADHUNTER'], cash: ['#e0b52a', '$', 'CASHBACK COLA'] };
   setHTML(el.perks, [jug.bought ? 'jug' : null, ...boughtExtraPerks].filter(Boolean).map(k => `<i class="pk" style="--c:${PERKC[k][0]}" title="${PERKC[k][2]}"><u>${PERKC[k][1]}</u></i>`).join(''));
-  setHTML(puHud, (instaT > 0 ? `<span>INSTA-KILL ${Math.ceil(instaT)}</span>` : '') + (doubleT > 0 ? `<span>2X POINTS ${Math.ceil(doubleT)}</span>` : '') + (gasClouds.length && playerHidden() ? '<span>HIDDEN IN GAS</span>' : ''));
+  setHTML(puHud, (instaT > 0 ? `<span class="pu"><b>&#9760;</b><em>${Math.ceil(instaT)}</em><small>INSTA-KILL</small></span>` : '') + (doubleT > 0 ? `<span class="pu dbl"><b>2X</b><em>${Math.ceil(doubleT)}</em><small>DOUBLE POINTS</small></span>` : '') + (gasClouds.length && playerHidden() ? '<span class="pu gas"><b>&#9729;</b><small>HIDDEN IN GAS</small></span>' : ''));
   const hv = Math.max(house.hold / 0.7, cdHold / 0.7, swHold / swMax, wbHold / 0.55, TL.hold / 1.5, (MP.rt || 0) / 3); el.hold.style.display = hv > 0.02 ? 'block' : 'none'; el.hold.firstChild.style.width = Math.min(100, hv * 100) + '%';
 }
+
+const teamPtsEl = document.createElement('div'); teamPtsEl.id = 'teamPts'; hudEl.appendChild(teamPtsEl);
+const TEAMC = ['#4aa8ff', '#8dff9a', '#fff48a', '#ffb0f0', '#9af3ff'];
+let _tpKey = '';
+function teamPtsTick() {
+  let h = '';
+  if (MP.on && !PVP.on) { let i = 0; for (const p of MP.peers.values()) { if (!p) continue; h += `<div style="color:${TEAMC[i % TEAMC.length]}"><small>${p.n || 'PLAYER'}</small>${p.sc | 0}</div>`; i++; } }
+  if (h !== _tpKey) { _tpKey = h; teamPtsEl.innerHTML = h; }
+}
+setInterval(() => { try { teamPtsTick(); } catch (e) {} }, 400);
 let noticeTimer = 0;
 function notice(text, ms = 2600) { el.notice.textContent = text; el.notice.classList.add('on'); clearTimeout(noticeTimer); noticeTimer = setTimeout(() => el.notice.classList.remove('on'), ms); }
 let bannerTimer = 0;
@@ -3422,8 +3505,60 @@ const barGeo = new THREE.PlaneGeometry(1, 1);
 const barBg = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.6, depthWrite: false });
 const barFg = new THREE.MeshBasicMaterial({ color: 0x7fe05a, depthWrite: false });
 
+/* ---------- zombie details: dismemberment, crawlers, test mode ---------- */
+const TEST = { on: false, arm: false, n: 0 };
+const TEST_LIST = [['NEW MODEL 1', { kind: 'mz', mzv: 0 }], ['NEW MODEL 2', { kind: 'mz', mzv: 1 }], ['NEW MODEL 3', { kind: 'mz', mzv: 2 }], ['NEW MODEL 4', { kind: 'mz', mzv: 3 }], ['NEW MODEL 5', { kind: 'mz', mzv: 4 }], ['NEW MODEL 6', { kind: 'mz', mzv: 5 }], ['OLD NORMAL', {}], ['VERITY', { kind: 'verity' }], ['TUNG SAHUR', { kind: 'tung' }], ['CAT GUY', { kind: 'cat' }], ['VERITY BOSS', { boss: true, kind: 'vboss' }], ['IRON WARLORD', { boss: true, warlord: true }], ['SURSTROMMING BOSS', { boss: true }], ['HELL HOUND', { hound: true }], ['CRAWLER', { kind: 'mz', mzv: 0, crawler: true }]];
+const testHudEl = document.createElement('div'); testHudEl.id = 'testHud'; testHudEl.style.display = 'none';
+testHudEl.innerHTML = '<b>TESTING</b>' + TEST_LIST.map((e, i) => `<div><i>${i < 10 ? (i + 1) % 10 : 'SHIFT+' + ((i - 9) % 10)}</i> ${e[0]}</div>`).join('') + '<div><i>K</i> CLEAR ALL</div><small>SHOOT LIMBS TO CUT THEM OFF</small>';
+document.body.appendChild(testHudEl);
+const gibs = [];
+function spawnGib(m, z) {
+  try {
+    const c = new THREE.Mesh(m.geometry, m.material); m.updateWorldMatrix(true, false); m.matrixWorld.decompose(c.position, c.quaternion, c.scale); scene.add(c);
+    const a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 2.5;
+    gibs.push({ m: c, vx: Math.cos(a) * sp, vy: 2 + Math.random() * 3, vz: Math.sin(a) * sp, rx: (Math.random() - .5) * 12, rz: (Math.random() - .5) * 12, age: 0, rest: false });
+    while (gibs.length > 36) { const g = gibs.shift(); scene.remove(g.m); }
+  } catch (e) {}
+}
+function updateGibs(dt) {
+  for (let i = gibs.length - 1; i >= 0; i--) {
+    const g = gibs[i]; g.age += dt;
+    if (!g.rest) { g.vy -= 14 * dt; g.m.position.x += g.vx * dt; g.m.position.y += g.vy * dt; g.m.position.z += g.vz * dt; g.m.rotation.x += g.rx * dt; g.m.rotation.z += g.rz * dt; if (g.m.position.y < 0.12) { g.m.position.y = 0.12; if (Math.abs(g.vy) > 2) { g.vy *= -0.3; g.vx *= 0.6; g.vz *= 0.6; g.rx *= 0.5; g.rz *= 0.5; } else g.rest = true; } }
+    if (g.age > 14) { scene.remove(g.m); gibs.splice(i, 1); }
+  }
+}
+function cutLimb(z, key, silent, point) {
+  if (!z.limbs || !z.limbs[key] || (z.cut && z.cut[key])) return false;
+  z.cut = z.cut || {}; z.cut[key] = 1;
+  for (const m of z.limbs[key]) { if (!silent) spawnGib(m, z); m.visible = false; const k = z.meshes.indexOf(m); if (k >= 0) z.meshes.splice(k, 1); }
+  if (!silent) { const p = point || new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z); burst(p, 14, pMat.blood, 6, 0.9); burst(p, 6, pMat.blood, 3, 0.5, 6); try { sfx.hit(); } catch (e) {} }
+  if (key[0] === 'l' && !z.crawl) { z.crawl = true; z.runner = false; z.limp = false; z.speed = Math.min(1.9, 0.9 + Math.max(1, state.wave) * 0.05); z.reach = 2.1; z.mzA = null; z.stagger = 0.3; if (z.frozen) crawlPose(z, state.time, z.phase); }
+  return true;
+}
+function crawlPose(z, t, ph) {   // prone crawl: the whole body tips forward onto its chest and drags itself with the arms
+  const s = Math.sin(ph * 1.2);
+  z.root.rotation.x = 1.4; z.root.position.y = 0.28;
+  z.upper.rotation.set(0.15, 0, 0); z.head.rotation.set(-1.15 + Math.sin(ph * 0.6) * 0.1, Math.sin(ph * 0.5) * 0.2, 0);
+  z.armL.rotation.set(-3.0 + s * 0.45, 0, -0.15); z.armR.rotation.set(-3.0 - s * 0.45, 0, 0.15);
+  z.eL.rotation.x = -0.25 - Math.max(0, -s) * 0.5; z.eR.rotation.x = -0.25 - Math.max(0, s) * 0.5;
+  z.legL.rotation.set(0.1 + s * 0.1, 0, 0); z.legR.rotation.set(0.1 - s * 0.1, 0, 0); z.kL.rotation.x = z.kR.rotation.x = 0.1;
+}
+function testSpawn(i) {
+  const e = TEST_LIST[i]; if (!e) return;
+  const n = TEST.n++, fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), rx = Math.cos(player.yaw), rz = -Math.sin(player.yaw), d = 4 + (((n / 5) | 0) % 3) * 1.8, off = ((n % 5) - 2) * 1.5;
+  createZombie(player.pos.x + fx * d + rx * off, player.pos.z + fz * d + rz * off, Object.assign({ frozen: true }, e[1]));
+  notice('SPAWNED: ' + e[0], 1200);
+}
+function testClear() { for (const z of zombies.splice(0)) scene.remove(z.root); for (const g of gibs.splice(0)) scene.remove(g.m); notice('CLEARED', 900); }
+window.addEventListener('keydown', e => {
+  if (!TEST.on || state.phase !== 'playing') return;
+  const m = /^Digit(\d)$/.exec(e.code);
+  if (m) { testSpawn((+m[1] + 9) % 10 + (e.shiftKey ? 10 : 0)); e.stopImmediatePropagation(); e.preventDefault(); }
+  else if (e.code === 'KeyK') { testClear(); e.stopImmediatePropagation(); e.preventDefault(); }
+}, true);
+
 function createZombie(x, z, opt = {}) {
-  const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : kind === 'cat' ? catVariant : kind === 'mz' ? pick(mzVariants) : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
+  const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : kind === 'cat' ? catVariant : kind === 'mz' ? (opt.mzv != null ? mzVariants[opt.mzv] : pick(mzVariants)) : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
   const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.9, 0.98) : kind === 'cat' ? rnd(0.98, 1.04) : kind === 'mz' ? rnd(1.1, 1.2) : boss ? 1.75 : hound ? 1 : rnd(0.95, 1.03); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.92, 1.06), s * rnd(0.98, 1.04), s * rnd(0.92, 1.06));
   const G = (par, px, py, pz) => { const g = new THREE.Group(); g.position.set(px, py, pz); par.add(g); return g; };
   const M = (geo, par, part, cast = true) => { const m = new THREE.Mesh(geo, v.mat || zMat); m.castShadow = cast; par.add(m); m.userData.part = part; return m; };
@@ -3433,6 +3568,8 @@ function createZombie(x, z, opt = {}) {
   const arm = sx => { const a = G(upper, sx * aw, hound ? 0.02 : (v.shy || 0.58), hound ? 0.44 : 0), u = M(sx > 0 && v.uaR ? v.uaR : v.ua, a, 'arm', false), e = v.el ? G(a, sx * v.el[0], v.el[1], 0) : G(a, 0, -0.3, 0), f = M(sx > 0 && v.faR ? v.faR : v.fa, e, 'arm', false); return { a, e, u, f }; };
   const leg = sx => { const l = G(root, sx * lw, hound ? 0.68 : 0.9, hound ? -0.42 : 0), t = M(sx > 0 && v.thR ? v.thR : v.th, l, 'leg'), k = G(l, 0, hound ? -0.34 : (v.kn || -0.44), 0), sh = M(sx > 0 && v.shR ? v.shR : v.sh, k, 'leg', false); return { l, k, t, sh }; };
   const aL = arm(-1), aR = arm(1), lL = leg(-1), lR = leg(1);
+  const LIMBS = { aL: [aL.u, aL.f], aR: [aR.u, aR.f], lL: [lL.t, lL.sh], lR: [lR.t, lR.sh], hd: [head] };
+  for (const k in LIMBS) for (const m of LIMBS[k]) m.userData.limb = k;
   if (v.mat) {   // dark joint caps hide the gaps where the separate body parts bend
     const cap = (par, r, sy = 1) => { const c = new THREE.Mesh(mzCapGeo, mzCapMat); c.scale.set(r, r * sy, r); par.add(c); return c; };
     for (const q of [aL, aR]) { cap(q.a, 0.085); cap(q.e, 0.062); }
@@ -3454,12 +3591,15 @@ function createZombie(x, z, opt = {}) {
   const zb = {
     root, upper, head: headP, torso, armL: aL.a, armR: aR.a, eL: aL.e, eR: aR.e, legL: lL.l, legR: lR.l, kL: lL.k, kR: lR.k,
     meshes: [torso, head, aL.u, aL.f, aR.u, aR.f, lL.t, lL.sh, lR.t, lR.sh], s, style: (Math.random() * 3) | 0, limp: Math.random() < 0.4,
-    hp, maxHp: hp, speed, kind, boss, warlord: !!opt.warlord, runner: runner || !!opt.warlord || boss, hound, reach: boss ? 2.3 : hound ? 1.5 : 1.2, dmg: boss ? (opt.warlord ? 55 : 60) : hound ? 25 : ZOMBIE_DAMAGE, throwT: 0, canCd: 3,
+    limbs: LIMBS, hp, maxHp: hp, speed, kind, boss, warlord: !!opt.warlord, runner: runner || !!opt.warlord || boss, hound, reach: boss ? 2.3 : hound ? 1.5 : 1.2, dmg: boss ? (opt.warlord ? 55 : 60) : hound ? 25 : ZOMBIE_DAMAGE, throwT: 0, canCd: 3,
     phase: Math.random() * 10, attackCd: 0, spawnT: 0, growlT: rnd(0.5, 3), stagger: 0, stuck: 0, side: Math.random() < 0.5 ? 1 : -1, dead: false, bar: null, deadT: 0, fd: 1,
   };
   zb.meshes.forEach(m => { m.userData.zombie = zb; });
   if (kind === 'vboss') { const [nc, nx] = mkCanvas(256, 64); nx.fillStyle = 'rgba(0,0,0,0.55)'; nx.fillRect(0, 0, 256, 64); nx.fillStyle = '#ff3b2f'; nx.font = 'bold 44px Arial'; nx.textAlign = 'center'; nx.textBaseline = 'middle'; nx.fillText('VERITY', 128, 34); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(nc), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.4, 1); sp.position.y = 2.75; sp.renderOrder = 9; root.add(sp); }
   zb.mid = ++MP.zid; zombies.push(zb);
+  if (opt.frozen) { zb.frozen = true; zb.spawnT = 1; root.position.y = 0; zb.hp = zb.maxHp = 1e9; root.rotation.y = Math.atan2(player.pos.x - x, player.pos.z - z); }
+  const wvC = Math.max(1, state.wave);
+  if (opt.crawler || (kind === 'mz' && !boss && !hound && !opt.frozen && !TEST.on && wvC >= 2 && Math.random() < Math.min(0.14, 0.02 + wvC * 0.012))) { cutLimb(zb, 'lL', true); cutLimb(zb, 'lR', true); if (opt.frozen) crawlPose(zb, 0, 0); }
   burst(new THREE.Vector3(x, 0.2, z), boss ? 20 : 8, pMat.dirt, 4, 0.7);
   return zb;
 }
@@ -3472,12 +3612,14 @@ function ensureBar(z) {
   g.add(bg, fg); scene.add(g); z.bar = { g, fg };
 }
 
-function damageZombie(z, dmg, point, head, knife = false) {
+function damageZombie(z, dmg, point, head, knife = false, obj = null) {
   if (MP.client) { MP.sendHit(z, dmg, head, knife); hitmarker(head); sfx.hit(); burst(point, 4, pMat.blood, 4, 0.6); return; }
   if (z.dead) return;
   if ((instaT > 0 || state.insta) && !z.boss) dmg = z.hp + 1;
   z.hp -= dmg;
   hitmarker(head && z.hp <= 0);
+  const limb = obj && obj.userData && obj.userData.limb;
+  if (limb && (TEST.on || (!z.boss && !z.hound))) { const pr = TEST.on ? 1 : z.hp <= 0 ? (limb === 'hd' ? 0.6 : 1) : (limb === 'hd' ? 0 : 0.2); if (Math.random() < pr) cutLimb(z, limb, false, point); }
   if (z.hp <= 0) { killZombie(z, point, head, knife); return; }
   addScore(HIT_POINTS); popPoints(`+${HIT_POINTS}`, false);
   z.stagger = z.boss ? 0 : 0.18; sfx.hit();
@@ -3866,7 +4008,7 @@ function shoot() {
       if (ph) { end = raycaster.ray.at(ph.t, new THREE.Vector3()); burst(end, 4, pMat.blood, 4, 0.3, 6); MP.send({ t: 'pvp', to: ph.id, d: Math.round(Math.min(90, Math.max(4, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - ph.t / 24) : 1) * (ph.head ? 1.5 : 1) * (PVP.on ? (PVP_SC[player.cur] || 0.4) : 0.4)))) }); }
       else if (hits.length) {
         const h = hits[0]; end = h.point; const z = h.object.userData.zombie;
-        if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1) * (h.object.userData.part === 'head' ? headMul(player.cur) : 1), h.point, h.object.userData.part === 'head');
+        if (z) damageZombie(z, dmgOf(player.cur) * (np > 1 ? Math.max(0.2, 1 - h.distance / 24) : 1) * (h.object.userData.part === 'head' ? headMul(player.cur) : 1), h.point, h.object.userData.part === 'head', false, h.object);
         else burst(h.point, 4, pMat.spark, 4, 0.3, 6);
       } else end = raycaster.ray.at(80, new THREE.Vector3());
       if (pi < 3) spawnTracer(muzzle, end);
@@ -3992,7 +4134,7 @@ function knifeStrike() {
   if (MP.on && (MP.ff || PVP.on)) { const ph = peerHit(raycaster.ray, hits.length ? Math.min(hits[0].distance, KNIFE_RANGE) : KNIFE_RANGE); if (ph && !(hits.length && hits[0].object.userData.zombie && hits[0].distance < ph.t)) { sfx.knifeHit(); MP.send({ t: 'pvp', to: ph.id, d: player.bowie ? 70 : 40 }); return; } }
   if (hits.length) {
     const h = hits[0], z = h.object.userData.zombie;
-    if (z) { sfx.knifeHit(); const dt2 = boughtExtraPerks.has('double') ? 2 : 1; const kd = player.bowie ? (state.wave <= 8 ? (z.boss ? 500 : 1e5) : 300) : KNIFE_DMG; damageZombie(z, kd * dt2, h.point, h.object.userData.part === 'head', true); }
+    if (z) { sfx.knifeHit(); const dt2 = boughtExtraPerks.has('double') ? 2 : 1; const kd = player.bowie ? (state.wave <= 8 ? (z.boss ? 500 : 1e5) : 300) : KNIFE_DMG; damageZombie(z, kd * dt2, h.point, h.object.userData.part === 'head', true, h.object); }
     else burst(h.point, 3, pMat.spark, 3, 0.3, 6);
   }
 }
@@ -4196,6 +4338,41 @@ function mapList(act) {
   return '<div class="label">' + (act === 'host:' ? 'HOST: SELECT MAP' : 'SELECT MAP') + '</div>' + ids.map(id => MAPS[id]).filter(Boolean).map(m => m.custom ? `<div class="lkrow"><div>${btn(act + m.id, m.name, m.sub)}</div><button class="btn lk ${LK.mine[m.id.slice(3)] ? 'on' : ''}" data-a="like:${m.id.slice(3)}">&#9829; ${lkCount(m.id.slice(3))}</button></div>` : btn(act + m.id, m.name, m.sub)).join('')
     + `<div class="pager"><button class="btn ${mapPage <= 0 ? 'off' : ''}" data-a="pg:-1">&lt; PREVIOUS</button><em>${mapPage + 1}/${MAP_PAGES.length}</em><button class="btn ${mapPage >= MAP_PAGES.length - 1 ? 'off' : ''}" data-a="pg:1">NEXT &gt;</button></div>`;
 }
+
+let zmSel = 0;
+function zmMapsHTML(act) {   // BO3-style full-screen MAPS page (zombies menu only): one scrolling list of every map
+  const ids = MAP_ORDER.filter(id => MAPS[id]);
+  if (zmSel >= ids.length || zmSel < 0) zmSel = 0;
+  const item = (id, i) => { const m = MAPS[id]; return `<div class="zmr"><button class="zmi ${i === zmSel ? 'on' : ''}" data-i="${i}" data-id="${id}" data-a="${act}${id}">${m.name}</button>` + (m.custom ? `<button class="zmlk ${LK.mine[id.slice(3)] ? 'on' : ''}" data-a="like:${id.slice(3)}">&#9829; ${lkCount(id.slice(3))}</button>` : '') + '</div>'; };
+  return `<div class="zmw"><div class="zmh"><span class="zmhe"></span>MAPS</div><div class="zmln"></div>`
+    + `<div class="zmcol"><div class="zml" id="zml">${ids.map(item).join('')}</div>`
+    + `<div class="zmpg"><button data-zm="-1">&#9660;</button><span id="zmc">${zmSel + 1} / ${ids.length}</span><button data-zm="1">&#9650;</button></div></div>`
+    + `<div class="zmp" id="zmp"></div>`
+    + `<div class="zmf"><span><i class="x">&#10005;</i> Select</span><button data-a="${act === 'host:' ? 'mpback' : 'main'}"><i class="o">&#9675;</i> Back</button></div></div>`;
+}
+function zmGo(i, scroll) {
+  const items = [...menuButtons.querySelectorAll('.zmi')]; if (!items.length) return;
+  zmSel = Math.max(0, Math.min(items.length - 1, i)); const id = items[zmSel].dataset.id, m = MAPS[id], p = $('zmp'); if (!m || !p) return;
+  items.forEach((b, k) => b.classList.toggle('on', k === zmSel));
+  if (scroll) items[zmSel].scrollIntoView({ block: 'nearest' });
+  const c = $('zmc'); if (c) c.textContent = (zmSel + 1) + ' / ' + items.length;
+  if (p.dataset.id !== id) {
+    p.dataset.id = id;
+    p.innerHTML = `<div class="zmimg"><img src="${m.thumb || drawMapArt(id)}" alt=""><em>${m.custom ? 'Community map' : 'Zombies map ' + (zmSel + 1)}</em><b>${m.name}</b></div><div class="zmbr"><h3>MISSION BRIEFING</h3><p>${MAP_DESC[id] || m.sub || ''}</p>${m.custom ? '<p class="zmby">' + (m.sub || '') + '</p>' : ''}</div>`;
+  }
+}
+function zmFill(id) { const i = [...menuButtons.querySelectorAll('.zmi')].findIndex(b => b.dataset.id === id); if (i >= 0) zmGo(i, false); }
+menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('.zmi'); if (b) zmGo(+b.dataset.i, false); });
+menuButtons.addEventListener('click', e => { const b = e.target.closest('[data-zm]'); if (b) { e.stopPropagation(); zmGo(zmSel + (+b.dataset.zm), true); } }, true);
+window.addEventListener('wheel', e => { if (!menuButtons.querySelector('.zmw') || menuEl.classList.contains('hidden')) return; zmGo(zmSel + (e.deltaY > 0 ? 1 : -1), true); e.preventDefault(); }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (!menuButtons.querySelector('.zmw') || menuEl.classList.contains('hidden')) return;
+  if (e.code === 'ArrowDown') { zmGo(zmSel + 1, true); e.preventDefault(); }
+  else if (e.code === 'ArrowUp') { zmGo(zmSel - 1, true); e.preventDefault(); }
+  else if (e.code === 'PageDown') { zmGo(zmSel + 10, true); e.preventDefault(); }
+  else if (e.code === 'PageUp') { zmGo(zmSel - 10, true); e.preventDefault(); }
+  else if (e.code === 'Enter') { const b = menuButtons.querySelectorAll('.zmi')[zmSel]; if (b) b.click(); }
+});
 const mprev = document.createElement('div'); mprev.id = 'mprev'; document.body.appendChild(mprev);
 const dimEl = document.createElement('div'); dimEl.id = 'dim'; document.body.appendChild(dimEl);
 const mapArt = {};
@@ -4224,7 +4401,7 @@ function showPreview(id) {
   const m = MAPS[id]; if (!m) return;
   mprev.innerHTML = `<img src="${m.thumb || drawMapArt(id)}" alt=""><b>${m.name}</b><span>${MAP_DESC[id] || m.sub}</span>`; mprev.style.display = 'block';
 }
-menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('[data-a^="map:"],[data-a^="host:"]'); if (b) showPreview(b.dataset.a.slice(b.dataset.a.indexOf(':') + 1)); else mprev.style.display = 'none'; });
+menuButtons.addEventListener('mouseover', e => { if (e.target.closest('.zmw')) return; const b = e.target.closest('[data-a^="map:"],[data-a^="host:"]'); if (b) showPreview(b.dataset.a.slice(b.dataset.a.indexOf(':') + 1)); else mprev.style.display = 'none'; });
 menuButtons.addEventListener('mouseleave', () => { mprev.style.display = 'none'; });
 let shopTab = 'crate';
 const SHOP_TABS = [['crate', 'CAMO CRATE'], ['fxcrate', 'FX CRATE'], ['trail', 'BULLET TRAILS'], ['basic', 'BASIC FX'], ['elem', 'ELEMENTAL'], ['cosmic', 'COSMIC'], ['party', 'PARTY'], ['coll', 'COLLECTION']];
@@ -4301,13 +4478,13 @@ document.addEventListener('keydown', e => {
 });
 function showLobbyClient() { menuEl.classList.remove('hidden'); renderMenu('lobbyc'); }
 function renderMenu(view) {
-  let h = ''; menuView = view; mprev.style.display = 'none'; if (view !== 'start' && view !== 'review') RV.testing = false;
-  if (view === 'main') h = '<div class="zmtitle"><div class="emb"></div><div class="bar">ZOMBIES</div></div><div class="zmm">' + (banActive() ? '<div class="clnote">BANNED FROM MULTIPLAYER AND PUBLISHING UNTIL ' + usTm(BAN.until) + '</div>' : '') + btn('new', 'SOLO GAME', '', 'on') + btn('mp', 'JOIN PUBLIC GAME') + btn('mpcreate', 'PRIVATE GAME') + '<div class="zgap"></div>' + btn('locker', 'LOCKER') + btn('shop', 'SHOP', WALLET.coins + ' coins') + btn('pubmap', 'PUBLISH MAP') + btn('controls', 'CONTROLS') + (CL.dev ? '<div class="zgap"></div>' + btn('editor', 'MAP EDITOR') + btn('rvopen', 'REVIEW MAPS', Object.keys(RV.subs).length + ' waiting') + btn('users', 'USERS', Object.keys(US.users).length + ' visitors') + btn('reports', 'REPORTS', Object.keys(RP.list).length + ' open') : '') + '<div class="zgap"></div>' + btn('tohome', '&lt; MAIN MENU', '', 'back') + '</div>';
+  let h = ''; menuView = view; mprev.style.display = 'none'; if (view !== 'maps' && view !== 'start') TEST.arm = false; if (view !== 'start' && view !== 'review') RV.testing = false;
+  if (view === 'main') h = '<div class="zmtitle"><div class="emb"></div><div class="bar">ZOMBIES</div></div><div class="zmm">' + (banActive() ? '<div class="clnote">BANNED FROM MULTIPLAYER AND PUBLISHING UNTIL ' + usTm(BAN.until) + '</div>' : '') + btn('new', 'SOLO GAME', '', 'on') + btn('mp', 'JOIN PUBLIC GAME') + btn('mpcreate', 'PRIVATE GAME') + '<div class="zgap"></div>' + btn('locker', 'LOCKER') + btn('shop', 'SHOP', WALLET.coins + ' coins') + btn('pubmap', 'PUBLISH MAP') + btn('controls', 'CONTROLS') + (CL.dev ? '<div class="zgap"></div>' + btn('editor', 'MAP EDITOR') + btn('testing', 'TESTING', 'spawn frozen models') + btn('rvopen', 'REVIEW MAPS', Object.keys(RV.subs).length + ' waiting') + btn('users', 'USERS', Object.keys(US.users).length + ' visitors') + btn('reports', 'REPORTS', Object.keys(RP.list).length + ' open') : '') + '<div class="zgap"></div>' + btn('tohome', '&lt; MAIN MENU', '', 'back') + '</div>';
   else if (view === 'changelog') h = (CL.dev ? '<div class="clnote">DEVMODE: EDIT BELOW. FIRST LINE OF EACH BLOCK IS THE TITLE, BLANK LINE BETWEEN UPDATES.</div><textarea id="clText" class="clin" spellcheck="false">' + clEsc(CL.text) + '</textarea>' + btn('clsave', 'SAVE FOR EVERYONE') : clHTML()) + (CL.msg ? '<div class="clnote">' + CL.msg + '</div>' : '') + btn('main', '&lt; BACK', '', 'back');
-  else if (view === 'maps') h = mapList('map:') + btn('main', '&lt; BACK', '', 'back');
+  else if (view === 'maps') h = zmMapsHTML('map:');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
   else if (view === 'shop') h = btn('main', '&lt; BACK', '', 'back') + shopGuiHTML();
-  else if (view === 'start') h = '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + (MAPS[curMap.id] && MAPS[curMap.id].custom && !RV.testing ? btn('rpm', 'REPORT THIS MAP', 'something wrong with it?') : '') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
+  else if (view === 'start') h = (TEST.arm ? '<div class="clnote">TESTING MODE: NO WAVES. PRESS 1-9 / 0 TO SPAWN FROZEN MODELS (SHIFT FOR MORE)</div>' : '') + '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + (MAPS[curMap.id] && MAPS[curMap.id].custom && !RV.testing ? btn('rpm', 'REPORT THIS MAP', 'something wrong with it?') : '') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
   else if (view === 'review') h = rvHTML();
   else if (view === 'users') h = usHTML();
   else if (view === 'usd') h = usdHTML();
@@ -4316,8 +4493,8 @@ function renderMenu(view) {
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'lobby') h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
   else if (view === 'lobbyc') h = '<div class="label">MAP: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">PASSWORD (OPTIONAL)</div><input class="mpin" disabled autocomplete="off" value="" placeholder="HOST ONLY" style="opacity:.5">' + btn('ffview', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'only the host can change this', 'off') + btn('startview', 'START MATCH', 'waiting for the host to start...', 'off') + btn('mpleave', '&lt; LEAVE SERVER', '', 'back');
-  else if (view === 'mpmaps') h = mapList('host:') + btn('mpback', '&lt; BACK', '', 'back');
-  menuButtons.innerHTML = h; document.body.classList.toggle('zmain', view === 'main'); MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
+  else if (view === 'mpmaps') h = zmMapsHTML('host:');
+  menuButtons.innerHTML = h; document.body.classList.toggle('zmain', view === 'main'); document.body.classList.toggle('zmaps', view === 'maps' || view === 'mpmaps'); if (view === 'maps' || view === 'mpmaps') { zmGo(zmSel, true); } MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
 }
 menuButtons.addEventListener('input', e => { if (e.target && e.target.id === 'mpPw' && MP.host && MP.lobby) { MP.pw = e.target.value.trim().slice(0, 16); MP.beat(); } });
 menuButtons.addEventListener('click', e => {
@@ -4396,12 +4573,13 @@ menuButtons.addEventListener('click', e => {
     else { menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>'; setTimeout(() => { selectMap(id); renderMenu('start'); }, 40); }
   }
   else if (MP.click(a)) {}
-  else if (a === 'start') startCountdown();
+  else if (a === 'start') { TEST.on = TEST.arm && !MP.on; startCountdown(); }
+  else if (a === 'testing') { TEST.arm = true; mapPage = 0; renderMenu('maps'); }
 });
 
 function showMenu(view = 'main') {
   clearInterval(cdTimer); stopGoSnd(); $('goBig').classList.remove('on'); MP.leave();
-  state.phase = 'menu'; resetWorld();
+  state.phase = 'menu'; TEST.on = false; testHudEl.style.display = 'none'; resetWorld();
   menuEl.classList.remove('hidden'); cdEl.classList.add('hidden'); pauseEl.classList.add('hidden'); goEl.classList.add('hidden');
   hudEl.classList.remove('show'); $('banner').classList.remove('on'); el.notice.classList.remove('on');
   renderMenu(view); setViewmodels();
@@ -4410,6 +4588,7 @@ function lock() { try { canvas.requestPointerLock(); } catch (e) {} }
 
 function startCountdown() {
   clearInterval(cdTimer); stopGoSnd(); $('goBig').classList.remove('on'); MP.panelHide(); pvpHide();
+  document.body.classList.remove('zmain', 'zmaps');
   state.phase = 'menu'; cdEl.querySelector('.map').textContent = 'MAP: ' + curMap.name;
   menuEl.classList.add('hidden'); goEl.classList.add('hidden'); pauseEl.classList.add('hidden'); cdEl.classList.remove('hidden');
   let n = 5; $('cdNum').textContent = n; sfx.beep();
@@ -4424,6 +4603,7 @@ function beginGame() {
   if (MP.pend && MP.client) { const q = MP.pend; MP.pend = null; if (q.bx) placeBox(q.bx[0], q.bx[1], q.bx[2]); for (const id of q.dr || []) applyDoor(id, true); for (const id of q.pw || []) applyPower(id); }
   cdEl.classList.add('hidden'); state.phase = 'playing'; hudEl.classList.add('show');
   state.roundState = PVP.on ? 'pvp' : 'intermission'; state.interT = 3;
+  testHudEl.style.display = TEST.on ? 'block' : 'none'; if (TEST.on) { state.god = true; state.score = 50000; }
   if (PVP.on) { state.god = false; state.insta = false; state.fast = false; state.powerAll = false; pvpBegin(); }
   setViewmodels(); updateHUD();
   if (!locked) pauseEl.classList.remove('hidden');
@@ -4651,7 +4831,7 @@ function updateCombat(dt, downed = false) {
 }
 
 function updateRounds(dt) {
-  if (PVP.on) return;
+  if (PVP.on || TEST.on) return;
   if (state.roundState === 'intermission') {
     state.interT -= dt; if (state.interT <= 0) startRound();
   } else {
@@ -4665,9 +4845,10 @@ function updateRounds(dt) {
 }
 
 function updateZombies(dt) {
-  const t = state.time; updatePara(dt);
+  const t = state.time; updatePara(dt); updateGibs(dt);
   for (let i = 0; i < zombies.length; i++) {
     const z = zombies[i], gp = z.root.position;
+    if (z.frozen) continue;
     if (z.spawnT < 0.9) {
       z.spawnT += dt; const sp0 = Math.min(1, z.spawnT / 0.9); gp.y = -2.4 + sp0 * 2.4; if (z.spawnT >= 0.9) gp.y = 0; z.armL.rotation.x = z.armR.rotation.x = -2.9 + sp0 * 1.5; z.upper.rotation.x = 0.5 - sp0 * 0.3;
       continue;
@@ -4728,7 +4909,7 @@ function updateZombies(dt) {
     }
     // separation
     for (let j = i + 1; j < zombies.length; j++) {
-      const o = zombies[j]; if (o.spawnT < 0.9) continue;
+      const o = zombies[j]; if (o.spawnT < 0.9 || o.frozen) continue;
       const ox = gp.x - o.root.position.x, oz = gp.z - o.root.position.z, d2 = ox * ox + oz * oz;
       if (d2 < 0.72 * 0.72 && d2 > 1e-6) { const d = Math.sqrt(d2), p = (0.72 - d) * 0.5; gp.x += ox / d * p; gp.z += oz / d * p; o.root.position.x -= ox / d * p; o.root.position.z -= oz / d * p; }
     }
@@ -4777,6 +4958,7 @@ function updateZombies(dt) {
       z.armR.rotation.x = -0.2 - swg * 2.4; z.armR.rotation.z = 0.1; z.eR.rotation.x = -0.2 - swg * 0.6;
       z.upper.rotation.set(0.12 + (hit ? -0.3 : 0), Math.sin(ph) * 0.1, 0);
     }
+    if (z.crawl) { crawlPose(z, t, ph); gp.y = 0.28 + (z.gy || 0); }
     // scary noises when you get close
     z.growlT -= dt;
     if (z.kind === 'verity' || z.kind === 'vboss' || z.kind === 'tung' || z.kind === 'cat') {
@@ -4801,12 +4983,24 @@ function updateZombies(dt) {
       const r = Math.max(0, z.hp / z.maxHp); b.fg.scale.x = r; b.fg.position.x = -(1 - r) * 0.5;
     }
   }
+  if (!TEST.on && !MP.silent) {   // far-away groans: you hear the horde before you see it
+    state.farT = (state.farT || 0) - dt;
+    if (state.farT <= 0) {
+      state.farT = 1.6 + Math.random() * 2.6;
+      const c = zombies.filter(q => !q.hound && !q.frozen && q.spawnT >= 0.9 && Math.hypot(q.root.position.x - player.pos.x, q.root.position.z - player.pos.z) > 14);
+      if (c.length) {
+        const q = c[(Math.random() * c.length) | 0], dx = q.root.position.x - player.pos.x, dz = q.root.position.z - player.pos.z, d = Math.hypot(dx, dz);
+        if (d < 80) { const rel = Math.atan2(dx, dz) - (player.yaw + Math.PI), gs = playSnd(q.crawl || Math.random() < 0.3 ? 'g' + (1 + ((Math.random() * 4) | 0)) : (q.runner ? 'r' : 'g') + (1 + ((Math.random() * (q.runner ? 8 : 4)) | 0)), Math.pow(Math.max(0, 1 - (d - 10) / 70), 2.2) * 0.5, -Math.sin(rel)); if (gs && gs.src.playbackRate) gs.src.playbackRate.value = q.crawl ? 0.78 : 0.9 + Math.random() * 0.2; }
+      }
+    }
+  }
   updateDying(dt);
 }
 function updateDying(dt) {
   for (let i = dying.length - 1; i >= 0; i--) {
     const z = dying[i]; z.deadT += dt;
     const p = Math.min(1, z.deadT / 0.55), e = Math.sin(p * Math.PI / 2);
+    if (z.crawl) { z.root.rotation.x = 1.4; z.root.position.y = 0.28 - Math.max(0, z.deadT - 0.6) * 1.0; z.armL.rotation.x = z.armR.rotation.x = -3.0 + e * 0.8; if (z.deadT > 1.6) { scene.remove(z.root); dying.splice(i, 1); } continue; }
     z.root.rotation.x = -e * Math.PI / 2 * z.fd; z.root.position.y = -Math.max(0, z.deadT - 0.6) * 1.4;
     z.armL.rotation.x = z.armR.rotation.x = -1.3 - e * 0.9; z.armL.rotation.z = -0.3 - e * 0.5; z.armR.rotation.z = 0.3 + e * 0.5;
     z.legL.rotation.x = e * 0.25; z.legR.rotation.x = -e * 0.2; z.kL.rotation.x = z.kR.rotation.x = 0.2; z.upper.rotation.x = 0.2 * (1 - e); z.head.rotation.x = -e * 0.4;
@@ -4944,9 +5138,74 @@ function updateInteractions() {
   setText(el.prompt, p);
 }
 
+/* ---------- PBR upgrade (generated normal + roughness maps for every textured surface) and volumetric-style fog ---------- */
+const PBR = { cache: new Map(), on: true };
+function pbrMaps(tex) {
+  let r = PBR.cache.get(tex.uuid); if (r) return r;
+  const img = tex.image; const W0 = img && (img.width || img.videoWidth), H0 = img && (img.height || img.videoHeight);
+  if (!W0 || !H0) { PBR.cache.set(tex.uuid, null); return null; }
+  const W = Math.min(256, W0), H = Math.min(256, H0), [c, x] = mkCanvas(W, H);
+  x.drawImage(img, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, hgt = new Float32Array(W * H);
+  let h = 1234567;
+  for (let i = 0; i < W * H; i++) { h = (h * 1103515245 + 12345) & 0x7fffffff; const l = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11) / 255; hgt[i] = l + ((h >> 8) % 256 / 255 - 0.5) * 0.07; }
+  const [nc, nx] = mkCanvas(W, H), [rc, rx] = mkCanvas(W, H), nd = nx.createImageData(W, H), rd = rx.createImageData(W, H), S = 2.6;
+  const at = (i, j) => hgt[((j + H) % H) * W + ((i + W) % W)];
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const dx = (at(i - 1, j - 1) + 2 * at(i - 1, j) + at(i - 1, j + 1)) - (at(i + 1, j - 1) + 2 * at(i + 1, j) + at(i + 1, j + 1));
+    const dy = (at(i - 1, j - 1) + 2 * at(i, j - 1) + at(i + 1, j - 1)) - (at(i - 1, j + 1) + 2 * at(i, j + 1) + at(i + 1, j + 1));
+    let nX = dx * S, nY = dy * S, nZ = 1, L = Math.hypot(nX, nY, nZ); nX /= L; nY /= L; nZ /= L;
+    const o = (j * W + i) * 4; nd.data[o] = (nX * 0.5 + 0.5) * 255; nd.data[o + 1] = (nY * 0.5 + 0.5) * 255; nd.data[o + 2] = (nZ * 0.5 + 0.5) * 255; nd.data[o + 3] = 255;
+    const g = 255 * Math.max(0.45, Math.min(1, 0.95 - (hgt[j * W + i] - 0.4) * 0.55)); rd.data[o] = rd.data[o + 1] = rd.data[o + 2] = g; rd.data[o + 3] = 255;
+  }
+  nx.putImageData(nd, 0, 0); rx.putImageData(rd, 0, 0);
+  const mk = cv => { const t = new THREE.CanvasTexture(cv); t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; if (t.repeat && tex.repeat) t.repeat.copy(tex.repeat); if (t.offset && tex.offset) t.offset.copy(tex.offset); t.rotation = tex.rotation || 0; t.anisotropy = 4; return t; };
+  r = { n: mk(nc), r: mk(rc) }; PBR.cache.set(tex.uuid, r); return r;
+}
+function pbrUpgrade(root) {
+  if (!PBR.on || !root || root.userData.pbrDone) return; root.userData.pbrDone = true;
+  const maxA = (renderer.capabilities && renderer.capabilities.getMaxAnisotropy) ? renderer.capabilities.getMaxAnisotropy() : 4;
+  root.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      try {
+        if (!m.isMeshStandardMaterial || !m.map || m.userData.pbr || m.transparent || m.normalMap || (m.emissiveIntensity > 0.6 && m.emissive && m.emissive.getHex() > 0)) continue;
+        m.userData.pbr = 1; m.map.anisotropy = Math.max(m.map.anisotropy || 1, Math.min(8, maxA));
+        const p = pbrMaps(m.map); if (!p) continue;
+        m.normalMap = p.n; if (m.normalScale) m.normalScale.set(0.85, 0.85); m.roughnessMap = p.r; if (m.roughness < 0.5) m.roughness = Math.min(1, m.roughness + 0.12); m.needsUpdate = true;
+      } catch (e) {}
+    }
+  });
+}
+const MIST = { g: null, s: [], dust: null };
+function mistInit() {
+  try {
+    const [c, x] = mkCanvas(128); const gr = x.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(c); MIST.g = new THREE.Group(); MIST.g.visible = false; scene.add(MIST.g);
+    for (let i = 0; i < 34; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.1 + Math.random() * 0.09 })); const sc = 9 + Math.random() * 9; sp.scale.set(sc, sc * 0.32, 1); sp.userData = { vx: (Math.random() - 0.5) * 0.7, vz: (Math.random() - 0.5) * 0.7, ph: Math.random() * 6 }; sp.position.set(0, 0.5 + Math.random() * 1.1, 0); sp.renderOrder = 2; MIST.g.add(sp); MIST.s.push(sp);
+    }
+    const N = 260, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 36; pos[i * 3 + 1] = Math.random() * 7; pos[i * 3 + 2] = (Math.random() - 0.5) * 36; }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    MIST.dust = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xcfc3a8, size: 0.07, transparent: true, opacity: 0.5, depthWrite: false })); MIST.dust.frustumCulled = false; MIST.g.add(MIST.dust); MIST.init = true;
+  } catch (e) { MIST.g = null; }
+}
+mistInit();
+function mistTick(dt) {
+  if (!MIST.g) return; const on = state.phase === 'playing' || state.phase === 'countdown'; MIST.g.visible = on && !(curMap.cave); if (!on) return;
+  const px = player.pos.x, pz = player.pos.z, t = state.time, col = scene.fog.color;
+  for (const sp of MIST.s) {
+    const u = sp.userData; sp.position.x += u.vx * dt; sp.position.z += u.vz * dt; sp.position.y = 0.45 + (Math.sin(t * 0.25 + u.ph) * 0.5 + 0.5) * 0.9;
+    let dx = sp.position.x - px, dz = sp.position.z - pz;
+    if (dx * dx + dz * dz > 46 * 46 || sp.position.x === 0) { const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 38; sp.position.x = px + Math.cos(a) * r; sp.position.z = pz + Math.sin(a) * r; }
+    sp.material.color.copy(col).lerp(_mistW, 0.35);
+  }
+  if (MIST.dust) { MIST.dust.position.set(px, 0, pz); MIST.dust.rotation.y = t * 0.02; MIST.dust.position.y = Math.sin(t * 0.2) * 0.3; }
+}
+const _mistW = new THREE.Color(0xb8bcc8);
+
 const FOGX = { k: 0, col: null }, FOG_HC = new THREE.Color(0x3a2424);
 function updateFog(dt) {   // hellhound rounds roll a thick reddish fog over the map, then it clears when the round ends
-  const tgt = state.phase === 'playing' && state.houndRound && state.roundState === 'active' ? 1 : 0, base = (curMap.fog || 0.02) * 0.42;
+  const tgt = state.phase === 'playing' && state.houndRound && state.roundState === 'active' ? 1 : 0, base = (curMap.fog || 0.02) * 0.42 * 1.35;
   FOGX.k += Math.sign(tgt - FOGX.k) * Math.min(Math.abs(tgt - FOGX.k), dt * 0.3);
   if (FOGX.k <= 0) { if (FOGX.col) { scene.fog.color.copy(FOGX.col); FOGX.col = null; scene.fog.density = base; } return; }
   if (!FOGX.col) FOGX.col = scene.fog.color.clone();
@@ -4954,7 +5213,7 @@ function updateFog(dt) {   // hellhound rounds roll a thick reddish fog over the
 }
 function update(dt) {
   if (MP.on && MP.paused) { MP.tick(dt); return; }
-  state.time += dt; updateFog(dt);
+  state.time += dt; updateFog(dt); mistTick(dt);
   if (state.phase === 'playing' && !state.cheated) { if (MP.client && MP.joinWave > 1 && state.coinNext < MP.joinWave + 10) state.coinNext = MP.joinWave + 10;   // late joiners: coins only after playing 10 more rounds
   while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
   if (state.qr > 0) { state.qr -= dt; const n = Math.ceil(state.qr); if (n > 0 && n !== state.qrN) { state.qrN = n; notice(`QUICK REVIVE - GETTING UP IN ${n}`, 1100); } if (state.qr <= 0) endQrDown(); }
@@ -6520,7 +6779,7 @@ function activateMap(id) {
   ] : []; 
   jug.pos.copy(m.jugPos); pap.pos.copy(m.papPos); pap.gear = m.papGear;
   mbox.pos.copy(m.boxPos); mbox.group.position.copy(m.boxPos); mbox.group.rotation.y = m.boxRot;
-  FOGX.k = 0; FOGX.col = null; scene.fog.density = m.fog * 0.42; applyEnv(m.env); scene.fog.color.lerp(new THREE.Color(0x4a5a78), 0.35); scene.background.lerp(new THREE.Color(0x24304a), 0.3);
+  FOGX.k = 0; FOGX.col = null; scene.fog.density = m.fog * 0.42 * 1.35; pbrUpgrade(m.root); applyEnv(m.env); scene.fog.color.lerp(new THREE.Color(0x4a5a78), 0.35); scene.background.lerp(new THREE.Color(0x24304a), 0.3);
   const sc = moon.shadow.camera; sc.left = -m.shadowX; sc.right = m.shadowX; sc.top = m.shadowZ; sc.bottom = -m.shadowZ; sc.updateProjectionMatrix();
   if (m.nav) {
     Object.assign(NAV, m.nav, { on: true, last: -1, t: 0 });
