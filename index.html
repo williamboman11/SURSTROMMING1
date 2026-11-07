@@ -474,6 +474,43 @@
   #testHud b { display: block; color: #ff8a22; font-size: 16px; margin-bottom: 4px; }
   #testHud i { display: inline-block; min-width: 54px; font-style: normal; color: #ffd24a; }
   #testHud small { display: block; margin-top: 4px; color: #9aa; font-size: 12px; }
+
+  /* ---------- lobby + loading screen ---------- */
+  .zlbL { position: absolute; left: 4.9vw; top: 18vh; width: 44vw; }
+  .zlbL .zmimg { max-height: 40vh; } .zlbL .zmbr { padding-top: 2vh; } .zlbL .zmbr p { max-width: 44vw; }
+  .zlo { margin-top: 1.6vh; display: flex; flex-wrap: wrap; align-items: center; gap: 1vw; font-size: calc(var(--u) * 1.4); color: #cfd4de; } .zlo label { letter-spacing: 1px; } .zlo .dim, .zmf .dim { color: #8a93a4; }
+  .zlo .mpin { width: 14vw; font-size: calc(var(--u) * 1.4) !important; padding: .6vh .8vw; background: rgba(8,12,18,.85); border: 1px solid rgba(160,180,215,.4); color: #fff; }
+  .zlb2 { font-family: inherit; font-size: calc(var(--u) * 1.4); color: #e6e9ef; background: rgba(8,12,18,.85); border: 1px solid rgba(160,180,215,.4); padding: .6vh 1vw; cursor: pointer; } .zlb2:hover { background: #d4621a; }
+  .zlt { margin-top: 1.4vh; color: #ff8a4a; font-size: calc(var(--u) * 1.3); }
+  .zlbR { position: absolute; right: 4.9vw; top: 18vh; width: 36vw; }
+  .zlh { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #aab2c4, #c9d0df); color: #10131a; font-size: calc(var(--u) * 2); padding: .5vh 1vw .2vh; letter-spacing: 1px; } .zlh b { font-weight: 600; }
+  .zlp { max-height: 56vh; overflow-y: auto; scrollbar-width: none; } .zlp::-webkit-scrollbar { display: none; }
+  .zlr { position: relative; display: flex; align-items: center; background: rgba(6,7,10,.88); margin-top: 3px; padding: 1.1vh 1vw 1vh 3vw; font-size: calc(var(--u) * 2.1); letter-spacing: 1px; text-transform: uppercase; }
+  .zlr i { position: absolute; left: 1.1vw; top: 50%; margin-top: -.9vh; border: .9vh solid transparent; border-left: 1.3vh solid #dcdcdc; }
+  .zlr em { margin-left: auto; font-style: normal; font-size: calc(var(--u) * 1.3); color: #ff9a4a; letter-spacing: 2px; }
+  .zlr.open { background: rgba(6,7,10,.5); color: #5d6572; } .zlr.open i { border-left-color: #4a505c; }
+  #loadScr { position: fixed; inset: 0; z-index: 400; background: #020305; display: none; overflow: hidden; color: #e6e9ef; font-family: var(--fm); }
+  #loadScr.on { display: block; animation: ldin .25s ease-out; } @keyframes ldin { from { opacity: 0; } to { opacity: 1; } }
+  #loadScr .lbg { position: absolute; inset: -4%; background-size: cover; background-position: center; filter: blur(22px) brightness(.35) saturate(1.2); }
+  #loadScr .lvig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 30%, rgba(0,0,0,.85) 100%); }
+  #loadScr .lbox { position: absolute; left: 8vw; right: 8vw; top: 12vh; display: flex; gap: 3vw; align-items: flex-start; }
+  #loadScr .lart { position: relative; width: 52vw; aspect-ratio: 2.37 / 1; border: 1px solid rgba(180,195,225,.45); box-shadow: 0 0 60px rgba(0,0,0,.9); overflow: hidden; } #loadScr .lart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #loadScr .lart b { position: absolute; left: 1.2vw; bottom: 1.6vh; background: #f2f2f2; color: #0c0c0c; font-size: min(3vw, 5vh); font-weight: 700; padding: .3vh 1vw 0; text-transform: uppercase; }
+  #loadScr .lbr { flex: 1; } #loadScr .lbr h3 { margin: 0 0 1.6vh; font-size: min(2vw, 3.6vh); font-weight: 600; } #loadScr .lbr p { margin: 0; font-size: min(1.5vw, 2.6vh); line-height: 1.4; color: #cfd4de; }
+  #loadScr .ltip { position: absolute; left: 8vw; right: 8vw; bottom: 15vh; font-size: min(1.5vw, 2.6vh); color: #ff9a4a; letter-spacing: 2px; }
+  #loadScr .lbar { position: absolute; left: 8vw; right: 8vw; bottom: 7vh; display: flex; align-items: center; gap: 1.4vw; font-size: min(1.4vw, 2.4vh); letter-spacing: 3px; }
+  #loadScr .lbar div { flex: 1; height: .8vh; background: rgba(255,255,255,.12); overflow: hidden; } #loadScr .lbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #d4621a, #ffb070); animation: ldbar 2.6s ease-in-out forwards; box-shadow: 0 0 12px rgba(255,120,40,.7); }
+  #loadScr .lbar i.inf { animation: ldinf 1.2s ease-in-out infinite alternate; } @keyframes ldbar { from { width: 0; } 60% { width: 72%; } to { width: 100%; } } @keyframes ldinf { from { width: 10%; margin-left: 0; } to { width: 40%; margin-left: 60%; } }
+  #weaponBox { transform: scale(.8); transform-origin: 100% 100%; }
+  #score, #teamPts { transform: scale(.8); transform-origin: 100% 100%; }
+
+  #gumHud { position: absolute; left: calc(var(--p) * 58); bottom: calc(var(--p) * 238); display: flex; flex-direction: column; gap: calc(var(--p) * 6); font-family: var(--fm); pointer-events: none; }
+  #gumHud .gh { display: flex; align-items: center; gap: calc(var(--p) * 10); background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.25); padding: calc(var(--p) * 6) calc(var(--p) * 14) calc(var(--p) * 4) calc(var(--p) * 8); }
+  #gumHud .gh i { width: calc(var(--p) * 26); height: calc(var(--p) * 26); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--c) 45%, #000 140%); box-shadow: 0 0 10px var(--c); }
+  #gumHud .gh b { font-size: calc(var(--p) * 24); color: #fff; letter-spacing: 1px; } #gumHud .gh small { font-size: calc(var(--p) * 16); color: #ffd24a; letter-spacing: 1px; }
+  #gumHud .ga { font-size: calc(var(--p) * 18); color: #cfe9ff; background: rgba(0,0,0,.45); padding: 2px calc(var(--p) * 10); letter-spacing: 1px; }
+  #gumPop { position: absolute; left: 50%; top: 24%; transform: translateX(-50%) scale(.9); font: 700 calc(var(--p) * 40)/1 var(--fm); letter-spacing: 3px; text-shadow: 0 0 14px currentColor, 2px 2px 0 #000; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; white-space: nowrap; }
+  #gumPop.on { opacity: 1; transform: translateX(-50%) scale(1); }
 </style>
 </head>
 <body class="home">
@@ -1961,6 +1998,24 @@ function variantOf(build, acc, len = 0.34) {
 }
 const NEWB = { mr6: variantOf(buildPistol, '#ffc83a', 0.16), kn44: variantOf(buildAK, '#35c8ff'), manowar: variantOf(buildGalil, '#ff4a2a'), kuda: variantOf(buildSMG, '#8aff4a'), vmp: variantOf(buildSMG, '#d048ff'), krm262: variantOf(buildShotgun, '#ffb030'), haymaker: variantOf(buildShotgun, '#ff5a1a'), brm: variantOf(buildMinigun, '#c8ff3a'), drakon: variantOf(buildSniper, '#30ffc8', 0.5), thundergun: variantOf(buildThumper, '#ffb800', 0.2), servant: variantOf(buildRay2, '#a040ff', 0.2), wunder: variantOf(buildRay, '#40c8ff', 0.2) };
 for (const k in NEWB) { vm[k] = NEWB[k](); papGlow(vm[k]); vm[k].visible = false; camera.add(vm[k]); }
+
+const RP0 = { dx: 0, dy: 0, dz: 0, rx: 0, ry: 0, rz: 0 };
+function reloadPose(p) {   // lower + cant the gun, swap the mag with a little shake, then pull the bolt back
+  const sm = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
+  const down = sm(0, 0.2, p) - sm(0.78, 0.95, p), mag = sm(0.24, 0.38, p) * (1 - sm(0.56, 0.7, p)), bolt = sm(0.84, 0.89, p) * (1 - sm(0.89, 0.97, p));
+  return { dx: -0.06 * down, dy: -0.2 * down + Math.sin(p * 40) * 0.012 * mag, dz: 0.05 * down - 0.08 * bolt, rx: 0.5 * down - 0.1 * mag * Math.sin(p * 22), ry: 0.28 * down, rz: -0.55 * down };
+}
+/* gloved hands + sleeves on every gun viewmodel */
+const HAND_M = new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.9 }), SLEEVE_M = new THREE.MeshStandardMaterial({ color: 0x3b4636, roughness: 0.95 });
+function addHands(g) {
+  try {
+    const mz = (g.userData.muzzle ? g.userData.muzzle.z : -0.6), h = new THREE.Group(), mk = (w, hh, d, mat, x, y, z, rx = 0, ry = 0) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), mat); q.position.set(x, y, z); q.rotation.set(rx, ry, 0); h.add(q); return q; };
+    mk(0.055, 0.085, 0.075, HAND_M, 0.0, -0.095, 0.06); mk(0.062, 0.06, 0.32, SLEEVE_M, 0.035, -0.15, 0.3, -0.2, -0.12);
+    const lz = Math.max(-0.5, mz * 0.42); mk(0.06, 0.055, 0.1, HAND_M, -0.012, -0.07, lz); mk(0.065, 0.06, 0.34, SLEEVE_M, -0.09, -0.14, lz + 0.26, -0.2, 0.4);
+    h.userData.hands = true; g.add(h);
+  } catch (e) {}
+}
+for (const k in vm) if (!['raygun', 'raygun2', 'wunder', 'minigun', 'rpg'].includes(k)) addHands(vm[k]);
 const knifeModel = buildKnife(); knifeModel.visible = false; camera.add(knifeModel);
 
 const muzzleFlash = new THREE.Mesh(
@@ -1968,7 +2023,8 @@ const muzzleFlash = new THREE.Mesh(
   new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })
 );
 muzzleFlash.visible = false;
-const muzzleLight = new THREE.PointLight(0xffb060, 0, 12, 2);
+{ const m2 = new THREE.Mesh(muzzleFlash.geometry, muzzleFlash.material); m2.rotation.z = Math.PI / 4; m2.scale.setScalar(0.75); muzzleFlash.add(m2); const m3 = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.55), muzzleFlash.material); m3.position.z = -0.02; muzzleFlash.add(m3); }
+const muzzleLight = new THREE.PointLight(0xffb060, 0, 16, 1.6);
 
 // mystery box floating display models
 mbox.models.teddy = buildTeddy(); mbox.models.ak = buildAK(); mbox.models.crossbow = buildCrossbow(); mbox.models.rpg = buildRPG(); mbox.models.revolver = buildRevolver(); mbox.models.sniper = buildSniper(); mbox.models.minigun = buildMinigun(); mbox.models.dbl = buildDouble(); mbox.models.thumper = buildThumper(); mbox.models.raygun = buildRay(); mbox.models.shotgun = buildShotgun(); mbox.models.raygun2 = buildRay2(); mbox.models.smg = buildSMG(); mbox.models.galil = buildGalil(); mbox.models.para = buildParalyzer();
@@ -2435,7 +2491,7 @@ const state = {
   fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0,
   reloading: false, reloadT: 0, swapT: 0,
   recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, knifeHit: false,
-  shake: 0, lastGrowl: 0, maxHealth: 100, ads: 0, rmb: false,
+  shake: 0, lastGrowl: 0, maxHealth: 140, ads: 0, rmb: false,
 };
 const player = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, pitch: 0, bob: 0,
@@ -3042,9 +3098,10 @@ const MP = {
       p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); if (banBlock()) return; const sv = this.servers.get(b.dataset.join); let pw = ''; if (sv && sv.k) { pw = prompt('SERVER PASSWORD'); if (pw === null) return; } this.join(b.dataset.join, pw); } });
       document.body.appendChild(p);
     }
-    this.panel.style.display = show ? 'block' : 'none'; if (show) { this.init(); this.draw(); }
+    this.panel.style.display = show && v !== 'lobby' && v !== 'lobbyc' ? 'block' : 'none'; if (show) { this.init(); this.draw(); }
   },
   draw() {
+    if (this.view === 'lobby' || this.view === 'lobbyc') { const L = this.host ? this.roster() : this.ros, pe = $('zlbParty'); if (pe) { pe.innerHTML = zlbPartyHTML(L, false); const c = $('zlbCnt'); if (c) c.textContent = L.length + ' / ' + MAX_PLAYERS; } return; }
     if (!this.panel || this.panel.style.display === 'none') return;
     if (this.view === 'lobby' || this.view === 'lobbyc') {
       const L = this.host ? this.roster() : this.ros, mx = MAX_PLAYERS;
@@ -3862,6 +3919,7 @@ function hurtPlayer(dmg) {
     state.health -= dmg; state.lastHurt = state.time; const vg = $('vignette'); vg.style.opacity = 1; setTimeout(() => { vg.style.opacity = 0; }, 160); sfx.hurt(); state.shake = Math.max(state.shake, 0.25);
     if (state.health <= 0) { state.downs = (state.downs | 0) + 1; pvpDie(); } return;
   }
+  if (GUM.shield > 0) { GUM.shield--; notice('IRON HIDE! ' + GUM.shield + ' LEFT', 900); sfx.chime(); return; }
   state.health -= dmg; state.lastHurt = state.time; if (state.health <= 0) state.downs = (state.downs | 0) + 1;
   const v = $('vignette'); v.style.opacity = 1; setTimeout(() => { v.style.opacity = 0; }, 160);
   sfx.hurt(); state.shake = Math.max(state.shake, 0.25);
@@ -3873,7 +3931,7 @@ function hurtPlayer(dmg) {
    WEAPONS
 =================================================================== */
 const magOf = t => WEAPONS[t].mag * (player.pap[t] ? 2 : 1), resOf = t => WEAPONS[t].reserve * (player.pap[t] ? 2 : 1);
-const dmgOf = t => WEAPONS[t].dmg * (player.pap[t] ? 2 : 1) * (boughtExtraPerks.has('double') ? 2 : 1);
+const dmgOf = t => WEAPONS[t].dmg * (player.pap[t] ? 2 : 1) * (boughtExtraPerks.has('double') ? 2 : 1) * (GUM.heavy > 0 ? 1.5 : 1);
 const headMul = t => player.pap[t] ? 4 : (boughtExtraPerks.has('head') ? 3 : 2);
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
@@ -3901,7 +3959,7 @@ function switchWeapon(type) {
 function startReload() {
   const w = WEAPONS[player.cur], a = player.ammo[player.cur];
   if (state.reloading || a.mag >= magOf(player.cur) || a.res <= 0) return;
-  state.reloading = true; state.reloadT = w.reload * (boughtExtraPerks.has('speed') ? 0.65 : 1) * (player.pap[player.cur] ? 0.7 : 1); sfx.reload();
+  state.reloading = true; state.reloadT = w.reload * (boughtExtraPerks.has('speed') ? 0.65 : 1) * (player.pap[player.cur] ? 0.7 : 1); state.reloadTot = state.reloadT; sfx.reload();
 }
 function giveWeapon(type) {
   const w = WEAPONS[type], a = player.ammo[type], had = player.slot1 === type || player.slot2 === type || player.slot3 === type;
@@ -3983,7 +4041,7 @@ function shoot() {
   sfx[player.cur]();
   if (w.kind === 'special') { fireSpecial(player.cur); if (a.mag === 0 && a.res > 0) startReload(); return; }
   if (player.cur !== 'crossbow' && player.cur !== 'raygun' && player.cur !== 'raygun2') {
-    state.flashT = 0.045; muzzleFlash.visible = true; muzzleFlash.rotation.z = Math.random() * 6; muzzleFlash.scale.setScalar(0.8 + Math.random() * 0.6); muzzleLight.intensity = 6;
+    state.flashT = 0.06; muzzleFlash.visible = true; muzzleFlash.rotation.z = Math.random() * 6; muzzleFlash.scale.setScalar((0.9 + Math.random() * 0.7) * (WEAPONS[player.cur].pellets ? 1.5 : 1)); muzzleLight.intensity = 11 + Math.random() * 4; muzzleLight.color.setHex(Math.random() < 0.5 ? 0xffb060 : 0xffcf80);
   } else if (player.cur === 'crossbow') {
     vm.crossbow.userData.bolt.visible = a.mag > 0;
   }
@@ -4160,6 +4218,7 @@ function nearestUse() {
   for (const w of curMap.switches || []) if (!w.on) c(Math.hypot(P.x - w.pos.x, P.z - w.pos.z), 2.2, { k: 'switch', w });
   if (mbox.state !== 'fly' && mbox.state !== 'gone') c(Math.hypot(P.x - mbox.pos.x, P.z - mbox.pos.z), 2.6, { k: 'box' });
   for (const q of curMap.wallBuys || []) c(Math.hypot(P.x - q.pos.x, P.z - q.pos.z), 2.2, { k: 'wall', q });
+  if (curMap.gumPos && !PVP.on) c(Math.hypot(P.x - curMap.gumPos.x, P.z - curMap.gumPos.z), 2.4, { k: 'gum' });
   return best;
 }
 function buyWall(q) {
@@ -4178,6 +4237,7 @@ function interact() {
   if (u.k === 'nopower' || u.k === 'switch') return;
   if (u.k === 'perk') { buyExtraPerk(u.q); return; }
   if (u.k === 'jug') { buyJug(); return; }
+  if (u.k === 'gum') { buyGum(); return; }
   if (u.k === 'pap') { buyPap(); return; }
   if (u.k === 'wall') { buyWall(u.q); return; }
   if (u.k === 'tele') { tlUse(u.t); return; }
@@ -4272,7 +4332,7 @@ function updateCan(dt) {
 function resetWorld() {
   for (const z of [...zombies]) { scene.remove(z.root); disposeBar(z); }
   for (const z of dying) scene.remove(z.root);
-  zombies.length = 0; dying.length = 0; clearPowerups(); state.houndRound = false;
+  zombies.length = 0; dying.length = 0; clearPowerups(); state.houndRound = false; gumReset();
   for (const p of projectiles) scene.remove(p.mesh); projectiles.length = 0;
   for (const h of holes) scene.remove(h.m); holes.length = 0; for (const g of grenades) scene.remove(g.mesh); grenades.length = 0; grenadeCooldown = 0; player.jumpY = 0; player.jumpVel = 0; player.onGround = true; for (const c of gasClouds) scene.remove(c.g); gasClouds.length = 0;
   for (const p of particles) scene.remove(p.m); particles.length = 0;
@@ -4280,7 +4340,7 @@ function resetWorld() {
   DNG.saved = null;
   Object.assign(state, {
     qr: 0, qrN: 0, downDrop: 0, time: 0, score: START_POINTS, kills: 0, wave: 0, health: 100, lastHurt: -10, roundState: 'intermission', interT: 3, roundTotal: 0, spawned: 0, spawnT: 0,
-    fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 100, ads: 0, rmb: false, god: false, cheated: false, coinNext: 10, downs: 0, revives: 0, heads: 0,
+    fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 140, ads: 0, rmb: false, god: false, cheated: false, coinNext: 10, downs: 0, revives: 0, heads: 0,
   });
   camera.fov = 75; camera.updateProjectionMatrix();
   player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.jumpY = curMap.spawn.y || 0; player.jumpVel = 0; player.onGround = true; player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.bowie = false; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
@@ -4344,7 +4404,7 @@ function zmMapsHTML(act) {   // BO3-style full-screen MAPS page (zombies menu on
   const ids = MAP_ORDER.filter(id => MAPS[id]);
   if (zmSel >= ids.length || zmSel < 0) zmSel = 0;
   const item = (id, i) => { const m = MAPS[id]; return `<div class="zmr"><button class="zmi ${i === zmSel ? 'on' : ''}" data-i="${i}" data-id="${id}" data-a="${act}${id}">${m.name}</button>` + (m.custom ? `<button class="zmlk ${LK.mine[id.slice(3)] ? 'on' : ''}" data-a="like:${id.slice(3)}">&#9829; ${lkCount(id.slice(3))}</button>` : '') + '</div>'; };
-  return `<div class="zmw"><div class="zmh"><span class="zmhe"></span>MAPS</div><div class="zmln"></div>`
+  return `<div class="zmw zmmaps"><div class="zmh"><span class="zmhe"></span>MAPS</div><div class="zmln"></div>`
     + `<div class="zmcol"><div class="zml" id="zml">${ids.map(item).join('')}</div>`
     + `<div class="zmpg"><button data-zm="-1">&#9660;</button><span id="zmc">${zmSel + 1} / ${ids.length}</span><button data-zm="1">&#9650;</button></div></div>`
     + `<div class="zmp" id="zmp"></div>`
@@ -4364,9 +4424,9 @@ function zmGo(i, scroll) {
 function zmFill(id) { const i = [...menuButtons.querySelectorAll('.zmi')].findIndex(b => b.dataset.id === id); if (i >= 0) zmGo(i, false); }
 menuButtons.addEventListener('mouseover', e => { const b = e.target.closest('.zmi'); if (b) zmGo(+b.dataset.i, false); });
 menuButtons.addEventListener('click', e => { const b = e.target.closest('[data-zm]'); if (b) { e.stopPropagation(); zmGo(zmSel + (+b.dataset.zm), true); } }, true);
-window.addEventListener('wheel', e => { if (!menuButtons.querySelector('.zmw') || menuEl.classList.contains('hidden')) return; zmGo(zmSel + (e.deltaY > 0 ? 1 : -1), true); e.preventDefault(); }, { passive: false });
+window.addEventListener('wheel', e => { if (!menuButtons.querySelector('.zmmaps') || menuEl.classList.contains('hidden')) return; zmGo(zmSel + (e.deltaY > 0 ? 1 : -1), true); e.preventDefault(); }, { passive: false });
 window.addEventListener('keydown', e => {
-  if (!menuButtons.querySelector('.zmw') || menuEl.classList.contains('hidden')) return;
+  if (!menuButtons.querySelector('.zmmaps') || menuEl.classList.contains('hidden')) return;
   if (e.code === 'ArrowDown') { zmGo(zmSel + 1, true); e.preventDefault(); }
   else if (e.code === 'ArrowUp') { zmGo(zmSel - 1, true); e.preventDefault(); }
   else if (e.code === 'PageDown') { zmGo(zmSel + 10, true); e.preventDefault(); }
@@ -4484,17 +4544,20 @@ function renderMenu(view) {
   else if (view === 'maps') h = zmMapsHTML('map:');
   else if (view === 'locker') h = lockerHTML() + btn('main', '&lt; SAVE &amp; BACK', '', 'back');
   else if (view === 'shop') h = btn('main', '&lt; BACK', '', 'back') + shopGuiHTML();
-  else if (view === 'start') h = (TEST.arm ? '<div class="clnote">TESTING MODE: NO WAVES. PRESS 1-9 / 0 TO SPAWN FROZEN MODELS (SHIFT FOR MORE)</div>' : '') + '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + (MAPS[curMap.id] && MAPS[curMap.id].custom && !RV.testing ? btn('rpm', 'REPORT THIS MAP', 'something wrong with it?') : '') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
+  else if (view === 'start') h = zlbHTML('solo');
+  else if (false) h = (TEST.arm ? '<div class="clnote">TESTING MODE: NO WAVES. PRESS 1-9 / 0 TO SPAWN FROZEN MODELS (SHIFT FOR MORE)</div>' : '') + '<div class="label">MAP: ' + curMap.name + '</div>' + (MAPS[curMap.id] && MAPS[curMap.id].thumb ? '<img src="' + MAPS[curMap.id].thumb + '" style="width:100%;display:block;margin:0 0 10px;border:2px solid #3a3f48" alt="">' : '') + btn('start', 'START GAME') + (MAPS[curMap.id] && MAPS[curMap.id].custom && !RV.testing ? btn('rpm', 'REPORT THIS MAP', 'something wrong with it?') : '') + btn(RV.testing ? 'review' : 'maps', '&lt; BACK', '', 'back');
   else if (view === 'review') h = rvHTML();
   else if (view === 'users') h = usHTML();
   else if (view === 'usd') h = usdHTML();
   else if (view === 'reports') h = rpHTML();
   else if (view === 'controls') h = '<div class="ctl"><b>W A S D</b>MOVE<br><b>MOUSE</b>AIM<br><b>L-CLICK</b>SHOOT<br><b>V</b>KNIFE<br><b>R</b>RELOAD<br><b>E</b>BUY / USE<br><b>HOLD E</b>OPEN DOOR<br><b>R-CLICK</b>AIM<br><b>1 / 2 / WHEEL</b>SWITCH<br><b>SHIFT</b>SPRINT<br><b>T</b>CHAT<br><b>B</b>MIC ON / OFF (MULTIPLAYER)<br><b>ESC</b>PAUSE</div>' + btn('main', '&lt; BACK', '', 'back');
   else if (view === 'mp') h = '<div class="label">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="' + MP.name + '" placeholder="PLAYER">' + btn('mpcreate', 'CREATE SERVER', 'pick a map &amp; host') + btn('main', '&lt; BACK', '', 'back');
-  else if (view === 'lobby') h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
-  else if (view === 'lobbyc') h = '<div class="label">MAP: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">PASSWORD (OPTIONAL)</div><input class="mpin" disabled autocomplete="off" value="" placeholder="HOST ONLY" style="opacity:.5">' + btn('ffview', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'only the host can change this', 'off') + btn('startview', 'START MATCH', 'waiting for the host to start...', 'off') + btn('mpleave', '&lt; LEAVE SERVER', '', 'back');
+  else if (view === 'lobby') h = zlbHTML('host');
+  else if (false) h = '<div class="label">MAP: ' + curMap.name + '</div><div class="label">PASSWORD (OPTIONAL)</div><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="' + clEsc(MP.pw) + '" placeholder="NO PASSWORD">' + btn('mpff', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'players can hurt each other') + btn('mpstart', 'START MATCH', 'players join on the right') + btn('mpleave', '&lt; CANCEL', '', 'back');
+  else if (view === 'lobbyc') h = zlbHTML('client');
+  else if (false) h = '<div class="label">MAP: ' + (MAPS[MP.map] ? MAPS[MP.map].name : '') + '</div><div class="label">PASSWORD (OPTIONAL)</div><input class="mpin" disabled autocomplete="off" value="" placeholder="HOST ONLY" style="opacity:.5">' + btn('ffview', 'FRIENDLY FIRE: ' + (MP.ff ? 'ON' : 'OFF'), 'only the host can change this', 'off') + btn('startview', 'START MATCH', 'waiting for the host to start...', 'off') + btn('mpleave', '&lt; LEAVE SERVER', '', 'back');
   else if (view === 'mpmaps') h = zmMapsHTML('host:');
-  menuButtons.innerHTML = h; document.body.classList.toggle('zmain', view === 'main'); document.body.classList.toggle('zmaps', view === 'maps' || view === 'mpmaps'); if (view === 'maps' || view === 'mpmaps') { zmGo(zmSel, true); } MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
+  menuButtons.innerHTML = h; document.body.classList.toggle('zmain', view === 'main'); document.body.classList.toggle('zmaps', view === 'maps' || view === 'mpmaps' || view === 'start' || view === 'lobby' || view === 'lobbyc'); if (view === 'maps' || view === 'mpmaps') { zmGo(zmSel, true); } MP.setView(view); lockerShow(view === 'locker'); coinsEl.textContent = 'COINS ' + WALLET.coins; coinsEl.style.display = view === 'start' ? 'none' : 'block';
 }
 menuButtons.addEventListener('input', e => { if (e.target && e.target.id === 'mpPw' && MP.host && MP.lobby) { MP.pw = e.target.value.trim().slice(0, 16); MP.beat(); } });
 menuButtons.addEventListener('click', e => {
@@ -4570,7 +4633,7 @@ menuButtons.addEventListener('click', e => {
   else if (a.startsWith('map:')) {
     const id = a.slice(4);
     if (MAPS[id].built) { selectMap(id); renderMenu('start'); }
-    else { menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>'; setTimeout(() => { selectMap(id); renderMenu('start'); }, 40); }
+    else { menuButtons.innerHTML = '<div class="label">LOADING MAP...</div>'; showLoading(id, 0); setTimeout(() => { selectMap(id); renderMenu('start'); hideLoading(); }, 80); }
   }
   else if (MP.click(a)) {}
   else if (a === 'start') { TEST.on = TEST.arm && !MP.on; startCountdown(); }
@@ -4587,7 +4650,7 @@ function showMenu(view = 'main') {
 function lock() { try { canvas.requestPointerLock(); } catch (e) {} }
 
 function startCountdown() {
-  clearInterval(cdTimer); stopGoSnd(); $('goBig').classList.remove('on'); MP.panelHide(); pvpHide();
+  clearInterval(cdTimer); stopGoSnd(); $('goBig').classList.remove('on'); MP.panelHide(); pvpHide(); showLoading(curMap.id, 2600);
   document.body.classList.remove('zmain', 'zmaps');
   state.phase = 'menu'; cdEl.querySelector('.map').textContent = 'MAP: ' + curMap.name;
   menuEl.classList.add('hidden'); goEl.classList.add('hidden'); pauseEl.classList.add('hidden'); cdEl.classList.remove('hidden');
@@ -4734,6 +4797,7 @@ document.addEventListener('keydown', e => {
   else if (e.code === 'KeyG') throwGrenade();
   else if (e.code === 'Space' && player.onGround) { player.jumpVel = 6.2 * (boughtExtraPerks.has('lunar') ? 1.3 : 1); player.onGround = false; }
   else if (e.code === 'KeyV') knife();
+  else if (e.code === 'KeyH') chewGum();
   else if (e.code === 'KeyE') interact();
   else if (e.code === 'Digit1') switchWeapon(player.slot1);
   else if (e.code === 'Digit2') switchWeapon(player.slot2);
@@ -4758,15 +4822,17 @@ function updateViewmodel(dt, spd, sprinting, bobX, bobY) {
   const w = WEAPONS[player.cur], m = vm[player.cur];
   state.recoil = Math.max(0, state.recoil - dt * 11);
   state.swapT = Math.max(0, state.swapT - dt);
-  const reloadDip = state.reloading ? Math.sin(Math.min(1, (w.reload - state.reloadT) / w.reload) * Math.PI) : 0;
+  const rp = state.reloading ? reloadPose(1 - state.reloadT / (state.reloadTot || w.reload)) : RP0;
   const swap = state.swapT / 0.25;
   const aimT = state.rmb && !state.reloading && !sprinting && state.knifeT <= 0 && state.swapT <= 0 && state.phase === 'playing' ? 1 : 0;
   state.ads += (aimT - state.ads) * Math.min(1, dt * 12); const AD = state.ads, ad = w.ads;
-  m.position.set(w.vm[0] + (ad[0] - w.vm[0]) * AD + bobX * 0.5 * (1 - AD), w.vm[1] + (ad[1] - w.vm[1]) * AD + bobY * 0.5 * (1 - AD) - reloadDip * 0.22 - swap * 0.3, w.vm[2] + (ad[2] - w.vm[2]) * AD + state.recoil * w.kick * (1 - AD * 0.5));
-  const fv = 75 - 17 * AD; if (Math.abs(camera.fov - fv) > 0.05) { camera.fov = fv; camera.updateProjectionMatrix(); }
-  m.rotation.set(state.recoil * w.rot + reloadDip * 0.7, 0, reloadDip * -0.4);
-  if (sprinting) { m.rotation.y = -0.25; m.position.x -= 0.05; }
-  if (state.flashT > 0) { state.flashT -= dt; if (state.flashT <= 0) { muzzleFlash.visible = false; muzzleLight.intensity = 0; } }
+  state.spK = (state.spK || 0) + ((sprinting ? 1 : 0) - (state.spK || 0)) * Math.min(1, dt * 9); const SK = state.spK;
+  const dyw = player.yaw - (state.lyw === undefined ? player.yaw : state.lyw); state.lyw = player.yaw; state.swY = Math.max(-0.14, Math.min(0.14, (state.swY || 0) * Math.max(0, 1 - dt * 9) - dyw * 0.5));
+  const br = Math.sin(state.time * 1.6) * 0.0035 * (1 - AD);
+  m.position.set(w.vm[0] + (ad[0] - w.vm[0]) * AD + bobX * 0.5 * (1 - AD) + rp.dx + 0.03 * SK, w.vm[1] + (ad[1] - w.vm[1]) * AD + bobY * 0.5 * (1 - AD) + br + rp.dy - swap * 0.3 - 0.12 * SK, w.vm[2] + (ad[2] - w.vm[2]) * AD + state.recoil * w.kick * (1 - AD * 0.5) + rp.dz);
+  const fv = 75 - 17 * AD + 3 * SK; if (Math.abs(camera.fov - fv) > 0.05) { camera.fov = fv; camera.updateProjectionMatrix(); }
+  m.rotation.set(state.recoil * w.rot + rp.rx - 0.32 * SK, rp.ry + 0.5 * SK + state.swY * (1 - AD * 0.8), rp.rz - 0.18 * SK + state.swY * 0.4 * (1 - AD));
+  if (state.flashT > 0) { state.flashT -= dt; muzzleLight.intensity *= Math.max(0, 1 - dt * 18); if (state.flashT <= 0) { muzzleFlash.visible = false; muzzleLight.intensity = 0; } }
 
   // knife swing
   if (state.knifeT > 0) {
@@ -4790,7 +4856,7 @@ function updatePlayer(dt) {
   if (keys['KeyA'] || keys['ArrowLeft']) wish.sub(right);
   const moving = wish.lengthSq() > 0; if (moving) wish.normalize();
   const sprinting = (keys['ShiftLeft'] || keys['ShiftRight']) && moving && !state.reloading && state.knifeT <= 0;
-  const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * (boughtExtraPerks.has('stamin') ? 1.3 : 1) * (state.fast ? 1.7 : 1) * (1 - 0.35 * state.ads), k = 1 - Math.exp(-12 * dt);
+  const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * (GUM.fleet > 0 ? 1.25 : 1) * (boughtExtraPerks.has('stamin') ? 1.3 : 1) * (state.fast ? 1.7 : 1) * (1 - 0.35 * state.ads), k = 1 - Math.exp(-12 * dt);
   player.vel.x += (wish.x * speed - player.vel.x) * k; player.vel.z += (wish.z * speed - player.vel.z) * k;
   player.pos.x += player.vel.x * dt; player.pos.z += player.vel.z * dt;
   resolvePlayerCircle(player.pos, PLAYER_RADIUS, player.jumpY);
@@ -4848,7 +4914,7 @@ function updateZombies(dt) {
   const t = state.time; updatePara(dt); updateGibs(dt);
   for (let i = 0; i < zombies.length; i++) {
     const z = zombies[i], gp = z.root.position;
-    if (z.frozen) continue;
+    if (z.frozen || GUM.freeze > 0) continue;
     if (z.spawnT < 0.9) {
       z.spawnT += dt; const sp0 = Math.min(1, z.spawnT / 0.9); gp.y = -2.4 + sp0 * 2.4; if (z.spawnT >= 0.9) gp.y = 0; z.armL.rotation.x = z.armR.rotation.x = -2.9 + sp0 * 1.5; z.upper.rotation.x = 0.5 - sp0 * 0.3;
       continue;
@@ -5088,7 +5154,7 @@ function openDoor() {
 }
 function buyJug() {
   if (state.score < JUG_COST) { notice(`NEED ${JUG_COST} POINTS`); sfx.deny(); return; }
-  state.score -= JUG_COST; jug.bought = true; state.maxHealth = 200; state.health = 200; sfx.heal(); sfx.buy(); notice('JUGGER-NOG! 200 HEALTH', 3000); tint('#ff4a52');
+  state.score -= JUG_COST; jug.bought = true; state.maxHealth = 245; state.health = 245; sfx.heal(); sfx.buy(); notice('JUGGER-NOG! TAKE ONE EXTRA HIT', 3000); tint('#ff4a52');
 }
 function buyPap() {
   const t = player.cur;
@@ -5131,6 +5197,7 @@ function updateInteractions() {
     else if (u.k === 'switch') p = `HOLD E: START POWER (${u.w.name})`;
     else if (u.k === 'perk') p = `PRESS E: BUY ${u.q.title} [${u.q.cost}]`;
     else if (u.k === 'jug') p = `PRESS E: BUY JUGGER-NOG [${JUG_COST}]`;
+    else if (u.k === 'gum') p = GUM.held ? 'CHEW YOUR GUM FIRST (H)' : `PRESS E: BUY GOBBLEGUM [${GUM_COST}]`;
     else if (u.k === 'pap') p = player.pap[player.cur] ? 'ALREADY PACKED' : `PRESS E: PACK-A-PUNCH [${PAP_COST}]`;
     else if (u.k === 'wall') p = u.q.type === 'bowie' ? (player.bowie ? 'BOWIE KNIFE OWNED' : `PRESS E: BUY BOWIE KNIFE [${u.q.cost}]`) : (player.slot1 === u.q.type || player.slot2 === u.q.type || player.slot3 === u.q.type) ? `PRESS E: AMMO [${Math.floor(u.q.cost / 2)}]` : `PRESS E: BUY ${WEAPONS[u.q.type].name} [${u.q.cost}]`;
     else if (u.k === 'box') { if (mbox.state === 'closed') p = `PRESS E: MYSTERY BOX [${BOX_COST}]`; else if (mbox.state === 'ready' && mbox.result !== 'teddy') p = (MP.on && mbox.owner && mbox.owner !== MP.id) ? 'SOMEONE ELSE\'S WEAPON' : `PRESS E: TAKE ${WEAPONS[mbox.result].name}`; }
@@ -5184,9 +5251,7 @@ function mistInit() {
     for (let i = 0; i < 34; i++) {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.1 + Math.random() * 0.09 })); const sc = 9 + Math.random() * 9; sp.scale.set(sc, sc * 0.32, 1); sp.userData = { vx: (Math.random() - 0.5) * 0.7, vz: (Math.random() - 0.5) * 0.7, ph: Math.random() * 6 }; sp.position.set(0, 0.5 + Math.random() * 1.1, 0); sp.renderOrder = 2; MIST.g.add(sp); MIST.s.push(sp);
     }
-    const N = 260, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 36; pos[i * 3 + 1] = Math.random() * 7; pos[i * 3 + 2] = (Math.random() - 0.5) * 36; }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    MIST.dust = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xcfc3a8, size: 0.07, transparent: true, opacity: 0.5, depthWrite: false })); MIST.dust.frustumCulled = false; MIST.g.add(MIST.dust); MIST.init = true;
+    MIST.init = true;
   } catch (e) { MIST.g = null; }
 }
 mistInit();
@@ -5199,9 +5264,100 @@ function mistTick(dt) {
     if (dx * dx + dz * dz > 46 * 46 || sp.position.x === 0) { const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 38; sp.position.x = px + Math.cos(a) * r; sp.position.z = pz + Math.sin(a) * r; }
     sp.material.color.copy(col).lerp(_mistW, 0.35);
   }
-  if (MIST.dust) { MIST.dust.position.set(px, 0, pz); MIST.dust.rotation.y = t * 0.02; MIST.dust.position.y = Math.sin(t * 0.2) * 0.3; }
 }
 const _mistW = new THREE.Color(0xb8bcc8);
+
+/* ---------- BO3-style lobby (party list) + loading screen ---------- */
+const ZLB_COL = ['#d8e84a', '#4aa8ff', '#8dff9a', '#ffb0f0', '#9af3ff', '#ffb04a'];
+function zlbPartyHTML(L, solo) {
+  const me = String(MP.name || '').toUpperCase(), slots = Math.min(MAX_PLAYERS, Math.max(4, L.length + 1));
+  let h = '';
+  L.forEach((n, i) => { const host = /\(HOST\)$/.test(n), nm = MP.esc(n.replace(/ \(HOST\)$/, '')); h += `<div class="zlr"><i></i><span style="color:${ZLB_COL[i % ZLB_COL.length]}">${nm}</span>${host ? '<em>' + (solo ? 'PLAYER' : 'LEADER') + '</em>' : ''}${nm.toUpperCase() === me && !host ? '<em>YOU</em>' : ''}</div>`; });
+  for (let i = L.length; i < slots; i++) h += '<div class="zlr open"><i></i><span>OPEN SLOT</span></div>';
+  return h;
+}
+function zlbHTML(kind) {   // kind: 'solo' | 'host' | 'client'
+  const id = kind === 'client' ? (MAPS[MP.map] ? MP.map : curMap.id) : curMap.id, m = MAPS[id] || curMap;
+  const title = kind === 'solo' ? 'SOLO GAME' : 'PRIVATE MATCH', L = kind === 'solo' ? [(MP.name || 'GUEST') + ' (HOST)'] : (kind === 'host' ? MP.roster() : (MP.ros || []));
+  const opts = kind === 'host' ? `<div class="zlo"><label>PASSWORD (OPTIONAL)</label><input id="mpPw" class="mpin" maxlength="16" autocomplete="off" value="${clEsc(MP.pw)}" placeholder="NO PASSWORD"><button class="zlb2" data-a="mpff">FRIENDLY FIRE: ${MP.ff ? 'ON' : 'OFF'}</button></div>` : kind === 'client' ? `<div class="zlo"><label>FRIENDLY FIRE: ${MP.ff ? 'ON' : 'OFF'}</label><label class="dim">ONLY THE LEADER CAN CHANGE SETTINGS</label></div>` : '';
+  const go = kind === 'client' ? '<span class="dim"><i class="x">&#10005;</i> Waiting for the leader...</span>' : `<button data-a="${kind === 'solo' ? 'start' : 'mpstart'}"><i class="x">&#10005;</i> ${kind === 'solo' ? 'Start game' : 'Start match'}</button>`;
+  const back = kind === 'solo' ? (RV.testing ? 'review' : 'maps') : 'mpleave';
+  return `<div class="zmw zlbw"><div class="zmh"><span class="zmhe"></span>${title}</div><div class="zmln"></div>`
+    + `<div class="zlbL"><div class="zmimg"><img src="${m.thumb || drawMapArt(id)}" alt=""><em>${kind === 'solo' ? 'Zombies' : 'Online'}</em><b>${m.name}</b></div><div class="zmbr"><h3>MISSION BRIEFING</h3><p>${MAP_DESC[id] || m.sub || ''}</p></div>${opts}${TEST.arm && kind === 'solo' ? '<div class="zlt">TESTING MODE: NO WAVES. PRESS 1-9 / 0 TO SPAWN FROZEN MODELS</div>' : ''}</div>`
+    + `<div class="zlbR"><div class="zlh"><span>PARTY</span><b id="zlbCnt">${L.length} / ${kind === 'solo' ? 1 : MAX_PLAYERS}</b></div><div id="zlbParty" class="zlp">${zlbPartyHTML(L, kind === 'solo')}</div></div>`
+    + `<div class="zmf">${go}<button data-a="${back}"><i class="o">&#9675;</i> Back</button></div></div>`;
+}
+const LOAD_TIPS = ['HOLD E TO REBUILD WINDOWS FOR POINTS.', 'HEADSHOTS GIVE MORE POINTS THAN BODY SHOTS.', 'PACK-A-PUNCH UPGRADES YOUR WEAPON.', 'KEEP MOVING. ZOMBIES GET FASTER EVERY ROUND.', 'SHOOT LEGS: CRAWLERS ARE SLOWER BUT STILL BITE.', 'POWER-UPS ARE DROPPED BY KILLED ZOMBIES. GRAB THEM.', 'THE MYSTERY BOX CAN GIVE YOU ANY GUN.', 'STAY NEAR YOUR TEAM. DOWNED PLAYERS CAN BE REVIVED.'];
+const loadEl = document.createElement('div'); loadEl.id = 'loadScr'; document.body.appendChild(loadEl); let _loadT = 0;
+function showLoading(id, ms) {
+  const m = MAPS[id] || curMap, art = m.thumb || drawMapArt(id);
+  loadEl.innerHTML = `<div class="lbg" style="background-image:url(${art})"></div><div class="lvig"></div><div class="lbox"><div class="lart"><img src="${art}" alt=""><b>${m.name}</b></div><div class="lbr"><h3>MISSION BRIEFING</h3><p>${MAP_DESC[id] || m.sub || ''}</p></div></div><div class="ltip">TIP: ${LOAD_TIPS[(Math.random() * LOAD_TIPS.length) | 0]}</div><div class="lbar"><span>LOADING</span><div><i${ms ? ` style="animation-duration:${ms}ms"` : ' class="inf"'}></i></div></div>`;
+  loadEl.classList.add('on'); clearTimeout(_loadT); if (ms) _loadT = setTimeout(hideLoading, ms);
+}
+function hideLoading() { clearTimeout(_loadT); loadEl.classList.remove('on'); }
+
+/* ---------- GobbleGum machine: buy a random gum (500 pts), chew it with H ---------- */
+const GUM_COST = 500, GUM_COL = { classic: '#52c8ff', rare: '#ffb43a', mega: '#ff4fd8' };
+const GUMS = [
+  { id: 'refill', n: 'REFILL', r: 'classic', d: 'ALL AMMO REFILLED', fx: () => { for (const k of [player.slot1, player.slot2, player.slot3]) if (k) { const a = player.ammo[k]; a.mag = magOf(k); a.res = resOf(k); } state.reloading = false; } },
+  { id: 'cash', n: 'CASH BACK', r: 'classic', d: '+1500 POINTS', fx: () => { state.score += 1500; } },
+  { id: 'fleet', n: 'FLEET FEET', r: 'classic', d: 'FASTER MOVEMENT FOR 3 MIN', fx: () => { GUM.fleet = 180; } },
+  { id: 'heavy', n: 'HEAVY HITTER', r: 'classic', d: '+50% DAMAGE FOR 3 MIN', fx: () => { GUM.heavy = 180; } },
+  { id: 'shield', n: 'IRON HIDE', r: 'classic', d: 'THE NEXT 3 HITS DO NO DAMAGE', fx: () => { GUM.shield = 3; } },
+  { id: 'insta', n: 'DEAD ON', r: 'rare', d: 'INSTA-KILL FOR 30 SEC', fx: () => { instaT = 30; } },
+  { id: 'double', n: 'DOUBLE TROUBLE', r: 'rare', d: 'DOUBLE POINTS FOR 60 SEC', fx: () => { doubleT = 60; } },
+  { id: 'wind', n: 'SECOND WIND', r: 'rare', d: 'FULL HEALTH + SELF REVIVE', fx: () => { boughtExtraPerks.add('quick'); state.health = state.maxHealth; sfx.heal(); } },
+  { id: 'freeze', n: 'KILLING TIME', r: 'mega', d: 'ALL ZOMBIES FROZEN FOR 20 SEC', fx: () => { GUM.freeze = 20; } },
+  { id: 'perkall', n: 'PERKAHOLIC', r: 'mega', d: 'ALL PERKS FOR THE REST OF THE GAME', fx: () => { for (const k of ['quick', 'speed', 'double', 'stamin', 'mule', 'vulture', 'lunar', 'head', 'cash']) boughtExtraPerks.add(k); if (!jug.bought) { jug.bought = true; state.maxHealth = 245; state.health = 245; } } }
+];
+const GUM = { held: null, fleet: 0, heavy: 0, shield: 0, freeze: 0 };
+function gumReset() { GUM.held = null; GUM.fleet = GUM.heavy = GUM.shield = GUM.freeze = 0; gumHud(); }
+function gumRoll() { const r = Math.random(), want = r < 0.55 ? 'classic' : r < 0.85 ? 'rare' : 'mega', L = GUMS.filter(g => g.r === want); return L[(Math.random() * L.length) | 0]; }
+function buyGum() {
+  if (GUM.held) { notice('CHEW YOUR GUM FIRST (PRESS H)', 1800); sfx.deny(); return; }
+  if (state.score < GUM_COST) { notice(`NEED ${GUM_COST} POINTS`); sfx.deny(); return; }
+  state.score -= GUM_COST; sfx.buy(); GUM.held = gumRoll(); gumHud(); gumPop('GOT ' + GUM.held.n, GUM.held.r);
+}
+function chewGum() {
+  const g = GUM.held; if (!g || state.phase !== 'playing' || MP.down) return;
+  GUM.held = null; try { g.fx(); } catch (e) {} sfx.chime(); gumPop(g.n + ': ' + g.d, g.r); gumHud();
+}
+const gumHudEl = document.createElement('div'); gumHudEl.id = 'gumHud'; hudEl.appendChild(gumHudEl);
+const gumPopEl = document.createElement('div'); gumPopEl.id = 'gumPop'; hudEl.appendChild(gumPopEl); let _gpT = 0;
+function gumPop(t, r) { gumPopEl.textContent = t; gumPopEl.style.color = GUM_COL[r] || '#fff'; gumPopEl.classList.add('on'); clearTimeout(_gpT); _gpT = setTimeout(() => gumPopEl.classList.remove('on'), 2600); }
+function gumHud() {
+  const g = GUM.held, a = [];
+  if (GUM.freeze > 0) a.push(['KILLING TIME', GUM.freeze]); if (GUM.fleet > 0) a.push(['FLEET FEET', GUM.fleet]); if (GUM.heavy > 0) a.push(['HEAVY HITTER', GUM.heavy]); if (GUM.shield > 0) a.push(['IRON HIDE x' + GUM.shield, 0]);
+  gumHudEl.innerHTML = (g ? `<div class="gh"><i style="--c:${GUM_COL[g.r]}"></i><b>${g.n}</b><small>H: CHEW</small></div>` : '') + a.map(x => `<div class="ga">${x[0]}${x[1] ? ' ' + Math.ceil(x[1]) + 's' : ''}</div>`).join('');
+}
+let _gk = '';
+function gumTick(dt) {
+  for (const k of ['fleet', 'heavy', 'freeze']) if (GUM[k] > 0) GUM[k] = Math.max(0, GUM[k] - dt);
+  const k = [GUM.held && GUM.held.id, Math.ceil(GUM.fleet), Math.ceil(GUM.heavy), Math.ceil(GUM.freeze), GUM.shield].join(); if (k !== _gk) { _gk = k; gumHud(); }
+  const gp = curMap && curMap.gumGrp; if (gp) { const gl = gp.userData.globe; if (gl) gl.rotation.y += dt * 0.6; }
+}
+function buildGumMachine() {
+  const g = new THREE.Group(), M = (c, e = 0, em = 0x000000) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, metalness: 0.55, emissive: em, emissiveIntensity: e });
+  const box = (w, h, d, m, x, y, z) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); q.castShadow = true; g.add(q); return q; };
+  box(1.3, 0.3, 1.0, M(0x20123a), 0, 0.15, 0); box(1.15, 1.45, 0.9, M(0x4a1f7a, 0.15, 0x2a0a55), 0, 1.0, 0);
+  box(1.2, 0.12, 0.95, M(0xff4fd8, 0.9, 0xff4fd8), 0, 1.76, 0);
+  const [c, x] = mkCanvas(256, 128); const gr = x.createLinearGradient(0, 0, 256, 0); gr.addColorStop(0, '#ff4fd8'); gr.addColorStop(1, '#52c8ff'); x.fillStyle = '#12081f'; x.fillRect(0, 0, 256, 128); x.fillStyle = gr; x.font = 'bold 40px Arial'; x.textAlign = 'center'; x.fillText('GOBBLE', 128, 52); x.fillText('GUMS', 128, 100);
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); sg.position.set(0, 1.38, 0.455); g.add(sg);
+  box(0.5, 0.22, 0.05, M(0x0b0612), 0, 0.82, 0.46); box(0.1, 0.02, 0.06, M(0xffd24a, 0.8, 0xffd24a), 0.0, 0.95, 0.47);
+  const glass = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 16), new THREE.MeshStandardMaterial({ color: 0xaad8ff, transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.1 })); glass.position.set(0, 2.32, 0); g.add(glass);
+  const globe = new THREE.Group(); globe.position.set(0, 2.32, 0); g.add(globe); g.userData.globe = globe;
+  const cols = [0xff4fd8, 0x52c8ff, 0xffb43a, 0x8aff4a, 0xff4a4a, 0xffffff];
+  for (let i = 0; i < 26; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshStandardMaterial({ color: cols[i % cols.length], roughness: 0.3, emissive: cols[i % cols.length], emissiveIntensity: 0.35 })); const a = Math.random() * 6.28, r = Math.random() * 0.36; b.position.set(Math.cos(a) * r, -0.3 + Math.random() * 0.45, Math.sin(a) * r); globe.add(b); }
+  box(0.3, 0.1, 0.3, M(0xffd24a, 0.5, 0xffb000), 0, 2.86, 0);
+  return g;
+}
+function placeGumMachine(m) {
+  if (m.gumGrp) return;
+  try {
+    const g = buildGumMachine(), r = m.boxRot || 0, bp = m.boxPos || { x: 0, z: 0 }, px = bp.x + Math.cos(r) * 3.2, pz = bp.z - Math.sin(r) * 3.2;
+    g.position.set(px, 0, pz); const sp = m.spawn || { x: 0, z: 0 }; g.rotation.y = Math.atan2(sp.x - px, sp.z - pz); (m.root || scene).add(g); m.gumGrp = g; m.gumPos = { x: px, z: pz };
+  } catch (e) {}
+}
 
 const FOGX = { k: 0, col: null }, FOG_HC = new THREE.Color(0x3a2424);
 function updateFog(dt) {   // hellhound rounds roll a thick reddish fog over the map, then it clears when the round ends
@@ -5213,7 +5369,7 @@ function updateFog(dt) {   // hellhound rounds roll a thick reddish fog over the
 }
 function update(dt) {
   if (MP.on && MP.paused) { MP.tick(dt); return; }
-  state.time += dt; updateFog(dt); mistTick(dt);
+  state.time += dt; updateFog(dt); mistTick(dt); gumTick(dt);
   if (state.phase === 'playing' && !state.cheated) { if (MP.client && MP.joinWave > 1 && state.coinNext < MP.joinWave + 10) state.coinNext = MP.joinWave + 10;   // late joiners: coins only after playing 10 more rounds
   while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
   if (state.qr > 0) { state.qr -= dt; const n = Math.ceil(state.qr); if (n > 0 && n !== state.qrN) { state.qrN = n; notice(`QUICK REVIVE - GETTING UP IN ${n}`, 1100); } if (state.qr <= 0) endQrDown(); }
@@ -6779,7 +6935,7 @@ function activateMap(id) {
   ] : []; 
   jug.pos.copy(m.jugPos); pap.pos.copy(m.papPos); pap.gear = m.papGear;
   mbox.pos.copy(m.boxPos); mbox.group.position.copy(m.boxPos); mbox.group.rotation.y = m.boxRot;
-  FOGX.k = 0; FOGX.col = null; scene.fog.density = m.fog * 0.42 * 1.35; pbrUpgrade(m.root); applyEnv(m.env); scene.fog.color.lerp(new THREE.Color(0x4a5a78), 0.35); scene.background.lerp(new THREE.Color(0x24304a), 0.3);
+  FOGX.k = 0; FOGX.col = null; scene.fog.density = m.fog * 0.42 * 1.35; pbrUpgrade(m.root); placeGumMachine(m); applyEnv(m.env); scene.fog.color.lerp(new THREE.Color(0x4a5a78), 0.35); scene.background.lerp(new THREE.Color(0x24304a), 0.3);
   const sc = moon.shadow.camera; sc.left = -m.shadowX; sc.right = m.shadowX; sc.top = m.shadowZ; sc.bottom = -m.shadowZ; sc.updateProjectionMatrix();
   if (m.nav) {
     Object.assign(NAV, m.nav, { on: true, last: -1, t: 0 });
