@@ -4687,7 +4687,7 @@ function resetWorld() {
   DNG.saved = null;
   Object.assign(state, {
     qr: 0, qrN: 0, downDrop: 0, time: 0, score: START_POINTS, kills: 0, wave: 0, health: 100, lastHurt: -10, roundState: 'intermission', interT: 3, roundTotal: 0, spawned: 0, spawnT: 0,
-    fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 140, ads: 0, rmb: false, god: false, cheated: false, coinNext: 10, downs: 0, revives: 0, heads: 0,
+    fireCd: 0, clickBuf: 0, mouseDown: false, heat: 0, over: false, heatIdle: 0, paraT: 0, paraTick: 0, reloading: false, reloadT: 0, swapT: 0, recoil: 0, flashT: 0, knifeT: 0, knifeCd: 0, shake: 0, lastGrowl: 0, maxHealth: 140, ads: 0, rmb: false, god: false, insta: false, fast: false, powerAll: false, gunCh: 0, cheated: false, coinNext: 10, downs: 0, revives: 0, heads: 0,
   });
   camera.fov = 75; camera.updateProjectionMatrix();
   player.pos.set(curMap.spawn.x, 0, curMap.spawn.z); player.jumpY = curMap.spawn.y || 0; player.jumpVel = 0; player.onGround = true; player.vel.set(0, 0, 0); player.yaw = curMap.spawn.yaw; player.pitch = 0; NAV.last = -1; player.bowie = false; player.cur = 'pistol'; player.slot1 = 'pistol'; player.slot2 = null; player.slot3 = null; player.pap = {};
@@ -5101,7 +5101,7 @@ function sendChat() {
 let cheatBuf = '';
 function cheatRound(add) {
   const n = Math.max(1, state.wave) + add;
-  if (MP.client) { notice('ONLY THE HOST CAN CHANGE THE ROUND'); return; }
+  if (MP.client) { notice('ONLY THE HOST CAN USE CHEATS'); return; }
   for (const z of [...zombies]) { scene.remove(z.root); disposeBar(z); } zombies.length = 0; MP.zmap.clear();
   state.wave = n - 1; state.roundState = 'intermission'; state.interT = 1.5; state.spawned = 0; state.roundTotal = 0; state.houndRound = false;
   notice('CHEAT: ROUND ' + n, 2600); sfx.chime();
@@ -5112,14 +5112,14 @@ const CHEATS = {
   perk: () => { for (const k of ['quick', 'speed', 'double', 'stamin', 'mule', 'vulture', 'lunar', 'head', 'cash']) boughtExtraPerks.add(k); if (!jug.bought) { jug.bought = true; state.maxHealth = 200; } state.health = state.maxHealth; notice('CHEAT: ALL PERKS', 2600); sfx.chime(); sfx.heal(); },
   power: () => { state.powerAll = !state.powerAll; notice(state.powerAll ? 'CHEAT: ALL ZOMBIES DROP POWER-UPS' : 'CHEAT: POWER-UP DROPS OFF', 2600); sfx.chime(); },
   ammo: () => { for (const t in player.ammo) { const w = WEAPONS[t], a = player.ammo[t]; if (w && a) { a.mag = magOf(t); a.res = resOf(t); } } state.reloading = false; notice('CHEAT: FULL AMMO', 2600); sfx.chime(); },
-  nuke: () => { if (MP.client) { notice('ONLY THE HOST CAN NUKE'); return; } for (const z of [...zombies]) damageZombie(z, 1e7, new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), false); notice('CHEAT: NUKE', 2600); sfx.explode(); },
+  nuke: () => { if (MP.client) { notice('ONLY THE HOST CAN USE CHEATS'); return; } for (const z of [...zombies]) damageZombie(z, 1e7, new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z), false); notice('CHEAT: NUKE', 2600); sfx.explode(); },
   insta: () => { state.insta = !state.insta; notice(state.insta ? 'CHEAT: INSTA-KILL ON' : 'CHEAT: INSTA-KILL OFF', 2600); sfx.chime(); },
   fast: () => { state.fast = !state.fast; notice(state.fast ? 'CHEAT: SUPER SPEED ON' : 'CHEAT: SUPER SPEED OFF', 2600); sfx.chime(); },
   gun: () => { const L = Object.keys(WEAPONS).filter(k => k !== 'pistol' && vm[k]); state.gunCh = ((state.gunCh | 0) % L.length) + 1; const t = L[state.gunCh - 1]; giveWeapon(t); sfx.swap(); notice('CHEAT: ' + WEAPONS[t].name + ' (' + state.gunCh + '/' + L.length + ')', 2600); },
   para: () => { if (curMap.id !== 'buried') { notice('THE PARALYZER ONLY EXISTS ON BURIED', 2600); return; } giveWeapon('para'); notice('CHEAT: PARALYZER', 2600); },
   money: () => { state.score += 10000; notice('CHEAT: +10000 POINTS', 2600); sfx.chime(); },
 };
-for (const k of Object.keys(CHEATS)) { const f = CHEATS[k]; CHEATS[k] = () => { if (!MP.on && !PVP.on) PVP.in = false; if (PVP.on || MP.mode === 'pvp') { notice('CHEATS ARE DISABLED IN PVP', 2400); sfx.deny(); return; } if (!state.cheated) { state.cheated = true; setTimeout(() => notice('CHEATS USED - NO COINS THIS RUN', 3000), 2700); } f(); }; }
+for (const k of Object.keys(CHEATS)) { const f = CHEATS[k]; CHEATS[k] = () => { if (MP.client) { notice('ONLY THE HOST CAN USE CHEATS', 2400); sfx.deny(); return; } if (!MP.on && !PVP.on) PVP.in = false; if (PVP.on || MP.mode === 'pvp') { notice('CHEATS ARE DISABLED IN PVP', 2400); sfx.deny(); return; } if (!state.cheated) { state.cheated = true; setTimeout(() => notice('CHEATS USED - NO COINS THIS RUN', 3000), 2700); } f(); }; }
 document.addEventListener('keydown', e => {
   if (chat.open) {
     e.preventDefault();
