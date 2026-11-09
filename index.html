@@ -8500,8 +8500,16 @@ function buildCustomMap(d) {
   const decks = [], teleIds = new Set((d.tele || []).map(q => q.id)), swIds = new Set((d.switches || []).map(q => q.id)), pwOk = id => (id && swIds.has(id)) ? id : undefined;
   const cmBoxM = (x, y0, z, w, h, dd, mk, col) => { const m = new THREE.Mesh(boxGeo(w, h, dd, CM_DEN[mk] || 3), cmMat(mk, col)); m.position.set(x, y0 + h / 2, z); m.castShadow = m.receiveShadow = true; scene.add(m); occ.push(m); return m; };
   for (const w of d.walls) {
-    const y0 = Math.max(0, +w.y || 0), mk = CM_MATK.includes(w.m) ? w.m : 'concrete'; cmBoxM(w.x, y0, w.z, w.w, w.h, w.d, mk, cmCol(w));
-    if (!(y0 > 0)) { obs.push({ minX: w.x - w.w / 2, maxX: w.x + w.w / 2, minZ: w.z - w.d / 2, maxZ: w.z + w.d / 2, top: w.h }); decks.push({ minX: w.x - w.w / 2, maxX: w.x + w.w / 2, minZ: w.z - w.d / 2, maxZ: w.z + w.d / 2, y: w.h }); }
+    const y0 = Math.max(0, +w.y || 0), mk = CM_MATK.includes(w.m) ? w.m : 'concrete', wm = cmBoxM(w.x, y0, w.z, w.w, w.h, w.d, mk, cmCol(w)), ang = w.a || 0;
+    wm.rotation.y = ang;
+    if (!(y0 > 0)) {
+      const sn = Math.sin(ang), cs = Math.cos(ang);
+      if (Math.abs(sn) < 0.001 || Math.abs(cs) < 0.001) { const sw = Math.abs(sn) > 0.5, hw = (sw ? w.d : w.w) / 2, hd = (sw ? w.w : w.d) / 2; obs.push({ minX: w.x - hw, maxX: w.x + hw, minZ: w.z - hd, maxZ: w.z + hd, top: w.h }); decks.push({ minX: w.x - hw, maxX: w.x + hw, minZ: w.z - hd, maxZ: w.z + hd, y: w.h }); }
+      else {   // angled wall: a row of small boxes along its length
+        const th = Math.max(0.5, w.d), n = Math.min(80, Math.max(1, Math.ceil(w.w / (th * 0.8)))), step = w.w / n, hh = Math.max(step, th) / 2 + 0.1;
+        for (let k = 0; k < n; k++) { const lx = -w.w / 2 + step * (k + 0.5), cx = w.x + lx * cs, cz = w.z - lx * sn, bb = { minX: cx - hh, maxX: cx + hh, minZ: cz - hh, maxZ: cz + hh }; obs.push({ ...bb, top: w.h }); decks.push({ ...bb, y: w.h }); }
+      }
+    }
   }
   for (const f of (d.floors || [])) {
     const top = Math.max(0.5, +f.y || 3.6), t = Math.min(0.3, top), mk = CM_MATK.includes(f.m) ? f.m : 'concrete'; cmBoxM(f.x, top - t, f.z, f.w, t, f.d, mk, cmCol(f));
@@ -8834,7 +8842,7 @@ function rvRemote(id, s) {
   d.windows = (Array.isArray(d.windows) ? d.windows : []).filter(q => fin(q, ['x', 'z', 'w'])).slice(0, 24).map(q => ({ x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, w: Math.max(1, Math.min(10, +q.w)), n: Math.max(2, Math.min(8, Math.round(+q.n || 6))) }));
   d.switches = (Array.isArray(d.switches) ? d.switches : []).filter(q => fin(q, ['x', 'z']) && /^[a-z0-9]{1,8}$/.test(q.id || '')).slice(0, 12).map(q => ({ id: q.id, x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, n: rvClean(q.n).toUpperCase().slice(0, 16) || 'POWER', hold: Math.max(1, Math.min(15, Math.round(+q.hold || 4))) })); d.tod = CM_TOD[d.tod] ? d.tod : 'night'; d.thumb = cmThumb(d); d.spawn = { x: d.spawn.x, z: d.spawn.z, yaw: Number.isFinite(d.spawn.yaw) ? d.spawn.yaw : 0, y: Number.isFinite(d.spawn.y) ? Math.max(0, Math.min(12, d.spawn.y)) : 0 };
   { const mk = v => CM_MATK.includes(v) ? v : 'concrete', col = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : undefined, cl = (v, a, b) => Math.max(a, Math.min(b, +v));
-    d.walls = d.walls.map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), h: cl(q.h, 0.5, 20), y: Number.isFinite(q.y) ? cl(q.y, 0, 12) : 0, m: mk(q.m), c: col(q.c) }));
+    d.walls = d.walls.map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), h: cl(q.h, 0.5, 20), y: Number.isFinite(q.y) ? cl(q.y, 0, 12) : 0, m: mk(q.m), c: col(q.c), a: Number.isFinite(q.a) ? q.a % (Math.PI * 2) : 0 }));
     d.floors = (Array.isArray(d.floors) ? d.floors : []).filter(q => fin(q, ['x', 'z', 'w', 'd', 'y'])).slice(0, 200).map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), y: cl(q.y, 0.5, 12), m: mk(q.m), c: col(q.c) }));
     d.stairs = (Array.isArray(d.stairs) ? d.stairs : []).filter(q => fin(q, ['x', 'z', 'w', 'd', 'y'])).slice(0, 100).map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 40), d: cl(q.d, 0.5, 40), y: cl(q.y, 0.5, 12), r: (((q.r | 0) % 4) + 4) % 4, m: mk(q.m), c: col(q.c) }));
     d.props = (Array.isArray(d.props) ? d.props : []).filter(q => q && typeof q.n === 'string' && PROP_DATA[q.n] && fin(q, ['x', 'z'])).slice(0, 150).map(q => ({ n: q.n, x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, s: cl(q.s || 1, 0.3, 6), y: Number.isFinite(q.y) ? cl(q.y, 0, 12) : 0, c: q.c ? 1 : 0 })); }
@@ -8933,7 +8941,7 @@ function edHit(x, z) {
   for (let i = d.zs.length - 1; i >= 0; i--) if (Math.hypot(d.zs[i].x - x, d.zs[i].z - z) < r) return { t: 'zs', i };
   if (Math.hypot(d.spawn.x - x, d.spawn.z - z) < r) return { t: 'spawn', i: 0 };
   for (let i = (d.props || []).length - 1; i >= 0; i--) if (Math.hypot(d.props[i].x - x, d.props[i].z - z) < Math.max(r, 0.9 * (d.props[i].s || 1))) return { t: 'prop', i };
-  for (const [t, arr] of [['gate', d.gates], ['stairs', d.stairs || []], ['wall', d.walls], ['floor', d.floors || []]]) for (let i = arr.length - 1; i >= 0; i--) { const q = arr[i]; if (Math.abs(q.x - x) <= q.w / 2 + 0.3 && Math.abs(q.z - z) <= q.d / 2 + 0.3) return { t, i }; }
+  for (const [t, arr] of [['gate', d.gates], ['stairs', d.stairs || []], ['wall', d.walls], ['floor', d.floors || []]]) for (let i = arr.length - 1; i >= 0; i--) { const q = arr[i], aa = q.a || 0, ca = Math.cos(aa), sa = Math.sin(aa), ex = x - q.x, ez = z - q.z; if (Math.abs(ex * ca - ez * sa) <= q.w / 2 + 0.3 && Math.abs(ex * sa + ez * ca) <= q.d / 2 + 0.3) return { t, i }; }
   return null;
 }
 function edItem(s) { if (!s) return null; const d = ED.d; if (s.t === 'spawn') return d.spawn; return ({ tele: d.tele || [], win: d.windows || [], sw: d.switches || [], wall: d.walls, gate: d.gates, floor: d.floors || [], stairs: d.stairs || [], perk: d.perks, wb: d.wb || [], prop: d.props || [], box: d.boxes, zs: d.zs }[s.t] || [])[s.i] || null; }
@@ -8953,7 +8961,7 @@ function edDown(ev) {
   const p = edXY(ev), w = edW(p), t = ED.tool, d = ED.d; ED.msg = '';
   if (t === 'sel') {
     const it = edItem(ED.sel);
-    if (it && it.w && Math.hypot((it.x + it.w / 2 - w.x) * ED.sc, (it.z + it.d / 2 - w.z) * ED.sc) < 18) { ED.drag = { m: 'resize' }; return; }
+    if (it && it.w && Math.hypot((it.x + (it.w / 2) * Math.cos(it.a || 0) + (it.d / 2) * Math.sin(it.a || 0) - w.x) * ED.sc, (it.z - (it.w / 2) * Math.sin(it.a || 0) + (it.d / 2) * Math.cos(it.a || 0) - w.z) * ED.sc) < 18) { ED.drag = { m: 'resize' }; return; }
     const h = edHit(w.x, w.z); ED.sel = h;
     if (h) { const q = edItem(h); ED.drag = { m: 'move', ox: q.x - w.x, oz: q.z - w.z }; } else ED.drag = { m: 'pan', sx: p.x, sy: p.y, cx: ED.cx, cz: ED.cz };
   } else if (t === 'wall' || t === 'gate' || t === 'floor' || t === 'stairs') ED.drag = { m: 'rect', x0: edSn(w.x), z0: edSn(w.z), x1: edSn(w.x), z1: edSn(w.z) };
@@ -8974,7 +8982,7 @@ function edMove(ev) {
   if (g.m === 'pan') { ED.cx = g.cx - (p.x - g.sx) / ED.sc; ED.cz = g.cz - (p.y - g.sy) / ED.sc; }
   else if (g.m === 'move') { const q = edItem(ED.sel); if (q) { q.x = edSn(w.x + g.ox); q.z = edSn(w.z + g.oz); } }
   else if (g.m === 'rect') { g.x1 = edSn(w.x); g.z1 = edSn(w.z); }
-  else if (g.m === 'resize') { const q = edItem(ED.sel); if (q) { q.w = Math.max(0.5, edSn((w.x - q.x) * 2)); q.d = Math.max(0.5, edSn((w.z - q.z) * 2)); } }
+  else if (g.m === 'resize') { const q = edItem(ED.sel); if (q) { const aa = q.a || 0, ex = w.x - q.x, ez = w.z - q.z; q.w = Math.max(0.5, edSn((ex * Math.cos(aa) - ez * Math.sin(aa)) * 2)); q.d = Math.max(0.5, edSn((ex * Math.sin(aa) + ez * Math.cos(aa)) * 2)); } }
   edDraw();
 }
 function edUp() {
@@ -9040,7 +9048,7 @@ function edAct(a) {
   else { const it = edItem(ED.sel); if (it) {
     if (a === 'w-') it.w = Math.max(0.5, it.w - 0.5); else if (a === 'w+') it.w += 0.5; else if (a === 'd-') it.d = Math.max(0.5, it.d - 0.5); else if (a === 'd+') it.d += 0.5;
     else if (a === 'ps-') it.s = Math.max(0.3, +((it.s || 1) - 0.1).toFixed(2)); else if (a === 'ps+') it.s = Math.min(6, +((it.s || 1) + 0.1).toFixed(2));
-    else if (a === 'rf') it.ry = ((it.ry || 0) + Math.PI / 12) % (Math.PI * 2);
+    else if (a === 'rf') { const k = ED.sel.t === 'wall' ? 'a' : 'ry'; it[k] = ((it[k] || 0) + Math.PI / 12) % (Math.PI * 2); }
     else if (a === 'py') { const L = [0, 0.5, 1, 1.5, 2, 3, 3.6, 4.5, 6, 8]; const i = L.findIndex(v => v > (it.y || 0) + 1e-6); it.y = L[i < 0 ? 0 : i]; }
     else if (a === 'pcol') it.c = it.c ? 0 : 1;
     else if (a === 'h') { const L = [1, 2, 3.6, 6, 10]; it.h = L[(L.indexOf(it.h) + 1) % L.length]; }
@@ -9049,7 +9057,7 @@ function edAct(a) {
     else if (a === 'y' && ED.sel.t === 'spawn') { const L = [0, 0.5, 1, 2, 3, 3.6, 4.5, 6, 8, 10], i = L.findIndex(v => v > (it.y || 0) + 1e-6); it.y = L[i < 0 ? 0 : i]; }
     else if (a === 'y') { const L = ED.sel.t === 'wall' ? [0, 1, 2, 3, 3.6, 5, 6, 8] : [0.5, 1, 1.5, 2, 3, 3.6, 4.5, 6, 8, 10], cur = ED.sel.t === 'wall' ? (it.y || 0) : it.y, i = L.findIndex(v => v > cur + 1e-6); it.y = L[i < 0 ? 0 : i]; }
     else if (a === 'c-') it.cost = Math.max(0, it.cost - 250); else if (a === 'c+') it.cost = Math.min(9000, it.cost + 250);
-    else if (a === 'rot') { if (ED.sel.t === 'stairs') it.r = ((it.r || 0) + 1) % 4; else if (ED.sel.t === 'spawn') it.yaw = ((it.yaw || 0) + Math.PI / 2) % (Math.PI * 2); else if (ED.sel.t === 'box') it.rot = ((it.rot || 0) + Math.PI / 2) % (Math.PI * 2); else it.ry = ((it.ry || 0) + Math.PI / 2) % (Math.PI * 2); }
+    else if (a === 'rot') { if (ED.sel.t === 'stairs') it.r = ((it.r || 0) + 1) % 4; else if (ED.sel.t === 'spawn') it.yaw = ((it.yaw || 0) + Math.PI / 2) % (Math.PI * 2); else if (ED.sel.t === 'box') it.rot = ((it.rot || 0) + Math.PI / 2) % (Math.PI * 2); else if (ED.sel.t === 'wall') it.a = ((it.a || 0) + Math.PI / 2) % (Math.PI * 2); else it.ry = ((it.ry || 0) + Math.PI / 2) % (Math.PI * 2); }
     else if (a === 'del') edDelete(ED.sel);
   } }
   edUI(); edDraw();
@@ -9096,7 +9104,7 @@ function edUI() {
   if (it) {
     const PW = q => 'POWER: ' + ((d.switches || []).find(w => w.id === q.pw) || { n: 'ALWAYS ON' }).n;
     const MN = () => (CM_MAT.find(q => q[0] === (it.m || 'concrete')) || ['', 'CONCRETE'])[1], SZ = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+');
-    if (s.t === 'wall') h = SZ + B('h', 'H ' + it.h) + B('y', 'RAISE ' + (it.y || 0)) + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
+    if (s.t === 'wall') h = SZ + B('rot', 'TURN 90') + B('rf', 'TURN 15') + B('h', 'H ' + it.h) + B('y', 'RAISE ' + (it.y || 0)) + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'floor') h = SZ + B('y', 'TOP Y ' + it.y) + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'stairs') h = SZ + B('y', 'TOP Y ' + it.y) + B('rot', 'TURN') + B('mat', 'MAT ' + MN()) + B('col', 'TINT') + B('del', 'DEL', 0, 'red');
     else if (s.t === 'gate') h = B('w-', 'W-') + B('w+', 'W+') + B('d-', 'D-') + B('d+', 'D+') + B('c-', '-250') + `<span>COST ${it.cost}</span>` + B('c+', '+250') + B('pw', PW(it)) + B('tpl', 'TELEPORT LINKS: ' + ((it.tp || []).length || 'NONE'), ED.panel === 'tpl') + B('del', 'DEL', 0, 'red');
@@ -9133,7 +9141,7 @@ function edDraw() {
   x.strokeStyle = '#e8d27a'; x.lineWidth = 2; x.strokeRect(X(-d.ax), Z(-d.az), d.ax * 2 * sc, d.az * 2 * sc);
   const sel = ED.sel, isS = (t, i) => sel && sel.t === t && sel.i === i;
   (d.floors || []).forEach((q, i) => { x.fillStyle = 'rgba(120,170,220,0.26)'; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('floor', i) ? '#fff' : '#78aadc'; x.lineWidth = 2; x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.fillStyle = '#bcd8f5'; x.font = 'bold 10px monospace'; x.textAlign = 'left'; x.fillText('Y' + q.y, X(q.x - q.w / 2) + 3, Z(q.z - q.d / 2) + 11); });
-  d.walls.forEach((q, i) => { x.fillStyle = q.c; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('wall', i) ? '#fff' : 'rgba(0,0,0,0.6)'; x.lineWidth = isS('wall', i) ? 2 : 1; x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); });
+  d.walls.forEach((q, i) => { const on = isS('wall', i); x.save(); x.translate(X(q.x), Z(q.z)); x.rotate(-(q.a || 0)); x.fillStyle = q.c; x.fillRect(-q.w * sc / 2, -q.d * sc / 2, q.w * sc, q.d * sc); x.strokeStyle = on ? '#fff' : 'rgba(0,0,0,0.6)'; x.lineWidth = on ? 2 : 1; x.strokeRect(-q.w * sc / 2, -q.d * sc / 2, q.w * sc, q.d * sc); x.restore(); });
   (d.stairs || []).forEach((q, i) => {
     const x0 = X(q.x - q.w / 2), z0 = Z(q.z - q.d / 2), W = q.w * sc, H = q.d * sc, r = q.r || 0, v = [[0, -1], [1, 0], [0, 1], [-1, 0]][r % 4];
     x.fillStyle = '#a8946a'; x.fillRect(x0, z0, W, H); x.strokeStyle = 'rgba(0,0,0,0.45)'; x.lineWidth = 1;
@@ -9192,7 +9200,7 @@ function e3Rebuild() {
   const add = (t, i, geo, mat, x, y, z, ry) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; m.userData = { t, i }; g.add(m); return m; };
   const gm = new THREE.Mesh(new THREE.PlaneGeometry(d.ax * 2, d.az * 2), e3Mat({ grass: '#2f4f27', asphalt: '#34373b', concrete: '#66686a', sand: '#85785a' }[d.ground] || '#2f4f27')); gm.rotation.x = -Math.PI / 2; g.add(gm);
   const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(d.ax * 2, 0.3, d.az * 2)), new THREE.LineBasicMaterial({ color: 0xe8d27a })); fr.position.y = 0.15; g.add(fr);
-  d.walls.forEach((q, i) => { const mk = CM_MATK.includes(q.m) ? q.m : 'concrete', y0 = Math.max(0, +q.y || 0); add('wall', i, boxGeo(q.w, q.h, q.d, CM_DEN[mk] || 3), cmMat(mk, cmCol(q)), q.x, y0 + q.h / 2, q.z); });
+  d.walls.forEach((q, i) => { const mk = CM_MATK.includes(q.m) ? q.m : 'concrete', y0 = Math.max(0, +q.y || 0); add('wall', i, boxGeo(q.w, q.h, q.d, CM_DEN[mk] || 3), cmMat(mk, cmCol(q)), q.x, y0 + q.h / 2, q.z, q.a || 0); });
   (d.floors || []).forEach((q, i) => { const mk = CM_MATK.includes(q.m) ? q.m : 'concrete', top = Math.max(0.5, +q.y || 3.6), t = Math.min(0.3, top); add('floor', i, boxGeo(q.w, t, q.d, CM_DEN[mk] || 3), cmMat(mk, cmCol(q)), q.x, top - t / 2, q.z); });
   (d.stairs || []).forEach((q, i) => { const mk = CM_MATK.includes(q.m) ? q.m : 'concrete', mat = cmMat(mk, cmCol(q)); for (const st of cmStairSteps(q)) add('stairs', i, boxGeo(st.w, st.th, st.d, CM_DEN[mk] || 3), mat, st.x, st.y - st.th / 2, st.z); });
   d.gates.forEach((q, i) => add('gate', i, new THREE.BoxGeometry(q.w, 3, q.d), e3Mat('#e0b020', { transparent: true, opacity: 0.65 }), q.x, 1.5, q.z));
