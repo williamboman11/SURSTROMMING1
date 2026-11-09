@@ -85,12 +85,12 @@
   .btn small { display: block; font-size: 8px; color: var(--dim); margin-top: 7px; letter-spacing: 1px; }
   .btn.back { margin-top: 18px; font-size: 10px; color: var(--dim); }
   .label { font-size: 9px; color: var(--dim); padding: 0 14px 12px; letter-spacing: 2px; }
-  .clbox { max-height: 58vh; overflow-y: auto; padding: 0 14px 0 10px; margin: 6px 0 12px; -webkit-overflow-scrolling: touch; }
-  .clbox h4 { margin: 14px 0 6px; font-weight: normal; font-size: 10px; color: var(--acc); letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
-  .clbox p { margin: 0 0 6px 10px; font-size: 8px; line-height: 1.8; color: #cfd2d6; text-shadow: 1px 1px 0 #000; }
+  .clbox { max-height: 64vh; overflow-y: auto; padding: 0 14px 0 10px; margin: 6px 0 12px; -webkit-overflow-scrolling: touch; }
+  .clbox h4 { margin: 14px 0 6px; font-weight: normal; font-size: 17px; color: var(--acc); letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+  .clbox p { margin: 0 0 8px 10px; font-size: 14px; line-height: 1.7; color: #cfd2d6; text-shadow: 1px 1px 0 #000; }
   .clbox p:before { content: '> '; color: var(--acc); }
-  textarea.clin { user-select: text; -webkit-user-select: text; width: calc(100% - 14px); height: 36vh; margin: 6px 0 8px; padding: 10px; background: #0b0d12; color: #fff; border: 2px solid #e8d27a; font: 9px/1.7 "Press Start 2P", monospace; resize: vertical; box-sizing: border-box; }
-  .clnote { font-size: 8px; color: var(--dim); margin: 4px 14px 8px 10px; line-height: 1.8; }
+  textarea.clin { user-select: text; -webkit-user-select: text; width: calc(100% - 14px); height: 36vh; margin: 6px 0 8px; padding: 10px; background: #0b0d12; color: #fff; border: 2px solid #e8d27a; font: 14px/1.7 "Press Start 2P", monospace; resize: vertical; box-sizing: border-box; }
+  .clnote { font-size: 13px; color: var(--dim); margin: 4px 14px 8px 10px; line-height: 1.8; }
   .ctl { padding: 0 14px; font-size: 9px; line-height: 2.3; color: #cfd2d6; text-shadow: 1px 1px 0 #000; }
   .ctl b { color: var(--acc); font-weight: normal; display: inline-block; width: 120px; }
 
@@ -5075,9 +5075,9 @@ document.addEventListener('wheel', e => {
   switchWeapon(sl[(ci + (e.deltaY > 0 ? 1 : sl.length - 1)) % sl.length]);
 }, { passive: true });
 /* ===================== CHAT (press T) + CHEAT CODES (type them while playing) ===================== */
-const chatBox = document.createElement('div'); chatBox.style.cssText = 'position:absolute;left:24px;top:112px;width:min(430px,62vw);font-size:10px;line-height:1.7;color:#e8e8e8;text-shadow:2px 2px 0 #000;';
+const chatBox = document.createElement('div'); chatBox.style.cssText = 'position:absolute;left:24px;top:112px;width:min(760px,82vw);font-size:18px;line-height:1.6;color:#e8e8e8;text-shadow:2px 2px 0 #000;';
 const chatLines = document.createElement('div'), chatInput = document.createElement('div');
-chatInput.style.cssText = 'display:none;margin-top:6px;padding:4px 8px;background:rgba(0,0,0,.65);border:2px solid #e8d27a;color:#fff;word-break:break-all;';
+chatInput.style.cssText = 'display:none;margin-top:6px;padding:6px 10px;background:rgba(0,0,0,.65);border:2px solid #e8d27a;color:#fff;word-break:break-all;';
 chatBox.append(chatLines, chatInput); hudEl.appendChild(chatBox);
 const chat = { open: false, text: '', log: [] };
 function renderChat() {
@@ -8891,7 +8891,7 @@ function rvAct(k) {
 }
 
 /* ---------- editor (top-down 2D, works with touch) ---------- */
-const ED = { undo: [], redo: [], clip: null, d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
+const ED = { multi: [], msel: false, undo: [], redo: [], clip: null, d: null, tool: 'sel', sel: null, cx: 0, cz: 0, sc: 8, ptrs: new Map(), drag: null, perk: 'jug', panel: '', msg: '', el: null };
 const ED_TOOLS = [['tele', '+TELEPORT'], ['win', '+WINDOW'], ['sw', '+POWER'], ['sel', 'MOVE'], ['wall', '+WALL'], ['gate', '+DOOR'], ['perk', '+PERK'], ['wb', '+WALLBUY'], ['box', '+BOX'], ['spawn', 'SPAWN'], ['zs', '+ZSPAWN'], ['floor', '+FLOOR/ROOF'], ['stairs', '+STAIRS'], ['prop', '+PROP'], ['del', 'DELETE']];
 function edBuild() {
   const css = document.createElement('style'); css.textContent = `
@@ -8962,7 +8962,14 @@ function edDown(ev) {
   if (t === 'sel') {
     const it = edItem(ED.sel);
     if (it && it.w && Math.hypot((it.x + (it.w / 2) * Math.cos(it.a || 0) + (it.d / 2) * Math.sin(it.a || 0) - w.x) * ED.sc, (it.z - (it.w / 2) * Math.sin(it.a || 0) + (it.d / 2) * Math.cos(it.a || 0) - w.z) * ED.sc) < 18) { ED.drag = { m: 'resize' }; return; }
-    const h = edHit(w.x, w.z); ED.sel = h;
+    const h = edHit(w.x, w.z), inM = h && ED.multi.some(m => m.t === h.t && m.i === h.i);
+    if (h && (ev.shiftKey || ev.ctrlKey || ED.msel)) {   // add to / remove from the multi-selection
+      if (!ED.multi.length && ED.sel) ED.multi.push({ t: ED.sel.t, i: ED.sel.i });
+      const k = ED.multi.findIndex(m => m.t === h.t && m.i === h.i); if (k >= 0) ED.multi.splice(k, 1); else ED.multi.push({ t: h.t, i: h.i });
+      ED.sel = ED.multi.length ? ED.multi[ED.multi.length - 1] : null; ED.drag = null; edUI(); edDraw(); return;
+    }
+    if (inM && ED.multi.length > 1) { ED.drag = { m: 'mmove', sx: edSn(w.x), sz: edSn(w.z), o: ED.multi.map(m => { const q = edItem(m); return q ? [q, q.x, q.z] : null; }).filter(Boolean) }; edUI(); edDraw(); return; }
+    ED.multi = []; ED.sel = h;
     if (h) { const q = edItem(h); ED.drag = { m: 'move', ox: q.x - w.x, oz: q.z - w.z }; } else ED.drag = { m: 'pan', sx: p.x, sy: p.y, cx: ED.cx, cz: ED.cz };
   } else if (t === 'wall' || t === 'gate' || t === 'floor' || t === 'stairs') ED.drag = { m: 'rect', x0: edSn(w.x), z0: edSn(w.z), x1: edSn(w.x), z1: edSn(w.z) };
   else if (t === 'tele') { d.tele = d.tele || []; const n = d.tele.length; d.tele.push({ id: Math.random().toString(36).slice(2, 7), x: edSn(w.x), z: edSn(w.z), ry: 0, n: 'TELEPORTER ' + String.fromCharCode(65 + (n % 26)) }); ED.sel = { t: 'tele', i: n }; ED.drag = { m: 'move', ox: 0, oz: 0 }; }
@@ -8981,6 +8988,7 @@ function edMove(ev) {
   const g = ED.drag; if (!g) return; const p = edXY(ev), w = edW(p);
   if (g.m === 'pan') { ED.cx = g.cx - (p.x - g.sx) / ED.sc; ED.cz = g.cz - (p.y - g.sy) / ED.sc; }
   else if (g.m === 'move') { const q = edItem(ED.sel); if (q) { q.x = edSn(w.x + g.ox); q.z = edSn(w.z + g.oz); } }
+  else if (g.m === 'mmove') { const dx = edSn(w.x) - g.sx, dz = edSn(w.z) - g.sz; for (const [q, x0, z0] of g.o) { q.x = x0 + dx; q.z = z0 + dz; } }
   else if (g.m === 'rect') { g.x1 = edSn(w.x); g.z1 = edSn(w.z); }
   else if (g.m === 'resize') { const q = edItem(ED.sel); if (q) { const aa = q.a || 0, ex = w.x - q.x, ez = w.z - q.z; q.w = Math.max(0.5, edSn((ex * Math.cos(aa) - ez * Math.sin(aa)) * 2)); q.d = Math.max(0.5, edSn((ex * Math.sin(aa) + ez * Math.cos(aa)) * 2)); } }
   edDraw();
@@ -8996,11 +9004,13 @@ function edUp() {
 function edDelete(s) { const d = ED.d; if (!s || s.t === 'spawn') return; if (s.t === 'tele') { const id = d.tele[s.i] && d.tele[s.i].id; for (const q of d.tele) if (q.to === id) delete q.to; for (const q of d.gates) if (q.tp) q.tp = q.tp.filter(x => x !== id); } if (s.t === 'sw') { const id = d.switches[s.i] && d.switches[s.i].id; for (const q of d.perks.concat(d.gates)) if (q.pw === id) delete q.pw; } ({ tele: d.tele, win: d.windows, sw: d.switches, wall: d.walls, gate: d.gates, floor: d.floors, stairs: d.stairs, perk: d.perks, wb: d.wb || [], box: d.boxes, zs: d.zs, prop: d.props || [] }[s.t]).splice(s.i, 1); ED.sel = null; }
 function edAct(a) {
   const d = ED.d; initAudio(); sfx.click();
-  if (a === 'undo') { edUndo(); edUI(); edDraw(); return; }
-  if (a === 'redo') { edRedo(); edUI(); edDraw(); return; }
+  if (a === 'undo') { ED.multi = []; edUndo(); edUI(); edDraw(); return; }
+  if (a === 'redo') { ED.multi = []; edRedo(); edUI(); edDraw(); return; }
+  if (a === 'copy' && ED.multi.length > 1) { const L = ED.multi.filter(m => !['spawn', 'perk', 'sw', 'tele'].includes(m.t)).map(m => ({ t: m.t, o: JSON.parse(JSON.stringify(edItem(m))) })); if (!L.length) ED.msg = 'NOTHING COPYABLE SELECTED'; else { ED.clip = { multi: L, n: 0 }; ED.msg = 'COPIED ' + L.length + ' - TAP PASTE'; } edUI(); return; }
   if (a === 'copy') { const s = ED.sel; if (!s || s.t === 'spawn' || s.t === 'perk' || s.t === 'sw' || s.t === 'tele') ED.msg = 'SELECT A WALL, FLOOR, STAIRS, DOOR, WALLBUY, BOX OR ZSPAWN TO COPY'; else { ED.clip = { t: s.t, o: JSON.parse(JSON.stringify(edItem(s))), n: 0 }; ED.msg = 'COPIED - TAP PASTE (WORKS IN OTHER MAPS TOO)'; } edUI(); return; }
   if (a === 'thumb') { edThumb(); return; }
   if (!/^(tpl|v3|tool:|zoomin|zoomout|maps|zmb|guns|exit|sync|bkp|rst|perk:|paste)/.test(a)) edPush(true);
+  if (a === 'paste' && ED.clip && ED.clip.multi) { edPush(true); const c = ED.clip; c.n++; ED.multi = []; for (const q of c.multi) { const o = JSON.parse(JSON.stringify(q.o)); o.x = edSn(o.x + 2 * c.n); o.z = edSn(o.z + 2 * c.n); const arr = edArr(q.t); arr.push(o); ED.multi.push({ t: q.t, i: arr.length - 1 }); } ED.sel = ED.multi[ED.multi.length - 1]; ED.msg = 'PASTED ' + c.multi.length; edUI(); edDraw(); return; }
   if (a === 'paste') { const c = ED.clip; if (!c) ED.msg = 'NOTHING COPIED'; else { edPush(true); c.n++; const o = JSON.parse(JSON.stringify(c.o)); o.x = edSn(o.x + 2 * c.n); o.z = edSn(o.z + 2 * c.n); const arr = edArr(c.t); arr.push(o); ED.sel = { t: c.t, i: arr.length - 1 }; ED.msg = 'PASTED'; } edUI(); edDraw(); return; }
   if (a === 'tpl') { ED.panel = ED.panel === 'tpl' ? '' : 'tpl'; }
   else if (a.startsWith('tpt:')) { const it = edItem(ED.sel); if (it && ED.sel.t === 'gate') { const id = a.slice(4); it.tp = it.tp || []; const i = it.tp.indexOf(id); if (i >= 0) it.tp.splice(i, 1); else it.tp.push(id); if (!it.tp.length) delete it.tp; } }
@@ -9016,7 +9026,10 @@ function edAct(a) {
   if (ED.pub && a === 'play') { ED.msg = 'PLAY IS NOT AVAILABLE YET - COMING SOON'; edUI(); return; }
   if (ED.pub && (a === 'maps' || a.startsWith('load:') || a.startsWith('del:'))) return;
   if (a === 'v3') { edSetView(!ED.v3); return; }
-  if (a.startsWith('tool:')) { ED.tool = a.slice(5); ED.panel = ''; if (ED.v3) edSetView(false); }
+  if (a === 'msel') { ED.msel = !ED.msel; if (!ED.msel && ED.multi.length < 2) ED.multi = []; edUI(); return; }
+  if (a === 'mclr') { ED.multi = []; ED.sel = null; edUI(); edDraw(); return; }
+  if (a === 'mdel') { const by = {}; for (const m of ED.multi) if (m.t !== 'spawn') (by[m.t] = by[m.t] || []).push(m.i); ED.multi = []; ED.sel = null; for (const t in by) for (const i of by[t].sort((x, y) => y - x)) edDelete({ t, i }); ED.msg = 'DELETED'; edUI(); edDraw(); return; }
+  if (a.startsWith('tool:')) { ED.tool = a.slice(5); ED.panel = ''; ED.multi = []; if (ED.v3) edSetView(false); }
   else if (a === 'guns') ED.panel = ED.panel === 'guns' ? '' : 'guns';
   else if (a === 'pnl') ED.panel = ED.panel === 'props' ? '' : 'props';
   else if (a.startsWith('pn:')) { const k = a.slice(3); if (PROP_DATA[k]) { const it = ED.sel && ED.sel.t === 'prop' ? edItem(ED.sel) : null; ED.propName = k; if (it) { it.n = k; if (PROP_HANG[k] !== undefined && !it.y) it.y = PROP_HANG[k]; } else ED.tool = 'prop'; ED.panel = ''; } }
@@ -9099,7 +9112,7 @@ function edSubmit() {
 function edUI() {
   const d = ED.d, B = (a, t, on, cls = '') => `<button class="edb ${on ? 'on' : ''} ${cls}" data-ea="${a}">${t}</button>`;
   $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('sub', 'SUBTITLE') + B('desc', 'DESCRIPTION') + B('v3', ED.v3 ? '2D VIEW' : '3D VIEW', ED.v3) + B('size', d.ax * 2 + 'M') + B('ground', d.ground.toUpperCase()) + B('tod', 'TIME: ' + CM_TOD[d.tod || 'night'].n) + B('thumb', d.thumb ? 'THUMBNAIL OK' : 'THUMBNAIL', !!d.thumb) + (d.thumb ? B('thumbx', 'X', 0, 'red') : '') + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + (ED.pub ? '' : B('maps', 'MAPS', ED.panel === 'maps')) + B('save', ED.pub ? 'SUBMIT' : 'SAVE') + B('play', 'PLAY', 0, ED.pub ? 'dis' : '') + B('zoomin', '+') + B('zoomout', '-');
-  $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + B('undo', 'UNDO', 0, ED.undo.length ? '' : 'dis') + B('redo', 'REDO', 0, ED.redo.length ? '' : 'dis') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : (CM_PD[k].nm || k.toUpperCase())), ED.perk === k)).join('') : '');
+  $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + B('msel', 'MULTI', ED.msel) + B('undo', 'UNDO', 0, ED.undo.length ? '' : 'dis') + B('redo', 'REDO', 0, ED.redo.length ? '' : 'dis') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : (CM_PD[k].nm || k.toUpperCase())), ED.perk === k)).join('') : '');
   const s = ED.sel, it = edItem(s); let h = '';
   if (it) {
     const PW = q => 'POWER: ' + ((d.switches || []).find(w => w.id === q.pw) || { n: 'ALWAYS ON' }).n;
@@ -9119,6 +9132,8 @@ function edUI() {
     else if (s.t === 'prop') h = B('pnl', 'PROP: ' + it.n, ED.panel === 'props') + B('ps-', 'SIZE-') + `<span>${(it.s || 1).toFixed(1)}x</span>` + B('ps+', 'SIZE+') + B('rot', 'TURN 90') + B('rf', 'TURN 15') + B('py', 'HEIGHT ' + (it.y || 0)) + B('pcol', it.c ? 'SOLID' : 'NO COLLISION', !!it.c) + B('del', 'DEL', 0, 'red');
   } else h = '<span>' + ({ sel: 'TAP TO SELECT, DRAG TO MOVE OR PAN. PINCH TO ZOOM', wall: 'DRAG A RECTANGLE', gate: 'DRAG A RECTANGLE (BUY-TO-OPEN DOOR)', perk: 'TAP TO PLACE, PICK PERK ABOVE', wb: 'TAP TO PLACE A WALL BUY (STAND IT AGAINST A WALL).', box: 'TAP TO ADD A BOX SPOT (FIRST = START)', spawn: 'TAP TO SET PLAYER SPAWN', zs: 'TAP TO ADD ZOMBIE SPAWNS (NONE = AROUND PLAYER)', tele: 'TAP TO PLACE A TELEPORTER. SET WHERE IT LINKS TO. DOORS CAN OPEN WHEN PADS ARE LINKED', win: 'TAP TO PLACE A WINDOW BARRIER IN A GAP IN A WALL (TURN IT TO FACE THE WALL). ZOMBIES TEAR THE PLANKS OFF, PLAYERS REBUILD THEM', sw: 'TAP TO PLACE A POWER SWITCH. THEN SELECT A PERK OR DOOR AND TAP POWER TO WIRE IT', floor: 'DRAG A RECTANGLE: FLOOR / ROOF / BRIDGE (TOP Y = HEIGHT)', stairs: 'DRAG A RECTANGLE: STAIRS (TURN = WHICH WAY THEY GO UP)', del: 'TAP AN ITEM TO DELETE' }[ED.tool]) + '</span>';
   h += (it && s.t !== 'spawn' && s.t !== 'perk' && s.t !== 'sw' && s.t !== 'tele' ? B('copy', 'COPY') : '') + (ED.clip ? B('paste', 'PASTE') : '');
+  if (ED.multi.length > 1) h = '<span>' + ED.multi.length + ' SELECTED</span>' + B('copy', 'COPY ALL') + (ED.clip ? B('paste', 'PASTE') : '') + B('mdel', 'DELETE ALL', 0, 'red') + B('mclr', 'CLEAR');
+  else if (ED.msel && !it) h = '<span>MULTI-SELECT ON: TAP ITEMS TO ADD/REMOVE, THEN DRAG, COPY OR DELETE</span>' + (ED.clip ? B('paste', 'PASTE') : '');
   $('edSel').innerHTML = h; $('edMsg').textContent = ED.msg;
   const P = $('edPanel');
   if (ED.tool === 'prop' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A PROP</span>' + B('pnl', 'PROP: ' + (ED.propName && PROP_DATA[ED.propName] ? ED.propName : PROP_NAMES()[0]), ED.panel === 'props') + (ED.clip ? B('paste', 'PASTE') : '');
@@ -9139,7 +9154,7 @@ function edDraw() {
   x.fillStyle = { grass: '#27401f', asphalt: '#2a2d31', concrete: '#4a4c4e', sand: '#6a5e46' }[d.ground]; x.fillRect(X(-d.ax), Z(-d.az), d.ax * 2 * sc, d.az * 2 * sc);
   x.strokeStyle = 'rgba(255,255,255,0.08)'; x.lineWidth = 1; for (let v = -d.ax; v <= d.ax; v += 5) { x.beginPath(); x.moveTo(X(v), Z(-d.az)); x.lineTo(X(v), Z(d.az)); x.stroke(); } for (let v = -d.az; v <= d.az; v += 5) { x.beginPath(); x.moveTo(X(-d.ax), Z(v)); x.lineTo(X(d.ax), Z(v)); x.stroke(); }
   x.strokeStyle = '#e8d27a'; x.lineWidth = 2; x.strokeRect(X(-d.ax), Z(-d.az), d.ax * 2 * sc, d.az * 2 * sc);
-  const sel = ED.sel, isS = (t, i) => sel && sel.t === t && sel.i === i;
+  const sel = ED.sel, isS = (t, i) => (sel && sel.t === t && sel.i === i) || ED.multi.some(m => m.t === t && m.i === i);
   (d.floors || []).forEach((q, i) => { x.fillStyle = 'rgba(120,170,220,0.26)'; x.fillRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.strokeStyle = isS('floor', i) ? '#fff' : '#78aadc'; x.lineWidth = 2; x.strokeRect(X(q.x - q.w / 2), Z(q.z - q.d / 2), q.w * sc, q.d * sc); x.fillStyle = '#bcd8f5'; x.font = 'bold 10px monospace'; x.textAlign = 'left'; x.fillText('Y' + q.y, X(q.x - q.w / 2) + 3, Z(q.z - q.d / 2) + 11); });
   d.walls.forEach((q, i) => { const on = isS('wall', i); x.save(); x.translate(X(q.x), Z(q.z)); x.rotate(-(q.a || 0)); x.fillStyle = q.c; x.fillRect(-q.w * sc / 2, -q.d * sc / 2, q.w * sc, q.d * sc); x.strokeStyle = on ? '#fff' : 'rgba(0,0,0,0.6)'; x.lineWidth = on ? 2 : 1; x.strokeRect(-q.w * sc / 2, -q.d * sc / 2, q.w * sc, q.d * sc); x.restore(); });
   (d.stairs || []).forEach((q, i) => {
@@ -9213,7 +9228,7 @@ function e3Rebuild() {
   (d.props || []).forEach((q, i) => { if (!PROP_DATA[q.n]) return; try { const P = propGeo(q.n), sc2 = q.s || 1, m = add('prop', i, P.g.clone(), P.mat, q.x, PROP_HANG[q.n] !== undefined ? (q.y || 0) - P.d.hgt * sc2 : (q.y || 0), q.z, q.ry || 0); m.scale.setScalar(sc2); } catch (e) { } });
   d.zs.forEach((q, i) => add('zs', i, new THREE.ConeGeometry(0.7, 1.8, 8), e3Mat('#c02424'), q.x, 0.9, q.z));
   add('spawn', 0, new THREE.CylinderGeometry(0.6, 0.6, 1.8, 12), e3Mat('#2aa84a'), d.spawn.x, 0.9 + (d.spawn.y || 0), d.spawn.z);
-  if (ED.sel) for (const m of g.children) if (m.userData.t === ED.sel.t && m.userData.i === ED.sel.i) { const l = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false })); l.renderOrder = 9; m.add(l); }
+  if (ED.sel || ED.multi.length) for (const m of g.children) if ((ED.sel && m.userData.t === ED.sel.t && m.userData.i === ED.sel.i) || ED.multi.some(q => q.t === m.userData.t && q.i === m.userData.i)) { const l = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false })); l.renderOrder = 9; m.add(l); }
 }
 function e3Render() {
   if (!E3.r || !ED.v3) return; const cv = $('ed3'), r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
@@ -9235,6 +9250,7 @@ function edSetView(on) {
   edUI(); requestAnimationFrame(() => edDraw());
 }
 function edOpen(pub) {
+  ED.multi = []; ED.msel = false;
   if (!ED.el) edBuild();
   if (ED.d) { if (ED.pub) ED.pubD = ED.d; else ED.devD = ED.d; }
   ED.pub = !!pub; ED.undo = []; ED.redo = []; ED.d = cmEnsure((pub ? ED.pubD : ED.devD) || cmNewData()); ED.sel = null; ED.tool = 'sel'; if (ED.v3) { ED.v3 = false; $('edCv').style.display = 'block'; $('ed3').style.display = 'none'; }
