@@ -86,8 +86,8 @@
   .btn.back { margin-top: 18px; font-size: 10px; color: var(--dim); }
   .label { font-size: 9px; color: var(--dim); padding: 0 14px 12px; letter-spacing: 2px; }
   .clbox { max-height: 64vh; overflow-y: auto; padding: 0 14px 0 10px; margin: 6px 0 12px; -webkit-overflow-scrolling: touch; }
-  .clbox h4 { margin: 14px 0 6px; font-weight: normal; font-size: 17px; color: var(--acc); letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
-  .clbox p { margin: 0 0 8px 10px; font-size: 14px; line-height: 1.7; color: #cfd2d6; text-shadow: 1px 1px 0 #000; }
+  .clbox h4 { margin: 16px 0 8px; font-weight: normal; font-size: 28px; color: var(--acc); letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+  .clbox p { margin: 0 0 10px 10px; font-size: 22px; line-height: 1.55; color: #cfd2d6; text-shadow: 1px 1px 0 #000; }
   .clbox p:before { content: '> '; color: var(--acc); }
   textarea.clin { user-select: text; -webkit-user-select: text; width: calc(100% - 14px); height: 36vh; margin: 6px 0 8px; padding: 10px; background: #0b0d12; color: #fff; border: 2px solid #e8d27a; font: 14px/1.7 "Press Start 2P", monospace; resize: vertical; box-sizing: border-box; }
   .clnote { font-size: 13px; color: var(--dim); margin: 4px 14px 8px 10px; line-height: 1.8; }
@@ -250,7 +250,7 @@
   #homeCl { position: absolute; left: 64px; top: 40px; bottom: 40px; width: min(560px, 90vw); padding: 22px 22px 16px; background: linear-gradient(135deg, rgba(14,10,8,.94), rgba(8,6,5,.9)); border: 1px solid rgba(255,176,46,.35); box-shadow: 0 0 60px rgba(0,0,0,.8); display: none; flex-direction: column; z-index: 5; }
   #home.cl #homeCl { display: flex; } #home.cl .hfeat, #home.cl .htitle, #home.cl .hmenu { display: none; }
   #homeCl .hclh { font-size: 15px; letter-spacing: 4px; color: var(--acc); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,176,46,.3); font-weight: 800; font-family: "Bahnschrift", "Arial Narrow", Arial, sans-serif; }
-  #homeCl .hclb { flex: 1; overflow-y: auto; min-height: 0; } #homeCl .clbox { max-height: none; }
+  #homeCl .clnote { font-size: 20px; } #homeCl .hclh { font-size: 22px; } #homeCl .hclb { flex: 1; overflow-y: auto; min-height: 0; } #homeCl .clbox { max-height: none; }
   #homeCl .hb.sm { display: block; width: 100%; text-align: left; margin-top: 8px; padding: 10px 14px; font-family: inherit; font-size: 11px; letter-spacing: 2px; color: #dcd6c8; background: rgba(255,255,255,.06); border: none; border-left: 3px solid var(--acc); cursor: pointer; }
   #homeCl .hb.sm:hover { background: rgba(255,176,46,.25); color: #fff; }
   /* team deathmatch screens */
@@ -2782,6 +2782,7 @@ const KFX = [null,
 ];
 const WALLET = { coins: 0, owned: [], sel: {}, last: 0, opening: false, fx: [], fxSel: 0, trSel: 0 };
 try { const s = JSON.parse(localStorage.getItem('zmb_wallet') || 'null'); if (s) { WALLET.coins = Math.max(0, s.coins | 0); WALLET.owned = (s.owned || []).map(Number).filter(n => CAMOS[n]); WALLET.fx = (s.fx || []).map(Number).filter(n => KFX[n]); WALLET.fxSel = WALLET.fx.includes(+s.fxSel) && !KFX[+s.fxSel].trail ? +s.fxSel : 0; WALLET.trSel = WALLET.fx.includes(+s.trSel) && KFX[+s.trSel].trail ? +s.trSel : 0; for (const k in (s.sel || {})) if (CAMOS[+s.sel[k]] && WALLET.owned.includes(+s.sel[k])) WALLET.sel[k] = +s.sel[k]; } } catch (e) {}
+try { if (localStorage.getItem('zmb_wipe') !== '3') { WALLET.coins = 0; WALLET.owned = []; WALLET.sel = {}; WALLET.fx = []; WALLET.fxSel = 0; WALLET.trSel = 0; localStorage.setItem('zmb_wipe', '3'); setTimeout(saveWallet, 0); } } catch (e) { }
 function saveWallet() { try { localStorage.setItem('zmb_wallet', JSON.stringify({ coins: WALLET.coins, owned: WALLET.owned, sel: WALLET.sel, fx: WALLET.fx, fxSel: WALLET.fxSel, trSel: WALLET.trSel })); } catch (e) {} }
 function drawCamo(id, S = 128) {
   const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d'); let sd = id * 7919 + 13;
@@ -3309,17 +3310,19 @@ const MP = {
         if (!this.peers.has(m.i) && this.peers.size >= MAX_PLAYERS - 1) { this.send({ t: 'full', to: m.i }); break; }
         if (!this.peers.has(m.i)) this.peers.set(m.i, { n: this.esc(m.n), x: 0, y: 0, z: 0, yaw: 0, pt: 0, d: 0, h: 100, w: 'pistol', seen: now });
         if (this.paused) this.send({ t: 'ps', v: 1 });
-        this.send({ t: 'welcome', to: m.i, map: this.map, dr: openedDoors(), pw: (curMap.switches || []).filter(w => w.on).map(w => w.id), bx: [+mbox.pos.x.toFixed(2), +mbox.pos.z.toFixed(2), +mbox.group.rotation.y.toFixed(3)], lb: this.lobby ? 1 : 0, ff: this.ff ? 1 : 0, md: this.mode === 'pvp' ? 1 : 0, inf: infCode() }); this.beat(); this.sendRoster(); if (this.mode === 'pvp') pvpSendTm(); if (this.lobby && menuView === 'lobby') this.draw(); break;
+        this.send({ t: 'welcome', to: m.i, ch: state.cheated ? 1 : 0, map: this.map, dr: openedDoors(), pw: (curMap.switches || []).filter(w => w.on).map(w => w.id), bx: [+mbox.pos.x.toFixed(2), +mbox.pos.z.toFixed(2), +mbox.group.rotation.y.toFixed(3)], lb: this.lobby ? 1 : 0, ff: this.ff ? 1 : 0, md: this.mode === 'pvp' ? 1 : 0, inf: infCode() }); this.beat(); this.sendRoster(); if (this.mode === 'pvp') pvpSendTm(); if (this.lobby && menuView === 'lobby') this.draw(); break;
       case 'lb': { const p = this.peers.get(m.i); if (p) p.seen = now; break; }
       case 'ros': if (this.client) { const f0 = this.ff; this.ros = m.l || []; this.ff = !!m.ff; this.lastRos = now; if (menuView === 'lobbyc') { if (f0 !== this.ff) renderMenu('lobbyc'); else this.draw(); } } break;
-      case 'start': if (this.client && this.lobby) { this.lobby = false; this.lastS = now; if (m.pv) pvpApplyStart(m.pv); selectMap(this.map); if (PVP.fr) { FREE.starting = true; FREE.on = true; frStartMatch(); } startCountdown(); } break;
+      case 'start': if (this.client && this.lobby) { this.lobby = false; this.lastS = now; if (m.pv) pvpApplyStart(m.pv); if (PVP.fr) frReg(); if (!MAPS[this.map]) break; selectMap(this.map); if (PVP.fr) { FREE.starting = true; FREE.on = true; frStartMatch(); } startCountdown(); } break;
       case 'pvp': if (PVP.on) { if (Number.isFinite(m.d) && PVP.teams[m.i] && PVP.teams[m.i] !== PVP.team) { PVP.att = m.i; hurtPlayer(Math.max(0, Math.min(PVP.inf ? 100 : 90, m.d))); } } else if (this.ff && Number.isFinite(m.d)) hurtPlayer(Math.max(0, Math.min(90, m.d))); break;
       case 'badpw': this.leave(); this.status = 'WRONG PASSWORD'; this.draw(); break;
       case 'ps': if (!this.host) this.setPause(!!m.v); break;
       case 'pu': if (this.client) dropPowerup(m.x, m.z, m.ty, m.k); break;
       case 'pk': { const q = powerups.findIndex(p => p.k === m.k); if (q >= 0) { scene.remove(powerups[q].m); powerups.splice(q, 1); } collectPowerup(m.ty, true); break; }
       case 'full': this.leave(); this.status = 'SERVER FULL'; this.draw(); break;
+      case 'chf': if (this.client) { state.cheated = true; } break;
       case 'welcome':
+        if (m.ch) state.cheated = true;
         if (this.joined) break; this.ff = !!m.ff; this.joined = true; this.status = ''; this.lastS = now; this.panelHide();
         this.pend = { dr: m.dr || [], pw: m.pw || [], bx: m.bx || null };
         if (m.md) { PVP.inf = !!m.inf; PVP.fr = m.inf === 2; this.mode = 'pvp'; PVP.in = true; PVP.on = false; PVP.teams = {}; PVP.names = {}; this.lobby = true; this.lastRos = now; pvpShow('lobby'); PVP.view = 'lobby'; pvpRender(); break; }
@@ -5072,6 +5075,8 @@ menuButtons.addEventListener('click', e => {
   if (a.startsWith('us:')) { US.sel = a.slice(3); renderMenu('usd'); return; }
   if (a.startsWith('ubn:')) { banSet(US.sel, +a.slice(4)); renderMenu('usd'); return; }
   if (a === 'ubc') { const v = prompt('BAN LENGTH (EXAMPLES: 30M, 5H, 3D)', '1H'); if (v === null) return; const m = /^\s*(\d+)\s*([mhd]?)\s*$/i.exec(v); if (!m) { notice('USE A NUMBER AND M, H OR D', 2500); return; } banSet(US.sel, +m[1] * ({ m: 1, h: 60, d: 1440 }[(m[2] || 'm').toLowerCase()])); renderMenu('usd'); return; }
+  if (a === 'uwp') { if (confirm('WIPE THIS PLAYER?')) wipeSend(US.sel); return; }
+  if (a === 'uwpall') { if (confirm('WIPE EVERYONE?')) wipeSend('all'); return; }
   if (a === 'ubu') { banClear(US.sel); renderMenu('usd'); return; }
   if (a === 'usf') { US.all = !US.all; US.page = 0; renderMenu('users'); return; }
   if (a === 'usdel') { const ids = Object.keys(US.users).filter(id => !US.users[id].n); if (ids.length && confirm('DELETE ' + ids.length + ' VISITORS WITH NO NAME?')) { for (const id of ids) { syPub('user/' + id, ''); delete US.users[id]; } } renderMenu('users'); return; }
@@ -5275,7 +5280,7 @@ const CHEATS = {
   instafire: () => { state.instaFire = !state.instaFire; notice(state.instaFire ? 'CHEAT: INSTAFIRE ON' : 'CHEAT: INSTAFIRE OFF', 2600); sfx.chime(); },
   money: () => { state.score += 10000; notice('CHEAT: +10000 POINTS', 2600); sfx.chime(); },
 };
-for (const k of Object.keys(CHEATS)) { const f = CHEATS[k]; CHEATS[k] = () => { if (MP.client) { notice('ONLY THE HOST CAN USE CHEATS', 2400); sfx.deny(); return; } if (!MP.on && !PVP.on) PVP.in = false; if (PVP.on || MP.mode === 'pvp') { notice('CHEATS ARE DISABLED IN PVP', 2400); sfx.deny(); return; } if (!state.cheated) { state.cheated = true; setTimeout(() => notice('CHEATS USED - NO COINS THIS RUN', 3000), 2700); } f(); }; }
+for (const k of Object.keys(CHEATS)) { const f = CHEATS[k]; CHEATS[k] = () => { if (MP.client) { notice('ONLY THE HOST CAN USE CHEATS', 2400); sfx.deny(); return; } if (!MP.on && !PVP.on) PVP.in = false; if (PVP.on || MP.mode === 'pvp') { notice('CHEATS ARE DISABLED IN PVP', 2400); sfx.deny(); return; } if (!state.cheated) { state.cheated = true; setTimeout(() => notice('CHEATS USED - NO COINS THIS RUN', 3000), 2700); } if (MP.host && MP.on) MP.send({ t: 'chf' }); f(); }; }
 document.addEventListener('keydown', e => {
   if (chat.open) {
     e.preventDefault();
@@ -6320,6 +6325,8 @@ function updateFog(dt) {   // hellhound rounds roll a thick reddish fog over the
 function update(dt) {
   if (MP.on && MP.paused) { MP.tick(dt); return; }
   state.time += dt; updateFog(dt); mistTick(dt); gumTick(dt); atmoTick(dt); mixTick(dt); casingTick(dt); goreTick(dt); propTick(dt);
+  if (MP.client && !state.cheated && MP.joinWave && state._lw >= MP.joinWave && state.wave - state._lw > 1) state.cheated = true;   // round skip = host cheats
+  state._lw = state.wave;
   if (state.phase === 'playing' && !state.cheated) { if (MP.client && MP.joinWave > 1 && state.coinNext < MP.joinWave + 10) state.coinNext = MP.joinWave + 10;   // late joiners: coins only after playing 10 more rounds
   while (state.wave >= state.coinNext) { state.coinNext += 10; addCoins(100, 'ROUND ' + (state.coinNext - 10) + ' REACHED'); } }
   if (state.qr > 0) { state.qr -= dt; const n = Math.ceil(state.qr); if (n > 0 && n !== state.qrN) { state.qrN = n; notice(`QUICK REVIVE - GETTING UP IN ${n}`, 1100); } if (state.qr <= 0) endQrDown(); }
@@ -8937,6 +8944,7 @@ function syMsg(i, t, s) {
   else if (k.startsWith('user/')) usRemote(k.slice(5), s);
   else if (k.startsWith('like/')) lkRemote(k.slice(5), s);
   else if (k.startsWith('ban/')) banRemote(k.slice(4), s);
+  else if (k.startsWith('wipe/')) wipeRemote(k.slice(5), s);
   else if (k.startsWith('rep/')) repRemote(k.slice(4), s);
   else if (k.startsWith('tomb/')) syTomb(k.slice(5), +s);
 }
@@ -8963,7 +8971,7 @@ function syInit() {
     c.on('connect', () => {
       SY.seen[i] = {};
       for (const t of ['changelog', 'mapdesc', 'cmap/+', 'sub/+', 'tomb/+', 'like/+/+']) c.subscribe(MP.PRE + t);
-      if (CL.dev) { c.subscribe(MP.PRE + 'user/+'); c.subscribe(MP.PRE + 'ban/+'); c.subscribe(MP.PRE + 'rep/+'); } else { try { c.subscribe(MP.PRE + 'ban/' + lkUid()); } catch (e) {} }
+      if (CL.dev) { c.subscribe(MP.PRE + 'user/+'); c.subscribe(MP.PRE + 'ban/+'); c.subscribe(MP.PRE + 'rep/+'); } else { try { c.subscribe(MP.PRE + 'ban/' + lkUid()); c.subscribe(MP.PRE + 'wipe/' + lkUid()); c.subscribe(MP.PRE + 'wipe/all'); } catch (e) {} }
       clearTimeout(SY.tm[i]); SY.tm[i] = setTimeout(() => syHeal(i), 8000);
       try { usAnnounce(); } catch (e) {}
       try { lkSync(); } catch (e) {}
@@ -8993,6 +9001,15 @@ function banSet(id, minutes) {
   if (!syOK()) { notice('NOT CONNECTED - TRY AGAIN'); return; }
   const d = { until: Date.now() + Math.max(1, Math.min(525600, minutes)) * 60000, ts: Date.now() }; US.bans[id] = d; syPub('ban/' + id, JSON.stringify(d));
 }
+function wipeRemote(id, s) {   // devmode 'wipe': resets coins, camos, kill effects and trails on the target device (once per wipe)
+  if (CL.dev || !s) return; let d; try { d = JSON.parse(s); } catch (e) { return; } if (!d || !Number.isFinite(d.ts)) return;
+  let me = ''; try { me = lkUid(); } catch (e) { } if (id !== 'all' && id !== me) return;
+  let last = 0; try { last = +localStorage.getItem('zwipets') || 0; } catch (e) { } if (d.ts <= last) return;
+  try { localStorage.setItem('zwipets', String(d.ts)); } catch (e) { }
+  WALLET.coins = 0; WALLET.owned = []; WALLET.sel = {}; WALLET.fx = []; WALLET.fxSel = 0; WALLET.trSel = 0; saveWallet(); try { applyAllCamos(); } catch (e) { }
+  notice('YOUR COINS AND COSMETICS WERE WIPED', 4500); if (menuView === 'shop' || menuView === 'main') renderMenu(menuView);
+}
+function wipeSend(id) { if (!syOK()) { notice('NOT CONNECTED - TRY AGAIN'); return; } syPub('wipe/' + id, JSON.stringify({ ts: Date.now() })); notice(id === 'all' ? 'WIPE SENT TO EVERYONE' : 'WIPE SENT', 2500); }
 function banClear(id) { syPub('ban/' + id, ''); delete US.bans[id]; }
 function repSend(kind, target, targetName, creator) {
   if (banBlock()) return; if (Date.now() - RP.last < 30000) { notice('WAIT A BIT BEFORE SENDING ANOTHER REPORT', 2500); return; }
@@ -9026,7 +9043,7 @@ function usdHTML() {
   const id = US.sel, u = US.users[id]; if (!u) return '<div class="label">VISITOR NOT FOUND</div>' + btn('users', '&lt; BACK', '', 'back');
   const b = US.bans[id], on = b && b.until > Date.now();
   return '<div class="label">' + clEsc(u.n || 'NO NAME') + ' (' + id.slice(0, 4).toUpperCase() + ')</div><div class="clnote">' + (u.d || 'UNKNOWN DEVICE') + '<br>FIRST ' + usTm(u.f) + '<br>LAST ' + usTm(u.l) + '<br>' + (on ? 'BANNED UNTIL ' + usTm(b.until) + ' (' + usLeft(b.until - Date.now()) + ' LEFT)' : 'NOT BANNED') + '</div>'
-    + '<div class="label">BAN FROM MULTIPLAYER + PUBLISHING</div>' + btn('ubn:10', '10 MINUTES') + btn('ubn:60', '1 HOUR') + btn('ubn:1440', '1 DAY') + btn('ubn:10080', '7 DAYS') + btn('ubc', 'CUSTOM LENGTH', 'like 30M, 5H or 3D') + (on ? btn('ubu', 'UNBAN') : '') + btn('users', '&lt; BACK', '', 'back');
+    + '<div class="label">BAN FROM MULTIPLAYER + PUBLISHING</div>' + btn('ubn:10', '10 MINUTES') + btn('ubn:60', '1 HOUR') + btn('ubn:1440', '1 DAY') + btn('ubn:10080', '7 DAYS') + btn('ubc', 'CUSTOM LENGTH', 'like 30M, 5H or 3D') + (on ? btn('ubu', 'UNBAN') : '') + '<div class="label">WIPE</div>' + btn('uwp', 'WIPE THIS PLAYER', 'coins, camos, kill effects, trails') + btn('users', '&lt; BACK', '', 'back');
 }
 
 function usAnnounce() {
@@ -9054,7 +9071,7 @@ function usHTML() {
   if (!ids.length) h += '<div class="clnote">' + (all.length ? 'NOBODY WITH A NAME YET' : 'NONE LOADED YET - IF THE SERVER IS CONNECTED THEY ARRIVE IN A MOMENT') + '</div>';
   for (const id of ids.slice(US.page * per, US.page * per + per)) { const u = US.users[id], bn = US.bans[id] && US.bans[id].until > Date.now(); h += btn('us:' + id, clEsc(u.n || 'NO NAME') + ' (' + id.slice(0, 4).toUpperCase() + ')' + (u.d ? ' - ' + u.d : '') + (bn ? ' - BANNED' : ''), 'FIRST ' + tm(u.f) + ' - LAST ' + tm(u.l)); }
   h += `<div class="pager"><button class="btn ${US.page <= 0 ? 'off' : ''}" data-a="usp:-1">&lt; PREV</button><em>${US.page + 1}/${pages}</em><button class="btn ${US.page >= pages - 1 ? 'off' : ''}" data-a="usp:1">NEXT &gt;</button></div>`;
-  return h + (anon ? btn('usdel', 'DELETE NO-NAME VISITORS', anon + ' (they come back if they open the game again)') : '') + btn('main', '&lt; BACK', '', 'back');
+  h += btn('uwpall', 'WIPE EVERYONE', 'coins, camos, kill effects, trails'); return h + (anon ? btn('usdel', 'DELETE NO-NAME VISITORS', anon + ' (they come back if they open the game again)') : '') + btn('main', '&lt; BACK', '', 'back');
 }
 
 /* ---------- PUBLISH MAP review queue (players submit, devmode reviews / playtests / approves) ---------- */
