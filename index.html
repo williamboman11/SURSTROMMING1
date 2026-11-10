@@ -9936,7 +9936,7 @@ activateMap('factory');
 showMenu('main');
 document.body.classList.add('home'); homeOpen(); homeEl.classList.add('splash');
 setTimeout(() => { fadeEl.style.opacity = '0'; setTimeout(() => { fadeEl.style.pointerEvents = 'none'; }, 460); }, 160);
-setInterval(() => { try { const n = MP.onlineCount(); document.getElementById('hpCount').textContent = n > 0 ? n : 1; const nm = (MP.name || (() => { try { return localStorage.getItem('zmb_name'); } catch (e) { return ''; } })() || 'GUEST'); document.getElementById('hpName').textContent = nm; document.getElementById('hfName').textContent = nm; } catch (e) {} }, 700);
+setInterval(() => { try { const n = MP.onlineCount(); document.getElementById('hpCount').textContent = n > 0 ? n : 1; const nm = (MP.name || (() => { try { return localStorage.getItem('zmb_name'); } catch (e) { return ''; } })() || 'GUEST'); homeUpdate(); } catch (e) {} }, 700);
 
 setInterval(() => { try { const n = MP.onlineCount(); const a = document.getElementById('zpCount'), b = document.getElementById('zpName'); if (a) a.textContent = n > 0 ? n : 1; if (b) b.textContent = MP.name || 'GUEST'; } catch (e) {} }, 700);
 window.addEventListener('keydown', e => {   // ESC = one step back, then to the main menu
