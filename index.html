@@ -6279,7 +6279,7 @@ function ggMachine() {
 function ggHTML() {
   const pk = ggPack(), f = GUMS.find(g => g.id === GGP.focus) || GUMS[0], nm = (MP.name || 'PLAYER');
   const head = (sub) => `<div class="ggHead"><i class="ggLogo"></i><div>${sub ? '<small>' + sub + '</small>' : ''}<b>GOBBLEGUM</b></div></div>`;
-  const foot = (sel) => `<div class="ggFoot"><button data-g="${sel ? 'sel' : 'cust'}"><i class="gx">✕</i> Select</button><button data-g="back"><i class="gx o">○</i> Back</button></div>`;
+  const foot = (sel) => `<div class="ggFoot"><button data-g="${sel ? 'sel' : 'cust'}"><i class="gx">✕</i> Select</button><button data-g="back"><i class="gx k">ESC</i> Back</button></div>`;
   if (GGP.view === 'grid') {
     return head('') + `<div class="ggTabsB"><span class="ggLR">L1</span><span class="ggCl">CLASSIC</span><span class="ggLR">R1</span></div><div class="ggBody g2">
     <div class="ggM"><div class="ggGrid">${GUMS.map(g => { const own = ggHas(g.id), n = WALLET.gg[g.id] | 0; return `<div class="ggc ${g.id === f.id ? 'foc' : ''} ${own ? '' : 'lock'}" data-g="pick:${g.id}">${ggBall(g, 112)}${pk.includes(g.id) ? '<em>✓</em>' : ''}${own ? (GG_FREE.includes(g.id) ? '' : `<b class="ggn">x${n}</b>`) : '<b class="ggk">🔒</b>'}</div>`; }).join('')}</div></div>
@@ -6298,7 +6298,7 @@ function ggEl() {
   e = document.createElement('div'); e.id = 'ggGui'; document.body.appendChild(e);
   const st = document.createElement('style'); st.textContent = `#ggGui{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;background:radial-gradient(ellipse at 62% 62%,#14295a 0,#070d22 48%,#03050c 100%);color:#e8ecf6;font-family:var(--ft),var(--fm),Arial,sans-serif;user-select:none;letter-spacing:.01em}
   #ggGui .ggHead{display:flex;align-items:center;gap:14px;padding:22px 46px 12px;border-bottom:1px solid #25304d;background:rgba(0,0,0,.35)}#ggGui .ggLogo{width:56px;height:56px;border-radius:50%;border:5px solid #dfe3ea;box-sizing:border-box;box-shadow:0 0 0 3px rgba(255,255,255,.12);background:radial-gradient(circle,#fff 0 28%,transparent 30%)}#ggGui .ggHead small{display:block;font-size:18px;opacity:.85;margin-bottom:-4px}#ggGui .ggHead b{font-weight:400;font-size:46px;letter-spacing:.03em;color:#eef}
-  #ggGui .ggFoot{display:flex;gap:30px;padding:14px 46px;border-top:1px solid #25304d;background:rgba(0,0,0,.55)}#ggGui .ggFoot button{background:none;border:none;color:#dfe6f5;font:inherit;font-size:22px;cursor:pointer;display:flex;align-items:center;gap:10px}#ggGui .gx{display:inline-flex;width:34px;height:34px;border-radius:50%;border:2px solid #4a8bd8;color:#6ab0ff;align-items:center;justify-content:center;font-style:normal;font-size:17px}#ggGui .gx.o{border-color:#d84a5a;color:#ff6a7a;font-size:20px}
+  #ggGui .ggFoot{display:flex;gap:30px;padding:14px 46px;border-top:1px solid #25304d;background:rgba(0,0,0,.55)}#ggGui .ggFoot button{background:none;border:none;color:#dfe6f5;font:inherit;font-size:22px;cursor:pointer;display:flex;align-items:center;gap:10px}#ggGui .gx{display:inline-flex;width:34px;height:34px;border-radius:50%;border:2px solid #4a8bd8;color:#6ab0ff;align-items:center;justify-content:center;font-style:normal;font-size:17px}#ggGui .gx.k{width:auto;height:auto;border-radius:4px;border:1px solid #8d99b4;color:#e0e6f4;padding:1px 9px;font-size:14px;letter-spacing:.06em}
   #ggGui .ggBody{flex:1;min-height:0;display:grid;overflow:hidden}#ggGui .ggBody.g1{grid-template-columns:minmax(300px,36%) 1fr minmax(300px,38%)}#ggGui .ggBody.g2{grid-template-columns:minmax(420px,52%) 1fr}
   #ggGui .ggL{padding:26px 46px;overflow:auto}#ggGui .ggT{background:#e6e9f2;color:#111;display:inline-block;padding:2px 14px;font-size:28px;margin-bottom:22px;font-weight:400}
   #ggGui .ggBar{background:linear-gradient(90deg,#ff7a22 0,#d4501a 80%,rgba(212,80,26,0) 100%);color:#fff;padding:6px 26px;font-size:28px;cursor:pointer;margin-bottom:18px;box-shadow:0 0 18px rgba(255,120,40,.35)}
@@ -6615,7 +6615,8 @@ function gfxClose() { gfxEl.style.display = 'none'; }
 /* ===== BO3-style MENU (pause) + OPTIONS screen ===== */
 {
   const st = document.createElement('style'); st.textContent = `
-  #pauseScreen{align-items:stretch;justify-content:flex-start;background:linear-gradient(180deg,rgba(0,0,0,.92) 0,rgba(0,0,0,.5) 22%,rgba(0,0,0,.45) 80%,rgba(0,0,0,.85) 100%)!important;font-family:var(--fn),sans-serif}
+  #pauseScreen{align-items:stretch;justify-content:flex-start;background:linear-gradient(180deg,rgba(0,0,0,.92) 0,rgba(0,0,0,.5) 22%,rgba(0,0,0,.45) 80%,rgba(0,0,0,.85) 100%)!important;font-family:var(--ft),sans-serif!important}
+  #pauseScreen *,#optEl *{font-family:var(--ft),sans-serif!important}
   .bo3{width:100%;display:flex;flex-direction:column;height:100%;color:#e8ecf4}
   .bo3Head{display:flex;align-items:center;justify-content:space-between;padding:10px 3vw 6px}.bo3Head b{font-weight:400;font-size:clamp(34px,5vw,64px);letter-spacing:.04em}
   .bo3Tabs{display:flex;gap:0;background:rgba(0,0,0,.55);border-bottom:1px solid #2a3040;border-top:1px solid #2a3040;padding-left:3vw}.bo3Tabs span{padding:8px 26px;font-size:clamp(16px,1.9vw,24px);letter-spacing:.06em;color:#aeb8cc;cursor:pointer}.bo3Tabs span.on{background:#ff5a12;color:#fff;box-shadow:0 0 18px rgba(255,90,18,.45)}.bo3Tabs span:not(.on):hover{background:rgba(255,255,255,.1)}
@@ -6623,7 +6624,7 @@ function gfxClose() { gfxEl.style.display = 'none'; }
   .bo3Foot{display:flex;gap:30px;padding:8px 3vw;background:rgba(0,0,0,.7);border-top:1px solid #2a3040;font-size:16px;color:#cfd7e8}.bo3Foot i{font-style:normal;background:#2a3040;padding:1px 7px;margin-right:6px;font-size:13px}
   .bo3User{display:flex;align-items:center;gap:22px;font-size:clamp(16px,1.9vw,26px)}.bo3User .nm{background:linear-gradient(90deg,rgba(20,24,40,.9),rgba(40,50,90,.6));padding:8px 22px;letter-spacing:.05em;color:#d8ff6a;border:1px solid #2a3556}
   .bo3Coin{display:inline-block;width:1.15em;height:1.15em;border-radius:50%;vertical-align:-0.2em;margin-right:6px;background:radial-gradient(circle at 35% 30%,#fff3a8 0,#f2c230 45%,#a8740a 100%);box-shadow:inset 0 0 0 2px #8a5c06,inset 0 0 0 4px rgba(255,236,150,.55),0 1px 3px rgba(0,0,0,.6)}
-  #optEl{position:fixed;inset:0;z-index:800;display:none;flex-direction:column;background:radial-gradient(ellipse at 50% 30%,#0f1a30 0,#070b16 60%,#04060c 100%);color:#e8ecf4;font-family:var(--fn),sans-serif}
+  #optEl{position:fixed;inset:0;z-index:800;display:none;flex-direction:column;background:radial-gradient(ellipse at 50% 30%,#0f1a30 0,#070b16 60%,#04060c 100%);color:#e8ecf4;font-family:var(--ft),sans-serif}
   #optEl .oHead{display:flex;align-items:center;justify-content:space-between;padding:12px 3vw 6px;background:rgba(0,0,0,.35)}#optEl .oHead b{font-weight:400;font-size:clamp(36px,5vw,64px);letter-spacing:.04em}
   #optEl .oTabs{display:flex;background:rgba(0,0,0,.4);border-top:1px solid #25304d;border-bottom:1px solid #25304d;padding-left:3vw}#optEl .oTabs span{padding:10px 32px;font-size:clamp(16px,2vw,28px);letter-spacing:.08em;color:#9aa6c0}#optEl .oTabs span.on{background:#ff5a12;color:#fff;box-shadow:0 0 18px rgba(255,90,18,.45)}
   #optEl .oBody{flex:1;min-height:0;padding:2.2vh 3vw;overflow:auto}
@@ -6632,7 +6633,7 @@ function gfxClose() { gfxEl.style.display = 'none'; }
   #optEl .oT svg{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:58%;height:58%;max-width:230px;opacity:.9}#optEl .oT.big{grid-column:1/3;grid-row:1/3;border-top:4px solid #ff5a12;border-bottom:4px solid #ff5a12}#optEl .oT.big svg{width:92%;height:78%;max-width:none;top:42%}
   #optEl .oL{align-self:flex-start;margin:0 0 8px 12px;background:rgba(0,0,0,.55);padding:1px 10px;font-size:clamp(14px,1.5vw,22px);letter-spacing:.04em;position:relative;z-index:2}#optEl .oS{align-self:flex-start;margin:0 0 14px 12px;background:rgba(0,0,0,.55);padding:1px 10px;font-size:clamp(13px,1.4vw,20px);position:relative;z-index:2}
   #optEl .oSoon{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);border:1px solid #cfd7e8;background:rgba(0,0,0,.6);padding:3px 12px;letter-spacing:.08em;font-size:clamp(13px,1.4vw,19px);z-index:3}
-  #optEl .oFoot{display:flex;gap:30px;padding:12px 3vw;background:rgba(0,0,0,.6);border-top:1px solid #25304d;font-size:20px}#optEl .oFoot button{background:none;border:none;color:#e0e6f4;font:inherit;cursor:pointer;display:flex;align-items:center;gap:10px}#optEl .oFoot .c{display:inline-flex;width:32px;height:32px;border-radius:50%;border:2px solid #4a8bd8;align-items:center;justify-content:center;font-size:15px;color:#6ab0ff}#optEl .oFoot .c.r{border-color:#d84a5a;color:#ff6a7a}
+  #optEl .oFoot{display:flex;gap:30px;padding:12px 3vw;background:rgba(0,0,0,.6);border-top:1px solid #25304d;font-size:20px}#optEl .oFoot button{background:none;border:none;color:#e0e6f4;font:inherit;cursor:pointer;display:flex;align-items:center;gap:10px}#optEl .oFoot .c{display:inline-flex;width:32px;height:32px;border-radius:50%;border:2px solid #4a8bd8;align-items:center;justify-content:center;font-size:15px;color:#6ab0ff}#optEl .oFoot .c.k{width:auto;height:auto;border-radius:4px;border:1px solid #8d99b4;color:#e0e6f4;padding:1px 9px;font-size:14px;letter-spacing:.06em}
   #optEl .oPanel{max-width:1000px;margin:0 auto;background:rgba(255,255,255,.05);border-top:4px solid #ff5a12;padding:22px 28px}#optEl .oPanel h2{margin:0 0 12px;font-weight:400;font-size:34px;letter-spacing:.05em}#optEl .oRow{display:flex;justify-content:space-between;gap:20px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:20px;letter-spacing:.03em}#optEl .oRow span:first-child{color:#9aa6c0}
   #optEl .oBtn{font:inherit;font-size:22px;letter-spacing:.06em;padding:8px 26px;margin:8px 10px 0 0;cursor:pointer;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}#optEl .oBtn.on{background:#ff5a12;border-color:#ff5a12}
   #optEl .oKb{width:100%;max-width:1100px;display:block;margin:0 auto}
@@ -6644,7 +6645,7 @@ setInterval(() => { try { for (const e of document.querySelectorAll('.bo3User'))
 const optEl = document.createElement('div'); optEl.id = 'optEl'; document.body.appendChild(optEl);
 const OPT = { v: 'grid', t: 0 };
 const KB_HL = [   // [keyCodes], label, side
-  [['Escape'], 'MENU', 't'], [['Digit1', 'Digit2', 'Digit3'], 'WEAPON 1-2-3', 't'], [['Tab'], 'SCOREBOARD', 't'], [['KeyW', 'KeyA', 'KeyS', 'KeyD'], 'MOVE', 't', 'KeyW'],
+  [['Escape'], 'MENU', 't'], [['Digit1', 'Digit2', 'Digit3'], 'WEAPON 1-2-3', 't'], [['Tab'], 'SCOREBOARD', 't'], [['KeyW', 'KeyA', 'KeyS', 'KeyD'], 'MOVE', 't'],
   [['KeyE'], 'BUY / USE / REVIVE', 't'], [['KeyR'], 'RELOAD', 't'], [['KeyT'], 'CHAT', 't'],
   [['KeyG'], 'GRENADE', 'b'], [['KeyX'], 'MONKEY BOMB', 'b'], [['KeyV'], 'KNIFE', 'b'], [['KeyB'], 'VOICE CHAT', 'b'], [['ShiftLeft'], 'SPRINT', 'b'], [['Space'], 'JUMP', 'b']
 ];
@@ -6666,7 +6667,7 @@ function kbSVG() {
     arr.forEach((g, i) => {
       const lx = KX(g), lvl = i % nl, ly = isTop ? 18 + lvl * 24 : Y0 + 6 * U + 28 + lvl * 24, y2 = isTop ? ly + 6 : ly - 18;
       for (const c of (g[3] ? [g[3]] : g[0])) { const k = pos[c]; if (!k) continue; const kx = g[0].length > 1 && !g[3] ? k.x + k.w / 2 : lx, ky = isTop ? k.y + 4 : k.y + k.h - 4, jx = kx;
-        lines += `<polyline points="${lx},${y2} ${lx},${isTop ? y2 + 4 : y2 - 4} ${jx},${isTop ? y2 + 4 : y2 - 4} ${jx},${ky}" fill="none" stroke="#ff7a2a" stroke-width="1.6" opacity=".9"/><circle cx="${jx}" cy="${ky}" r="3.2" fill="#ff7a2a"/>`; }
+        const pts = `${lx},${y2} ${lx},${isTop ? y2 + 4 : y2 - 4} ${jx},${isTop ? y2 + 4 : y2 - 4} ${jx},${ky}`; lines += `<polyline points="${pts}" fill="none" stroke="#000" stroke-width="4.5" opacity=".55"/><polyline points="${pts}" fill="none" stroke="#ff7a2a" stroke-width="1.8"/><circle cx="${jx}" cy="${ky}" r="3.2" fill="#ff7a2a"/>`; }
       labels += `<text x="${lx}" y="${ly}" text-anchor="middle" font-size="17" fill="#fff" font-family="sans-serif" letter-spacing="1">${g[1]}</text>`;
     }); };
   place(KB_HL.filter(g => g[2] === 't'), true); place(KB_HL.filter(g => g[2] === 'b'), false);
@@ -6687,7 +6688,7 @@ function optIcons() { return {
   logo: `<svg viewBox="0 0 160 160"><g fill="none" stroke="#6e7790" stroke-width="14"><ellipse cx="80" cy="52" rx="22" ry="38"/><ellipse cx="80" cy="52" rx="22" ry="38" transform="rotate(120 80 88)"/><ellipse cx="80" cy="52" rx="22" ry="38" transform="rotate(240 80 88)"/></g></svg>`
 }; }
 function optDraw() {
-  const I = optIcons(), back = `<div class="oFoot"><button data-o="sel"><span class="c">✕</span> Select</button><button data-o="back"><span class="c r">○</span> Back</button><button data-o="dismiss"><span class="c" style="border-radius:8px;width:22px">&nbsp;</span> Dismiss Menu</button></div>`;
+  const I = optIcons(), back = `<div class="oFoot"><button data-o="sel"><span class="c">✕</span> Select</button><button data-o="back"><span class="c k">ESC</span> Back</button><button data-o="dismiss"><span class="c" style="border-radius:8px;width:22px">&nbsp;</span> Dismiss Menu</button></div>`;
   const head = `<div class="oHead"><b>MENU</b><div class="bo3User">${bo3UserHTML()}</div></div><div class="oTabs"><span class="on">OPTIONS</span></div>`;
   let body = '';
   const tile = (id, ic, label, sub, soon, cls = '') => `<div class="oT ${cls}" data-o="${id}">${I[ic]}${soon ? '<div class="oSoon">COMING SOON</div>' : ''}<div class="oL">${label}</div>${sub ? `<div class="oS">${sub}</div>` : ''}</div>`;
