@@ -592,6 +592,7 @@
     <h1>PAUSED</h1>
     <button class="btn" id="btnResume">RESUME</button>
     <button class="btn" id="btnGfx">GRAPHICS SETTINGS</button>
+    <button class="btn" id="btnKick" style="display:none">KICK PLAYER</button>
     <button class="btn" id="btnPauseMenu">RETURN TO MAIN MENU</button>
   </div>
 </div>
@@ -3326,7 +3327,7 @@ const Voice = {
 const MP = {
   on: false, host: false, client: false, down: false, silent: false, rx: false, zid: 0,
   id: Math.random().toString(36).slice(2, 8), name: '', status: '', topic: '', map: '', view: '',
-  peers: new Map(), servers: new Map(), zmap: new Map(), me: { x: 0, z: 0, me: true },
+  peers: new Map(), kicked: new Set(), servers: new Map(), zmap: new Map(), me: { x: 0, z: 0, me: true },
   PRE: 'czmb1/', BR: ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'], bi: 0, fails: 0, c: null,
   ff: false, tp: 0, ts: 0, tb: 0, th: 0, lastS: 0, panel: null, hud: null, pw: '', lobby: false, started: false, ros: [], lastRos: 0, synced: false,
   online: new Map(),   // presence: everyone with the game loaded (id -> last seen)
@@ -3364,6 +3365,7 @@ const MP = {
     setTimeout(() => { if (this.client && !this.joined) { this.leave(); this.status = 'SERVER NOT RESPONDING'; this.draw(); } }, 6500);
   },
   leave() {
+    this.kicked.clear();
     if (this.on && this.c) { this.send({ t: 'bye' }); try { this.c.unsubscribe(this.topic); } catch (e) {} if (this.host) this.c.publish(this.PRE + 'list/' + this.id, '', { retain: true }); }
     for (const p of this.peers.values()) if (p.g) scene.remove(p.g);
     Voice.stop(); this.peers.clear(); this.zmap.clear(); this.on = this.host = this.client = this.down = false; this.topic = ''; this.joined = false; this.lobby = this.started = this.synced = this.ff = false; this.mode = ''; this.joinWave = 0; this.ros = []; this.setPause(false);
@@ -3386,7 +3388,9 @@ const MP = {
       this.draw(); return;
     }
     const m = JSON.parse(s); if (m.i === this.id || !this.on) return;
+    if (this.host && this.kicked.has(m.i)) { if (m.t === 'join') this.send({ t: 'kick', to: m.i, r: this.kickWhy || '' }); return; }
     if (m.to && m.to !== this.id) return;
+    if (m.t === 'kick' && !this.host) { kickedByHost(m.r); return; }
     if (PVP.in && (m.t === 'ptm' || m.t === 'psw' || m.t === 'pk' || m.t === 'psc' || m.t === 'pend' || m.t === 'pin' || m.t === 'pagain' || m.t === 'frfin')) { pvpRx(m); return; }
     const now = performance.now();
     switch (m.t) {
@@ -5381,6 +5385,32 @@ function gameOver() {
 =================================================================== */
 $('btnResume').addEventListener('click', () => { initAudio(); lock(); });
 $('btnGfx').addEventListener('click', () => { initAudio(); sfx.click(); gfxOpen(); });
+function kickedByHost(why) {
+  const r = MP.esc(String(why || '').slice(0, 60)); try { MP.leave(); } catch (e) { }
+  const wasP = PVP.in; try { if (wasP) pvpReset(); } catch (e) { } try { showMenu('main'); if (wasP) homeOpen(); } catch (e) { }
+  setTimeout(() => { try { banner('KICKED BY HOST' + (r ? ': ' + r : ''), 7000); } catch (e) { notice('KICKED BY HOST' + (r ? ': ' + r : ''), 7000); } }, 400);
+}
+const kickEl = document.createElement('div'); kickEl.id = 'kickPanel';
+kickEl.style.cssText = 'position:fixed;inset:0;z-index:910;display:none;background:rgba(0,0,0,.75);align-items:center;justify-content:center;font-family:var(--fm);color:#e6e9ef';
+document.body.appendChild(kickEl);
+function kickDraw() {
+  const bt = (a, t, c) => `<button data-k="${a}" style="font:inherit;font-size:15px;letter-spacing:2px;padding:7px 14px;margin:3px;cursor:pointer;color:#fff;background:${c || 'rgba(255,255,255,.1)'};border:1px solid rgba(255,255,255,.3)">${t}</button>`;
+  const rows = [...MP.peers.entries()].map(([id, p]) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1)"><span style="flex:1;font-size:18px;letter-spacing:2px">${MP.esc(p.n || 'PLAYER')}</span>${bt('k:' + id, 'KICK', '#a02a2a')}</div>`).join('') || '<div style="color:#8d99a3;padding:10px 0">NO OTHER PLAYERS</div>';
+  kickEl.innerHTML = `<div style="width:min(520px,92vw);background:rgba(8,10,14,.97);border:1px solid rgba(255,255,255,.2);padding:22px 26px"><div style="font-size:26px;letter-spacing:4px;margin-bottom:12px">KICK PLAYER</div><div style="font-size:12px;letter-spacing:2px;color:#8d99a3">REASON (OPTIONAL)</div><input id="kickWhy" maxlength="60" autocomplete="off" placeholder="e.g. cheating" style="width:100%;box-sizing:border-box;margin:6px 0 14px;font:inherit;font-size:17px;letter-spacing:1px;padding:8px 12px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.3)">${rows}<div style="height:12px"></div>${bt('close', 'CLOSE')}</div>`;
+}
+kickEl.addEventListener('click', e => {
+  const t = e.target.closest('[data-k]'); if (!t) { if (e.target === kickEl) kickEl.style.display = 'none'; return; } const a = t.dataset.k; try { initAudio(); sfx.click(); } catch (er) { }
+  if (a === 'close') { kickEl.style.display = 'none'; return; }
+  if (a.startsWith('k:') && MP.host) {
+    const id = a.slice(2), pr = MP.peers.get(id), why = ($('kickWhy') && $('kickWhy').value || '').trim().slice(0, 60);
+    if (!pr || !confirm('KICK ' + (pr.n || 'PLAYER') + '?')) return;
+    MP.kickWhy = why; MP.send({ t: 'kick', to: id, r: why }); MP.kicked.add(id);
+    if (pr.g) scene.remove(pr.g); MP.peers.delete(id); try { Voice.drop(id); } catch (er) { } try { MP.beat(); MP.sendRoster(); } catch (er) { }
+    notice('KICKED ' + (pr.n || 'PLAYER'), 2500); kickDraw();
+  }
+});
+$('btnKick').addEventListener('click', () => { kickDraw(); kickEl.style.display = 'flex'; });
+setInterval(() => { try { const on = !!(MP.on && MP.host) && !pauseEl.classList.contains('hidden'); $('btnKick').style.display = on ? '' : 'none'; if (!on && kickEl.style.display !== 'none' && pauseEl.classList.contains('hidden')) kickEl.style.display = 'none'; } catch (e) { } }, 400);
 $('btnPauseMenu').addEventListener('click', () => { initAudio(); sfx.click(); if (PVP.in) { pvpLeaveHome(); return; } showMenu('main'); });
 $('btnAgain').addEventListener('click', () => { initAudio(); startCountdown(); });
 $('btnGoMenu').addEventListener('click', () => { initAudio(); showMenu('main'); });
