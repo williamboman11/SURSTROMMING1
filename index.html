@@ -35,6 +35,7 @@
   #roundNum .t5 { position: relative; display: inline-block; }
   #roundNum .t5::after { content: ''; position: absolute; left: -10px; right: -10px; top: 46%; height: 7px; background: #b30d0d; transform: rotate(-24deg); box-shadow: 1px 1px 0 #000; }
   #perks { position: absolute; left: 30px; bottom: 98px; font-size: 8px; }
+  #perks2 { position: absolute; left: 30px; bottom: 160px; font-size: 8px; }
   .pk { display: inline-block; position: relative; width: 24px; height: 44px; margin: 14px 8px 0 0; background: var(--c); border: 2px solid #fff; border-radius: 5px 5px 9px 9px; vertical-align: bottom; }
   .pk::before { content: ''; position: absolute; left: 5px; top: -14px; width: 10px; height: 12px; background: var(--c); border: 2px solid #fff; border-bottom: 0; }
   .pk u { position: absolute; inset: 0; text-align: center; line-height: 40px; font: bold 14px Arial; color: #fff; text-decoration: none; text-shadow: 1px 1px 0 #000; }
@@ -275,7 +276,7 @@
   .pvtm h4, .pvcols h4 { margin: 0 0 12px; font-size: 14px; letter-spacing: 4px; font-weight: 800; } .pvtm.r h4, .pvcols h4.r { color: #ff5a5a; } .pvtm.b h4, .pvcols h4.b { color: #5a9dff; }
   .pvp1 { padding: 9px 10px; margin-bottom: 4px; background: rgba(255,255,255,.06); font-size: 11px; letter-spacing: 1px; } .pvp1.me { background: rgba(255,176,46,.2); } .pvp1 i { font-style: normal; font-size: 8px; color: var(--acc); margin-left: 6px; }
   #pvpHud { position: fixed; inset: 0; z-index: 12; pointer-events: none; display: none; text-shadow: 2px 2px 0 #000; }
-  body.pvp #score, body.pvp #roundNum, body.pvp #perks { display: none !important; }
+  body.pvp #score, body.pvp #roundNum, body.pvp #perks, body.pvp #perks2 { display: none !important; }
   .pvbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); } .pvbar span { min-width: 70px; text-align: center; padding: 8px 14px; font-size: 22px; font-weight: bold; } .pvbar span.r { background: rgba(255,50,50,.35); } .pvbar span.b { background: rgba(50,130,255,.35); } .pvbar span.me { box-shadow: inset 0 -4px 0 #fff; } .pvbar b { padding: 10px 18px; font-size: 18px; font-weight: normal; letter-spacing: 2px; }
   .pvsub { position: absolute; top: 62px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 3px; color: #cfd3d8; }
   .pvdead { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: 26px; letter-spacing: 4px; color: #ff5a5a; } .pvdead small { display: block; margin-top: 16px; font-size: 12px; color: #fff; letter-spacing: 3px; }
@@ -465,6 +466,7 @@
   #roundNum { left: calc(var(--p) * 44) !important; bottom: calc(var(--p) * 14) !important; font: 700 calc(var(--p) * 124)/1 var(--fm) !important; letter-spacing: 3px; color: #8a1515 !important; opacity: .88; text-shadow: 0 0 18px rgba(120,0,0,.6), 2px 2px 0 rgba(0,0,0,.7) !important; }
   #roundNum .t5::after { height: calc(var(--p) * 9); }
   #perks { left: calc(var(--p) * 58) !important; bottom: calc(var(--p) * 160) !important; display: flex; gap: calc(var(--p) * 10); font-size: 0; }
+  #perks2 { left: calc(var(--p) * 58) !important; bottom: calc(var(--p) * 228) !important; display: flex; gap: calc(var(--p) * 10); font-size: 0; flex-wrap: wrap; max-width: 60vw; }
   .pk { width: calc(var(--p) * 54) !important; height: calc(var(--p) * 60) !important; margin: 0 !important; border: none !important; border-radius: 0 !important; background: #e4eaf1 !important; clip-path: polygon(0 0, 100% 0, 100% 66%, 50% 100%, 0 66%); filter: drop-shadow(0 2px 3px #000); }
   .pk::before { content: '' !important; position: absolute !important; inset: calc(var(--p) * 3) !important; width: auto !important; height: auto !important; left: calc(var(--p) * 3) !important; top: calc(var(--p) * 3) !important; border: none !important; background: linear-gradient(160deg, color-mix(in srgb, var(--c) 78%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 55%, #000)) !important; clip-path: polygon(0 0, 100% 0, 100% 66%, 50% 100%, 0 66%); }
   .pk u { line-height: calc(var(--p) * 44) !important; font: 700 calc(var(--p) * 28)/1 var(--fm) !important; z-index: 2; text-shadow: 0 2px 3px rgba(0,0,0,.7) !important; }
@@ -529,7 +531,7 @@
 
 <div id="hud">
   <div id="score"><div class="hudlabel">POINTS</div><span id="scoreVal">500</span></div>
-  <div id="roundNum"></div><div id="perks"></div><div id="holdBar"><i></i></div>
+  <div id="roundNum"></div><div id="perks"></div><div id="perks2"></div><div id="holdBar"><i></i></div>
   <div id="crosshair"><i></i><i></i><i></i><i></i></div>
   <div id="hitmarker"></div>
   <div id="weaponBox">
@@ -2293,6 +2295,7 @@ function addHands(g) {
 for (const k in vm) if (!['raygun', 'raygun2', 'wunder', 'minigun', 'rpg'].includes(k)) addHands(vm[k]);
 const knifeModel = buildKnife(); knifeModel.visible = false; camera.add(knifeModel);
 const bowStab = buildBowArrow(); bowStab.visible = false; bowStab.userData.spirit.visible = true; bowStab.scale.setScalar(1.4); camera.add(bowStab);
+const fistModel = new THREE.Group(); part(fistModel, B(0.11, 0.11, 0.14), WM.glove, 0, 0, 0); part(fistModel, CY(0.058, 0.32, 8), WM.sleeve, 0, 0, 0.22, Math.PI / 2); part(fistModel, new THREE.TorusGeometry(0.078, 0.013, 6, 14), WBM.rune, 0, 0, -0.075); fistModel.visible = false; camera.add(fistModel);
 
 const muzzleFlash = new THREE.Mesh(
   new THREE.PlaneGeometry(0.3, 0.3),
@@ -3681,8 +3684,9 @@ function updateHUD() {
   setText(el.wSlots, '');
   const hr = state.health / state.maxHealth; $('lowhp').style.opacity = hr < 0.4 ? (1 - hr / 0.4).toFixed(2) : 0;
   el.cross.style.opacity = (1 - state.ads).toFixed(2);
-  const PERKC = { jug: ['#d6242c', 'J', 'JUGGER-NOG'], quick: ['#2b86e6', 'Q', 'QUICK REVIVE'], speed: ['#33b05a', 'S', 'SPEED COLA'], double: ['#e0b52a', '2', 'DOUBLE TAP'], stamin: ['#8fb43a', '↑', 'STAMIN-UP'], mule: ['#d4631f', 'M', 'MULE KICK'], vulture: ['#5aa02a', 'V', 'VULTURE AID'], lunar: ['#7a8cff', 'L', 'LUNAR LEGS'], head: ['#d6242c', 'H', 'HEADHUNTER'], cash: ['#e0b52a', '$', 'CASHBACK COLA'] };
-  setHTML(el.perks, [jug.bought ? 'jug' : null, ...boughtExtraPerks].filter(Boolean).map(k => `<i class="pk" style="--c:${PERKC[k][0]}" title="${PERKC[k][2]}"><u>${PERKC[k][1]}</u></i>`).join(''));
+  const PERKC = { jug: ['#d6242c', 'J', 'JUGGER-NOG'], quick: ['#2b86e6', 'Q', 'QUICK REVIVE'], speed: ['#33b05a', 'S', 'SPEED COLA'], double: ['#e0b52a', '2', 'DOUBLE TAP'], stamin: ['#8fb43a', '↑', 'STAMIN-UP'], mule: ['#d4631f', 'M', 'MULE KICK'], vulture: ['#5aa02a', 'V', 'VULTURE AID'], lunar: ['#7a8cff', 'L', 'LUNAR LEGS'], head: ['#d6242c', 'H', 'HEADHUNTER'], cash: ['#e0b52a', '$', 'CASHBACK COLA'], ...XPK_C };
+  { const _bp = ['jug', 'quick', 'speed', 'double', 'stamin', 'mule', 'vulture', 'lunar', 'head', 'cash'], _all = [jug.bought ? 'jug' : null, ...boughtExtraPerks].filter(Boolean), _pk = k => PERKC[k] ? `<i class="pk" style="--c:${PERKC[k][0]}" title="${PERKC[k][2]}"><u>${PERKC[k][1]}</u></i>` : '';
+    setHTML(el.perks, _all.filter(k => _bp.includes(k)).map(_pk).join('')); setHTML($('perks2'), _all.filter(k => !_bp.includes(k)).map(_pk).join('')); }
   setHTML(puHud, (instaT > 0 ? `<span class="pu"><b>&#9760;</b><em>${Math.ceil(instaT)}</em><small>INSTA-KILL</small></span>` : '') + (doubleT > 0 ? `<span class="pu dbl"><b>2X</b><em>${Math.ceil(doubleT)}</em><small>DOUBLE POINTS</small></span>` : '') + (fireT > 0 ? `<span class="pu fire"><b>$</b><em>${Math.ceil(fireT)}</em><small>FIRE SALE</small></span>` : '') + (gasClouds.length && playerHidden() ? '<span class="pu gas"><b>&#9729;</b><small>HIDDEN IN GAS</small></span>' : ''));
   const hv = Math.max(house.hold / 0.7, cdHold / 0.7, swHold / swMax, wbHold / 0.55, TL.hold / 1.5, (MP.rt || 0) / 3); el.hold.style.display = hv > 0.02 ? 'block' : 'none'; el.hold.firstChild.style.width = Math.min(100, hv * 100) + '%';
 }
@@ -4202,7 +4206,7 @@ function damageZombie(z, dmg, point, head, knife = false, obj = null) {
   if (MP.client) { MP.sendHit(z, dmg, head, knife); hitmarker(head); sfx.hit(); burst(point, 4, pMat.blood, 4, 0.6); try { goreHit(z, point, head); } catch (e) { } return; }
   if (z.dead) return;
   if ((instaT > 0 || state.insta) && !z.boss) dmg = z.hp + 1;
-  z.hp -= dmg;
+  z.hp -= dmg; if (boughtExtraPerks.has('frost') && !MP.silent) z.slowT = Math.max(z.slowT || 0, 2.5);
   hitmarker(head && z.hp <= 0);
   const limb = obj && obj.userData && obj.userData.limb;
   if (limb && (TEST.on || (!z.boss && !z.hound))) { const pr = TEST.on ? 1 : z.hp <= 0 ? (limb === 'hd' ? 0.6 : 1) : (limb === 'hd' ? 0 : 0.1); if (Math.random() < pr) cutLimb(z, limb, false, point); }
@@ -4219,12 +4223,12 @@ function killZombie(z, point, head, knife = false) {
   if (!MP.silent) myKillFx(z.root.position.x, z.root.position.z);
   if (boughtExtraPerks.has('vulture') && !MP.silent && Math.random() < 0.2) spawnCloud(z.root.position.x, z.root.position.z, curMap.decks ? (z.gy || 0) : 0);
   const pts = noPts ? 0 : z.boss ? 1500 : knife ? KNIFE_KILL_POINTS : head ? HEADSHOT_POINTS : KILL_POINTS;
-  addScore(pts); state.kills++; if (head && !knife && !MP.silent) state.heads = (state.heads | 0) + 1;
+  perkKill(z); addScore(pts); state.kills++; if (head && !knife && !MP.silent) state.heads = (state.heads | 0) + 1;
   popPoints(head && !knife ? `+${pts} HEADSHOT` : `+${pts}`, head && !knife);
   head ? sfx.head() : sfx.kill();
   if (z.hound && (state.roundTotal - state.spawned) + zombies.length <= 0) dropPowerup(z.root.position.x, z.root.position.z, 'ammo');
   else if (state.powerAll) dropPowerup(z.root.position.x, z.root.position.z);
-  else if (!noPts && (z.boss || (!z.hound && Math.random() < 0.10))) dropPowerup(z.root.position.x, z.root.position.z);
+  else if (!noPts && (z.boss || (!z.hound && Math.random() < (boughtExtraPerks.has('scav') ? 0.2 : 0.10)))) dropPowerup(z.root.position.x, z.root.position.z);
 }
 
 function spawnBoss(warlord = false, kind = null) {
@@ -4603,6 +4607,7 @@ function updateDownedView(dt) {
 
 function hurtPlayer(dmg) {
   if (state.phase !== 'playing' || MP.down || state.qr > 0 || (state.god && !PVP.on)) return;
+  if (!PVP.on && boughtExtraPerks.has('skin')) dmg *= 0.7;
   if (PVP.on) {
     if (PVP.over || PVP.dead || PVP.prot > 0 || (PVP.inf && PVP.ph !== 'hunt')) return;
     state.health -= dmg; state.lastHurt = state.time; const vg = $('vignette'); vg.style.opacity = 1; setTimeout(() => { vg.style.opacity = 0; }, 160); sfx.hurt(); state.shake = Math.max(state.shake, 0.25);
@@ -4637,7 +4642,7 @@ function attachFlash(model) {
 function setViewmodels() {
   const show = state.phase === 'playing' || state.phase === 'countdown';
   for (const k in vm) { vm[k].visible = show && k === player.cur && state.knifeT <= 0 && !isInfected() && !FREE.on; vm[k].userData.pg.visible = !!player.pap[k]; }
-  knifeModel.visible = show && state.knifeT > 0 && player.cur !== 'wolfbow'; bowStab.visible = show && state.knifeT > 0 && player.cur === 'wolfbow'; knifeModel.scale.setScalar(player.bowie ? 1.7 : 1);
+  const _fo = player.cur !== 'wolfbow' && boughtExtraPerks.has('fist') && !isInfected(); fistModel.visible = show && state.knifeT > 0 && _fo; knifeModel.visible = show && state.knifeT > 0 && player.cur !== 'wolfbow' && !_fo; bowStab.visible = show && state.knifeT > 0 && player.cur === 'wolfbow'; knifeModel.scale.setScalar(player.bowie ? 1.7 : 1);
   if (show) attachFlash(vm[player.cur]);
 }
 function switchWeapon(type) {
@@ -4650,7 +4655,7 @@ function switchWeapon(type) {
 function startReload() {
   const w = WEAPONS[player.cur], a = player.ammo[player.cur];
   if (state.reloading || a.mag >= magOf(player.cur) || a.res <= 0) return;
-  state.reloading = true; state.reloadT = w.reload * (GG.r.armam > 0 ? 0.55 : 1) * (boughtExtraPerks.has('speed') ? 0.65 : 1) * (player.pap[player.cur] ? 0.7 : 1); state.reloadTot = state.reloadT; sfx.reload();
+  state.reloading = true; state.reloadT = w.reload * (GG.r.armam > 0 ? 0.55 : 1) * (boughtExtraPerks.has('speed') ? 0.65 : 1) * (player.pap[player.cur] ? 0.7 : 1); state.reloadTot = state.reloadT; sfx.reload(); if (boughtExtraPerks.has('cherry')) cherryBlast();
 }
 function giveWeapon(type) {
   const w = WEAPONS[type], a = player.ammo[type], had = player.slot1 === type || player.slot2 === type || player.slot3 === type;
@@ -4730,7 +4735,7 @@ function shoot() {
     if (a.res > 0) startReload(); else if (player.cur !== player.slot1) { notice('OUT OF AMMO'); switchWeapon(player.slot1); }
     return;
   }
-  if (!state.infAmmo) a.mag--; state.fireCd = state.instaFire ? 0 : w.delay * (GG.r.arsenal > 0 && ['raygun', 'raygun2', 'wunder', 'servant', 'thumper', 'rpg'].includes(player.cur) ? 0.5 : 1); state.recoil = state.instaFire ? 0 : 1;
+  if (!state.infAmmo) a.mag--; state.fireCd = state.instaFire ? 0 : w.delay * (boughtExtraPerks.has('rapid') ? 0.75 : 1) * (GG.r.arsenal > 0 && ['raygun', 'raygun2', 'wunder', 'servant', 'thumper', 'rpg'].includes(player.cur) ? 0.5 : 1); state.recoil = state.instaFire ? 0 : 1;
   if (!state._quiet) { sfx[player.cur](); ejectCasing(player.cur); }
   if (w.kind === 'special') { fireSpecial(player.cur); if (a.mag === 0 && a.res > 0) startReload(); return; }
   if (player.cur !== 'crossbow' && player.cur !== 'raygun' && player.cur !== 'raygun2') {
@@ -4751,7 +4756,7 @@ function shoot() {
     targets.push(...obstacleMeshes);
     const muzzle = vm[player.cur].localToWorld(vm[player.cur].userData.muzzle.clone());
     for (let pi = 0; pi < np; pi++) {
-      const sprd = state.instaFire ? 0 : w.spread * (1 - 0.8 * state.ads); ndc.set((Math.random() - 0.5) * 2 * sprd, (Math.random() - 0.5) * 2 * sprd);
+      const sprd = state.instaFire ? 0 : w.spread * (1 - 0.8 * state.ads) * (boughtExtraPerks.has('dead') ? 0.15 : 1); ndc.set((Math.random() - 0.5) * 2 * sprd, (Math.random() - 0.5) * 2 * sprd);
       raycaster.setFromCamera(ndc, camera); raycaster.far = 150;
       const hits = raycaster.intersectObjects(targets, false);
       let end; const ph = (MP.on && (MP.ff || PVP.on)) ? peerHit(raycaster.ray, hits.length ? hits[0].distance : 150) : null;
@@ -4873,10 +4878,11 @@ function fireProj(w) {
 }
 function knife() {
   if (state.knifeCd > 0 || state.phase !== 'playing') return;
-  const _bk = player.cur === 'wolfbow'; state.knifeCd = isInfected() ? 0.42 : _bk ? 0.38 : KNIFE_CD; state.knifeT = state.knifeTot = _bk ? 0.28 : 0.38; state.knifeHit = false; state.reloading = false;
+  const _bk = player.cur === 'wolfbow', _fk = !_bk && boughtExtraPerks.has('fist') && !isInfected(); state.knifeCd = isInfected() ? 0.42 : _bk ? 0.38 : _fk ? 0.75 : KNIFE_CD; state.knifeT = state.knifeTot = _bk ? 0.28 : _fk ? 0.34 : 0.38; state.knifeHit = false; state.reloading = false;
   sfx.knife(); setViewmodels();
 }
 function knifeStrike() {
+  if (boughtExtraPerks.has('fist') && player.cur !== 'wolfbow' && !isInfected()) { fistStrike(); return; }
   const KR = isInfected() ? 3.2 : KNIFE_RANGE;
   raycaster.setFromCamera(ndc.set(0, 0), camera); raycaster.far = KR;
   const targets = [];
@@ -4896,10 +4902,23 @@ function knifeStrike() {
 =================================================================== */
 function boxNear() { return Math.hypot(player.pos.x - mbox.pos.x, player.pos.z - mbox.pos.z) < 2.6; }
 function extraPerkNear() { return curMap.id === 'factory' ? factoryExtraPerks.find(q => Math.hypot(player.pos.x - q.pos.x, player.pos.z - q.pos.z) < 2.6 && !boughtExtraPerks.has(q.id)) : null; }
+const XPK = [
+  { id: 'imp', title: 'IMP SPIRIT', fs: 26, body: '#1f4fd8', trim: '#d6e8ff', emb: 'I', cost: 3000, info: 'EVERY 12 KILLS A BLUE IMP SPAWNS AND KILLS 5 ZOMBIES FOR YOU' },
+  { id: 'fist', title: 'TITAN FIST', fs: 25, body: '#b8421a', trim: '#ffe0c8', emb: 'F', cost: 3500, info: 'KNIFE KEY = UPPERCUT. INSTAKILLS UNTIL ROUND 10' },
+  { id: 'cherry', title: 'ELECTRIC CHERRY', fs: 18, body: '#2a8cd8', trim: '#e8f8ff', emb: 'E', cost: 2000, info: 'RELOADING SHOCKS NEARBY ZOMBIES' },
+  { id: 'dead', title: 'DEAD SHOT', fs: 25, body: '#3a3a44', trim: '#ffd23a', emb: 'D', cost: 2000, info: 'BULLETS GO EXACTLY WHERE YOU AIM' },
+  { id: 'blood', title: 'BLOODTHIRST BREW', fs: 17, body: '#7a0e22', trim: '#ffd0d8', emb: 'B', cost: 2500, info: 'KILLS HEAL YOU' },
+  { id: 'scav', title: 'SCAVENGER SODA', fs: 18, body: '#6a8a2a', trim: '#f4ffd0', emb: 'C', cost: 2500, info: 'DOUBLE POWER-UP DROP CHANCE' },
+  { id: 'frost', title: 'FROSTBITE FIZZ', fs: 19, body: '#58b8e8', trim: '#ffffff', emb: 'W', cost: 2500, info: 'HITS SLOW ZOMBIES' },
+  { id: 'skin', title: 'THICK SKIN', fs: 24, body: '#6a5a4a', trim: '#f0e4d0', emb: 'T', cost: 3000, info: 'TAKE 30% LESS DAMAGE' },
+  { id: 'rapid', title: 'RAPID FIRE', fs: 24, body: '#d8a020', trim: '#1a1405', emb: 'R', cost: 3000, info: 'WEAPONS FIRE 25% FASTER' },
+  { id: 'adren', title: 'ADRENALINE RUSH', fs: 18, body: '#e0307a', trim: '#fff0f6', emb: 'A', cost: 2000, info: 'KILLS GIVE A SHORT SPEED BOOST' },
+];
+const XPK_C = Object.fromEntries(XPK.map(x => [x.id, [x.body, x.emb, x.title]]));
 const PERK_INFO = { vulture: 'KILLS MAY RELEASE GAS - ZOMBIES LOSE YOU INSIDE IT', lunar: 'JUMP HIGHER', head: 'HEADSHOTS DO x3 DAMAGE', cash: '+25% POINTS' };
 function buyExtraPerk(q) {
   if (state.score < q.cost) { notice(`NEED ${q.cost} POINTS`); sfx.deny(); return; }
-  state.score -= q.cost; boughtExtraPerks.add(q.id); if (q.id === 'quick') { if (!nzPlay('quick', 1)) playSnd('quick', 0.95); } sfx.buy(); sfx.chime(); notice(`${q.title} PURCHASED${PERK_INFO[q.id] ? ' - ' + PERK_INFO[q.id] : ''}`, 3400); tint(q.body);
+  state.score -= q.cost; boughtExtraPerks.add(q.id); if (q.id === 'quick') { if (!nzPlay('quick', 1)) playSnd('quick', 0.95); } sfx.buy(); sfx.chime(); notice(`${q.title} PURCHASED${(PERK_INFO[q.id] || (XPK.find(x => x.id === q.id) || {}).info) ? ' - ' + (PERK_INFO[q.id] || XPK.find(x => x.id === q.id).info) : ''}`, 3400); tint(q.body);
 }
 function tint(c) { el.notice.style.color = c; setTimeout(() => { el.notice.style.color = ''; }, 2400); }
 function nearestUse() {
@@ -5808,6 +5827,7 @@ function updateViewmodel(dt, spd, sprinting, bobX, bobY) {
     knifeModel.position.set(0.32 - e * 0.5, -0.32 + Math.sin(p * Math.PI) * 0.1, -0.45 - Math.sin(p * Math.PI) * 0.25);
     knifeModel.rotation.set(0.2 - e * 0.5, 0.5 - e * 1.5, -0.9 + e * 1.4);
     if (player.cur === 'wolfbow') { bowStab.position.set(0.16, -0.2, -0.1 - Math.sin(p * Math.PI) * 0.6); bowStab.rotation.set(0.04, -0.1, 0); }
+    else if (boughtExtraPerks.has('fist') && !isInfected()) { fistModel.position.set(0.15, -0.2 + Math.sin(p * Math.PI) * 0.18, -0.05 - Math.sin(p * Math.PI) * 0.7); fistModel.rotation.set(0.05 + Math.sin(p * Math.PI) * 0.5, -0.1, 0); }
     if (!state.knifeHit && p > 0.35) { state.knifeHit = true; knifeStrike(); }
     if (state.knifeT <= 0) { state.knifeT = 0; setViewmodels(); }
   }
@@ -5824,7 +5844,7 @@ function updatePlayer(dt) {
   if (TOUCH.on && (TOUCH.mx || TOUCH.my)) { wish.addScaledVector(fwd, -TOUCH.my); wish.addScaledVector(right, TOUCH.mx); }
   const moving = wish.lengthSq() > 0; if (moving) wish.normalize();
   const sprinting = !MP.down && (keys['ShiftLeft'] || keys['ShiftRight'] || TOUCH.sprint) && moving && (!state.reloading || GG.r.fotac > 0) && state.knifeT <= 0;
-  const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * (GUM.fleet > 0 ? 1.25 : 1) * (boughtExtraPerks.has('stamin') ? 1.3 : 1) * (state.fast ? 1.7 : 1) * (isInfected() ? 1.15 : FREE.on ? 1.22 : 1) * (1 - 0.35 * state.ads * (GG.r.swifty > 0 ? 0 : 1)) * (MP.down ? 0.2 : 1), k = 1 - Math.exp(-12 * dt);
+  const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * (GUM.fleet > 0 ? 1.25 : 1) * (boughtExtraPerks.has('adren') && state.adrT > 0 ? 1.25 : 1) * (boughtExtraPerks.has('stamin') ? 1.3 : 1) * (state.fast ? 1.7 : 1) * (isInfected() ? 1.15 : FREE.on ? 1.22 : 1) * (1 - 0.35 * state.ads * (GG.r.swifty > 0 ? 0 : 1)) * (MP.down ? 0.2 : 1), k = 1 - Math.exp(-12 * dt);
   player.vel.x += (wish.x * speed - player.vel.x) * k; player.vel.z += (wish.z * speed - player.vel.z) * k;
   player.pos.x += player.vel.x * dt; player.pos.z += player.vel.z * dt;
   resolvePlayerCircle(player.pos, PLAYER_RADIUS, player.jumpY);
@@ -5847,7 +5867,7 @@ function updatePlayer(dt) {
 function updateCombat(dt, downed = false) {
   updateParaWeapon(dt);
   state.fireCd -= dt; state.clickBuf -= dt; state.knifeCd -= dt;
-  const w = WEAPONS[player.cur];
+  const w = WEAPONS[player.cur]; if (state.adrT > 0) state.adrT -= dt;
   if (player.cur === 'wolfbow') bowTick(dt); else if (state.bowC || state.bowDraw) bowReset();
   if (FREE.on) { state.clickBuf = 0; }
   else if (isInfected()) { if (state.mouseDown || state.clickBuf > 0) { knife(); state.clickBuf = 0; } }
@@ -6043,6 +6063,7 @@ function updateZombies(dt) {
 function updateDying(dt) {
   for (let i = dying.length - 1; i >= 0; i--) {
     const z = dying[i]; z.deadT += dt;
+    if (z.fly) { z.fly.vy -= 24 * dt; z.root.position.y += z.fly.vy * dt; z.root.rotation.x += dt * 7; z.root.rotation.z += dt * 3; if (z.deadT > 1.5 || z.root.position.y < -0.5) { scene.remove(z.root); dying.splice(i, 1); } continue; }
     const p = Math.min(1, z.deadT / 0.55), e = Math.sin(p * Math.PI / 2);
     if (z.crawl) { z.root.rotation.x = 1.4; z.root.position.y = 0.28 - Math.max(0, z.deadT - 0.6) * 1.0; z.armL.rotation.x = z.armR.rotation.x = -3.0 + e * 0.8; if (z.deadT > 1.6) { scene.remove(z.root); dying.splice(i, 1); } continue; }
     z.root.rotation.x = -e * Math.PI / 2 * z.fd; z.root.position.y = -Math.max(0, z.deadT - 0.6) * 1.4;
@@ -6173,8 +6194,78 @@ function bowFxTick(dt) {
     if (W.t > 1.6 && !W.lifted.length) { scene.remove(W.g); bowWaves.splice(i, 1); }
   }
 }
+
+/* ---------- extra perks (second HUD row) ---------- */
+function perkKill(z) {
+  if (MP.silent) return;
+  if (boughtExtraPerks.has('blood')) state.health = Math.min(state.maxHealth, state.health + 8);
+  if (boughtExtraPerks.has('adren')) state.adrT = 3;
+  if (boughtExtraPerks.has('imp') && !z.impKill && !PVP.on) { state.impK = (state.impK || 0) + 1; if (state.impK >= 12) { state.impK = 0; spawnImp(); } }
+}
+function cherryBlast() {
+  const o = new THREE.Vector3(player.pos.x, 1, player.pos.z); burst(o, 26, pMat.bowBlue, 11, 0.6, 1); burst(o, 10, pMat.spark, 9, 0.4, 2);
+  try { tone('sawtooth', 900, 90, 0.3, 0.14); noiseBurst(0.25, 4000, 800, 0.14, 'bandpass'); } catch (e) { }
+  for (const z of [...zombies]) { if (z.dead) continue; const c = new THREE.Vector3(z.root.position.x, 1.1, z.root.position.z); if (c.distanceTo(o) < 5.5) { z.stunT = Math.max(z.stunT || 0, 1.2); damageZombie(z, z.boss ? 200 : 350, c, false); } }
+}
+function fistStrike() {
+  camera.getWorldDirection(_v); const fx = _v.x, fz = _v.z, fl = Math.hypot(fx, fz) || 1, insta = state.wave <= 10; let any = false;
+  for (const z of [...zombies]) {
+    if (z.dead) continue; const dx = z.root.position.x - player.pos.x, dz = z.root.position.z - player.pos.z, d = Math.hypot(dx, dz);
+    if (d > 3.0 || (d > 0.5 && (dx * fx + dz * fz) / (d * fl) < 0.45)) continue;
+    any = true; const p = new THREE.Vector3(z.root.position.x, 1.2, z.root.position.z);
+    damageZombie(z, z.boss ? (insta ? 900 : 500) : (insta ? 1e7 : 1500), p, false, true);
+    if (z.dead) z.fly = { vy: 13 }; else { z.stunT = Math.max(z.stunT || 0, 0.7); z.root.position.x += dx / (d || 1) * 1.2; z.root.position.z += dz / (d || 1) * 1.2; }
+    burst(p, 12, pMat.bowBlue, 8, 0.6, 2); burst(p, 6, pMat.spark, 8, 0.5, 4);
+  }
+  if (any) { sfx.knifeHit(); try { tone('sawtooth', 160, 40, 0.3, 0.22); } catch (e) { } state.shake = Math.max(state.shake || 0, 0.4); }
+}
+const imps = [];
+function spawnImp() {
+  const g = new THREE.Group(), bm = new THREE.MeshStandardMaterial({ color: 0x2a5cff, emissive: 0x1038c0, emissiveIntensity: 0.7, roughness: 0.6 }), em = new THREE.MeshBasicMaterial({ color: 0xbff4ff });
+  part(g, new THREE.SphereGeometry(0.26, 10, 8), bm, 0, 0.45, 0); part(g, new THREE.SphereGeometry(0.19, 10, 8), bm, 0, 0.85, 0.04);
+  for (const sg of [-1, 1]) { part(g, new THREE.ConeGeometry(0.05, 0.2, 6), bm, sg * 0.11, 1.04, 0.04, 0, 0, -sg * 0.3); part(g, new THREE.SphereGeometry(0.04, 6, 5), em, sg * 0.07, 0.88, 0.2); part(g, B(0.07, 0.3, 0.07), bm, sg * 0.3, 0.45, 0.05, 0, 0, sg * 0.4); part(g, B(0.08, 0.22, 0.08), bm, sg * 0.1, 0.15, 0); }
+  part(g, B(0.04, 0.04, 0.45), bm, 0, 0.3, -0.35, 0.4); part(g, new THREE.SphereGeometry(0.07, 6, 5), em, 0, 0.42, -0.55);
+  g.position.set(player.pos.x + 1.5, 0, player.pos.z); scene.add(g); burst(g.position.clone().setY(0.6), 20, pMat.bowBlue, 7, 0.7, 1);
+  notice('AN IMP JOINS THE FIGHT', 1800); try { tone('square', 500, 900, 0.2, 0.12); } catch (e) { }
+  imps.push({ g, life: 12, kills: 0, tgt: null });
+}
+function impTick(dt) {
+  for (let i = imps.length - 1; i >= 0; i--) {
+    const I = imps[i]; I.life -= dt;
+    if (!I.tgt || I.tgt.dead || !zombies.includes(I.tgt)) { I.tgt = null; let bd = 45; for (const z of zombies) { if (z.dead) continue; const d = Math.hypot(z.root.position.x - I.g.position.x, z.root.position.z - I.g.position.z); if (d < bd) { bd = d; I.tgt = z; } } }
+    const tx = I.tgt ? I.tgt.root.position.x : player.pos.x + 1.5, tz = I.tgt ? I.tgt.root.position.z : player.pos.z, dx = tx - I.g.position.x, dz = tz - I.g.position.z, d = Math.hypot(dx, dz) || 1;
+    const sp = I.tgt ? 15 : 7; if (d > (I.tgt ? 0.9 : 1.5)) { I.g.position.x += dx / d * sp * dt; I.g.position.z += dz / d * sp * dt; I.g.rotation.y = Math.atan2(dx, dz); }
+    I.g.position.y = Math.abs(Math.sin(state.time * 14)) * 0.15 + (I.tgt && I.tgt.root.position.y > 0 ? I.tgt.root.position.y : 0);
+    if (I.tgt && d < 1.4) { const z = I.tgt; z.impKill = true; const p = killOrHurt(z, false, 500); burst(p, 14, pMat.bowBlue, 8, 0.7, 2); sfx.knifeHit(); I.kills++; I.tgt = null; }
+    if (I.kills >= 5 || I.life <= 0) { burst(I.g.position.clone().setY(0.7), 24, pMat.bowBlue, 8, 0.8, 1); burst(I.g.position.clone().setY(0.7), 10, pMat.bowDark, 6, 0.9, 1); scene.remove(I.g); imps.splice(i, 1); }
+  }
+}
+/* put every extra perk machine into every map, on free floor near the spawn */
+function placeExtraPerks(m) {
+  if (!m || m._xp || !m.root || PVP.on) return; m._xp = true;
+  const ob = obstacles, sp = m.spawn || { x: 0, z: 0 }, cx = sp.x || 0, cz = sp.z || 0;
+  const taken = [m.spawn, m.jugPos, m.papPos, m.boxPos, ...(m.perks || []).map(q => q.pos), ...(m.wallBuys || []).map(q => q.pos), ...((m.id === 'factory' ? factoryExtraPerks : []).map(q => q.pos))].filter(Boolean).map(q => ({ x: q.x, z: q.z }));
+  const ax = (m.ax || 30) - 2.5, az = (m.az || 30) - 2.5;
+  const free = (x, z) => {
+    if (Math.abs(x) > ax || Math.abs(z) > az) return false;
+    for (const t of taken) if (Math.hypot(t.x - x, t.z - z) < 3.4) return false;
+    for (const o of ob) { if (typeof o.minX !== 'number') continue; if (x + 1.3 > o.minX && x - 1.3 < o.maxX && z + 1.3 > o.minZ && z - 1.3 < o.maxZ) return false; }
+    for (const g of m.gates || []) { try { if (g.near && g.near(x, z)) return false; } catch (e) { } }
+    return true;
+  };
+  const list = m.id === 'factory' ? factoryExtraPerks : (m.perks || (m.perks = []));
+  for (const q of XPK) {
+    let spot = null;
+    for (let r = 4; r < 45 && !spot; r += 1.5) for (let a = 0; a < 24 && !spot; a++) { const an = a / 24 * Math.PI * 2 + r * 0.7, x = cx + Math.cos(an) * r, z = cz + Math.sin(an) * r; if (free(x, z)) spot = { x, z }; }
+    if (!spot) continue; taken.push(spot);
+    const w0 = scene.children.length, rot = Math.atan2(cx - spot.x, cz - spot.z);
+    try { addPerk(spot.x, spot.z, rot, q); } catch (e) { continue; }
+    for (const c of scene.children.slice(w0)) m.root.add(c);
+    list.push({ ...q, x: spot.x, z: spot.z, rot, pos: new THREE.Vector3(spot.x, 0, spot.z), cd: null });
+  }
+}
 function updateProjectiles(dt) {
-  bowFxTick(dt);
+  bowFxTick(dt); impTick(dt);
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
     p.life -= dt; if (!p.ray) p.vel.y -= 7 * (curMap.gravity || 1) * dt;
@@ -8759,6 +8850,7 @@ function activateMap(id) {
   for (const k in MAPS) if (MAPS[k].root) MAPS[k].root.visible = (k === id);
   curMap = m; obstacles = m.obs; obstacleMeshes = m.occ; AX = m.ax; AZ = m.az;
   try { movApply(m); } catch (e) { console.warn('mov', e); }
+  try { placeExtraPerks(m); } catch (e) { console.warn('xperks', e); }
   if (!m.propsDone) { m.propsDone = true; try { scatterProps(m, id); } catch (e) { console.warn('props', e); } }
   // Invisible player-only no-go footprints under elevated scenery prevent out-of-bounds camping; they don't obstruct zombie navigation.
   playerAntiCamp = id === 'factory' ? [
