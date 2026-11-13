@@ -3416,6 +3416,7 @@ const MP = {
     if (this.c) this.c.subscribe(this.topic); this.beat();
   },
   join(sid, pw = '') {
+    { const _s = this.servers.get(sid); if (_s && !mapOk(_s.m)) return; }
     const s = this.servers.get(sid); if (!s || !this.c) return;
     this.leave(); this.jpw = pw; this.on = this.client = true; this.topic = this.PRE + 'g/' + sid; this.map = s.m; this.joined = false;
     this.c.subscribe(this.topic); this.status = 'JOINING ' + s.n + '...'; this.draw();
@@ -3634,7 +3635,7 @@ const MP = {
     if (this.status) h += `<div style="color:#ff8a6a;margin-bottom:10px">${this.status}</div>`;
     let n = 0;
     for (const [id, s] of this.servers) {
-      if (now - s.seen > 15000 || s.md) continue; n++; const full = s.p >= s.x;
+      if (now - s.seen > 15000 || s.md || !mapOk(s.m)) continue; n++; const full = s.p >= s.x;
       h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #333"><div>${this.esc(s.n)}<br><span style="color:#8e949b">${MAPS[s.m] ? MAPS[s.m].name : s.m} &middot; ${s.p}/${s.x}${s.k ? ' &middot; <span style="color:#e8d27a">PASSWORD</span>' : ''}${s.f ? ' &middot; <span style="color:#ff8a6a">FRIENDLY FIRE</span>' : ''}${s.l ? ' &middot; LOBBY' : ''}</span></div>${full ? '<span style="color:#e0453a">FULL</span>' : `<button class="btn" data-join="${id}" style="padding:8px 12px;font-size:9px">JOIN</button>`}</div>`;
     }
     if (!n) h += '<div style="color:#8e949b">NO SERVERS YET.<br>CREATE ONE AND TELL YOUR FRIENDS!</div>';
@@ -4931,6 +4932,7 @@ function nearestUse() {
   for (const T of curMap.traps || []) c(Math.hypot(P.x - T.pos.x, P.z - T.pos.z), 2.2, { k: 'trap', T });
   for (const w of curMap.switches || []) if (!w.on) c(Math.hypot(P.x - w.pos.x, P.z - w.pos.z), 2.2, { k: 'switch', w });
   if (mbox.state !== 'fly' && mbox.state !== 'gone') c(Math.hypot(P.x - mbox.pos.x, P.z - mbox.pos.z), 2.6, { k: 'box' });
+  if (FB.on && mbox.state === 'closed') for (const f of FB.list) if (f.g.visible) c(Math.hypot(P.x - f.x, P.z - f.z), 2.6, { k: 'box', fb: f });
   for (const q of curMap.wallBuys || []) c(Math.hypot(P.x - q.pos.x, P.z - q.pos.z), 2.2, { k: 'wall', q });
   if (curMap.gumPos && !PVP.on) c(Math.hypot(P.x - curMap.gumPos.x, P.z - curMap.gumPos.z), 1.9, { k: 'gum' });
   return best;
@@ -4956,6 +4958,7 @@ function interact() {
   if (u.k === 'pap') { buyPap(); return; }
   if (u.k === 'wall') { buyWall(u.q); return; }
   if (u.k === 'tele') { tlUse(u.t); return; }
+  if (u.fb) { if (mbox.state !== 'closed') return; placeBox(u.fb.x, u.fb.z, u.fb.rot); if (MP.on) MP.send({ t: 'box', a: 'jump', x: u.fb.x, z: u.fb.z, r: u.fb.rot }); }
   if (mbox.state === 'closed') {
     if (state.score < boxCost()) { notice(`NEED ${boxCost()} POINTS`); sfx.deny(); return; }
     state.score -= boxCost(); mbox.paid = boxCost(); sfx.buy(); mbox.owner = MP.id;
@@ -5021,6 +5024,7 @@ function boxRx(m) {
   const b = mbox;
   if (m.a === 'open') { if (b.state !== 'closed') { if (b.state === 'rolling' && b.owner === MP.id && m.i && String(m.i) < String(MP.id)) { state.score += (b.paid || 0); notice('SOMEONE BOUGHT THE BOX FIRST - REFUNDED', 2200); stopJingle(); b.state = 'closed'; } else return; } b.state = 'rolling'; b.t = 0; b.cycleT = 0; b.result = m.r; b.owner = m.i; b.uses = m.u || 0; b.display.visible = true; b.display.position.y = 0.9; startJingle(0.7); }
   else if (m.a === 'take') { if (b.owner && m.i && m.i !== b.owner) return; stopJingle(); b.state = 'closed'; b.display.visible = false; b.uses = m.u || 0; b.owner = null; }
+  else if (m.a === 'jump') { if (b.state === 'closed') placeBox(m.x, m.z, m.r); }
   else if (m.a === 'move') { placeBox(m.x, m.z, m.r); b.state = 'closed'; b.group.visible = true; b.display.visible = false; b.uses = 0; b.owner = null; boxStrike(m.x, m.z); }
 }
 function boxAway(dt) {
@@ -5128,7 +5132,10 @@ let cdTimer = 0, menuAngle = 0;
 
 function btn(a, text, sub = '', cls = '') { return `<button class="btn ${cls}" data-a="${a}">${text}${sub ? `<small>${sub}</small>` : ''}</button>`; }
 menuEl.appendChild(coinsEl);
-const MAP_ORDER = ['factory', 'osterled', 'window', 'ironmire', 'verity', 'giant', 'moon', 'dust', 'buried', 'm41']; let MAP_PAGES = [MAP_ORDER.slice(0, 6), MAP_ORDER.slice(6)];
+const MAP_LOCK = { osterled: 'ÖSTERLED', m41: '41' }; let MAP_UNL = {};
+try { MAP_UNL = JSON.parse(localStorage.getItem('zmapunl') || '{}') || {}; } catch (e) { }
+const mapOk = id => !MAP_LOCK[id] || !!MAP_UNL[id];
+const MAP_ORDER = ['factory', 'osterled', 'window', 'ironmire', 'verity', 'giant', 'moon', 'dust', 'buried', 'm41']; let MAP_PAGES = [MAP_ORDER.filter(mapOk).slice(0, 6), MAP_ORDER.filter(mapOk).slice(6)];
 let mapPage = 0, menuView = 'main';
 const DESC = { o: {}, ts: 0 };
 try { const q = JSON.parse(localStorage.getItem('zdesc') || 'null'); if (q && q.o) { DESC.o = q.o; DESC.ts = q.ts | 0; } } catch (e) { }
@@ -5155,7 +5162,7 @@ function mapList(act) {
 
 let zmSel = 0;
 function zmMapsHTML(act) {   // BO3-style full-screen MAPS page (zombies menu only): one scrolling list of every map
-  const ids = MAP_ORDER.filter(id => MAPS[id]);
+  const ids = MAP_ORDER.filter(id => MAPS[id] && mapOk(id));
   if (zmSel >= ids.length || zmSel < 0) zmSel = 0;
   const item = (id, i) => { const m = MAPS[id]; return `<div class="zmr"><button class="zmi ${i === zmSel ? 'on' : ''}" data-i="${i}" data-id="${id}" data-a="${act}${id}">${m.name}</button>` + (m.custom ? `<button class="zmlk ${LK.mine[id.slice(3)] ? 'on' : ''}" data-a="like:${id.slice(3)}">&#9829; ${lkCount(id.slice(3))}</button>` : '') + '</div>'; };
   return `<div class="zmw zmmaps"><div class="zmh"><span class="zmhe"></span>MAPS</div><div class="zmln"></div>`
@@ -5348,6 +5355,16 @@ document.addEventListener('keydown', e => {
   const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   NOAH.buf = (NOAH.buf + e.key.toLowerCase()).slice(-4);
   if (NOAH.buf === 'noah') { NOAH.buf = ''; NOAH.on = !NOAH.on; try { localStorage.setItem('znoah', NOAH.on ? '1' : '0'); } catch (x) { } noahBanner(); }
+});
+let mapUnlBuf = '';
+document.addEventListener('keydown', e => {
+  if (state.phase !== 'menu' || menuView !== 'main' || !e.key || e.key.length !== 1) return;
+  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  mapUnlBuf = (mapUnlBuf + e.key.toLowerCase()).slice(-8);
+  const hit = /österled$|osterled$/.test(mapUnlBuf) ? 'osterled' : /41$/.test(mapUnlBuf) ? 'm41' : null;
+  if (!hit) return; mapUnlBuf = '';
+  if (MAP_UNL[hit]) return; MAP_UNL[hit] = 1; try { localStorage.setItem('zmapunl', JSON.stringify(MAP_UNL)); } catch (x) { } cmRebuildPages();
+  try { let el = document.getElementById('noahBanner'); if (!el) { noahBanner(); el = document.getElementById('noahBanner'); } el.textContent = MAP_LOCK[hit] + ' MAP UNLOCKED FOREVER'; el.style.color = '#e8d27a'; el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 2600); } catch (x) { }
 });
 let devBuf = '';
 document.addEventListener('keydown', e => {
@@ -6264,7 +6281,22 @@ function placeExtraPerks(m) {
     list.push({ ...q, x: spot.x, z: spot.z, rot, pos: new THREE.Vector3(spot.x, 0, spot.z), cd: null });
   }
 }
+const FB = { on: false, list: [], map: null };
+function fireBoxTick() {
+  const sp = curMap && curMap.boxSpots, want = fireT > 0 && sp && sp.length > 1 && curMap.root && state.phase === 'playing';
+  if (FB.on && (!want || FB.map !== curMap)) { for (const f of FB.list) f.g.parent && f.g.parent.remove(f.g); FB.list = []; FB.on = false; try { hayUpdate(); } catch (e) { } }
+  if (!want) return;
+  if (!FB.on) {
+    if (mbox.state !== 'closed') return;
+    FB.on = true; FB.map = curMap; FB.list = [];
+    for (const q of sp) { const g = mbox.group.clone(true); g.position.set(q.x, 0, q.z); g.rotation.y = q.rot || 0; g.visible = true; curMap.root.add(g); FB.list.push({ x: q.x, z: q.z, rot: q.rot || 0, g }); }
+    notice('FIRE SALE - A MYSTERY BOX AT EVERY LOCATION!', 2600);
+  }
+  for (const f of FB.list) f.g.visible = Math.hypot(f.x - mbox.pos.x, f.z - mbox.pos.z) > 1.5 && mbox.state !== 'fly' && mbox.state !== 'gone';
+  for (const h of curMap._hay || []) h.g.visible = false;
+}
 function updateProjectiles(dt) {
+  fireBoxTick();
   bowFxTick(dt); impTick(dt);
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
@@ -9760,7 +9792,7 @@ function buildCustomMap(d) {
   mm.nav = buildNav(mm);
   return mm;
 }
-function cmRebuildPages() { MAP_PAGES = []; for (let i = 0; i < MAP_ORDER.length; i += 6) MAP_PAGES.push(MAP_ORDER.slice(i, i + 6)); if (mapPage >= MAP_PAGES.length) mapPage = Math.max(0, MAP_PAGES.length - 1); }
+function cmRebuildPages() { MAP_PAGES = []; const _o = MAP_ORDER.filter(mapOk); for (let i = 0; i < _o.length; i += 6) MAP_PAGES.push(_o.slice(i, i + 6)); if (mapPage >= MAP_PAGES.length) mapPage = Math.max(0, MAP_PAGES.length - 1); }
 function cmRegister(d) {
   const id = 'cm_' + d.id, old = MAPS[id];
   if (old && curMap && curMap.id === id && state.phase !== 'menu') return false;
@@ -10494,7 +10526,7 @@ function pvpRender() {
     L = `<div class="pvt">MULTIPLAYER<b>${PVP.fr ? 'FREERUN RACE' : PVP.inf ? 'INFECTED' : 'TEAM DEATHMATCH'}</b></div><div class="pvl">YOUR NAME</div><input id="mpName" class="mpin" maxlength="14" value="${clEsc(MP.name)}" placeholder="PLAYER">` + btnP('create', 'CREATE ROOM', 'pick a map and host') + btnP('loadout', 'LOADOUT', 'start gun: ' + WEAPONS[PVP.loadout].name) + btnP('home', '&lt; BACK', '', 'back');
     R = '<div class="pvh">ROOMS</div><div id="pvList">' + pvpListHTML() + '</div>';
   } else if (v === 'maps') {
-    const ids = [...MAP_ORDER.filter(id => MAPS[id]), ...Object.keys(MAPS).filter(id => MAPS[id].custom)];
+    const ids = [...MAP_ORDER.filter(id => MAPS[id] && mapOk(id)), ...Object.keys(MAPS).filter(id => MAPS[id].custom)];
     L = `<div class="pvt">CREATE ROOM<b>PICK A MAP</b></div>` + btnP('rooms', '&lt; BACK', '', 'back'); R = '<div class="pvmaps">' + ids.map(pvpMapCard).join('') + '</div>';
   } else if (v === 'loadout') {
     L = `<div class="pvt">LOADOUT<b>STARTING GUN</b></div><div class="pvnote">YOU SPAWN WITH THIS GUN AND A PISTOL EVERY TIME YOU RESPAWN.</div>` + btnP(PVP.in ? 'lobby' : 'rooms', '&lt; BACK', '', 'back');
