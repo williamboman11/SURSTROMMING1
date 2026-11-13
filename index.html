@@ -2740,6 +2740,8 @@ function mzApply(g, A, fi, j, extraX) {
 }
 for (const k in MZ_ANIM) { const A = MZ_ANIM[k], q = A.q.up, n = A.n, d = Math.abs(q[0] - q[(n - 1) * 4]) + Math.abs(q[1] - q[(n - 1) * 4 + 1]) + Math.abs(q[2] - q[(n - 1) * 4 + 2]); A.loop = d < 0.06 && n > 3 ? n - 1 : n; }
 const mzVariants = MZ_SKINS.map((_, i) => buildMZVariant(i)), mzVariant = mzVariants[0];
+const litEyeMat = new THREE.MeshBasicMaterial({ color: 0xcffaff }), litGlowMat = new THREE.MeshBasicMaterial({ color: 0x3ad8ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
+const litVariant = { ...mzVariant, mat: new THREE.MeshStandardMaterial({ color: 0x7f8fb8, emissive: 0x1a40c0, emissiveIntensity: 0.55, roughness: 0.7 }) };
 const verityVariant = buildVerityVariant(), tungVariant = buildTungVariant(), verityBossVariant = buildVerityBossVariant(), catVariant = buildCatVariant();
 function texZombie(bump) {   // pores, blotches, faint veins (colour) / fine skin relief (bump)
   const [c, x] = mkCanvas(128);
@@ -3521,7 +3523,7 @@ const MP = {
     for (const [id, x, z, f, sp] of m.z) {
       seen.add(id); let zb = this.zmap.get(id);
       if (zb && (zb.dead || !zombies.includes(zb))) zb = null;
-      if (!zb) { zb = createZombie(x, z, { boss: !!(f & 1), warlord: !!(f & 2), hound: !!(f & 4), kind: (f & 64) ? 'vboss' : (f & 16) ? 'verity' : (f & 32) ? 'tung' : (f & 256) ? 'cat' : (f & 512) ? 'mz' : null }); zb.mid = id; zb.runner = !!(f & 8); zb.speed = sp; this.zmap.set(id, zb); }
+      if (!zb) { zb = createZombie(x, z, { boss: !!(f & 1), warlord: !!(f & 2), hound: !!(f & 4), kind: (f & 64) ? 'vboss' : (f & 16) ? 'verity' : (f & 32) ? 'tung' : (f & 256) ? 'cat' : (f & 512) ? 'mz' : (f & 1024) ? 'lit' : null }); zb.mid = id; zb.runner = !!(f & 8); zb.speed = sp; this.zmap.set(id, zb); }
       zb.tx = x; zb.tz = z; if (f & 128) zb.para = 0.45; else if (zb.para > 0.45) zb.para = 0.45;
     }
     for (const zb of [...zombies]) if (!seen.has(zb.mid)) { zb.dead = true; zombies.splice(zombies.indexOf(zb), 1); this.zmap.delete(zb.mid); zb.deadT = 0; dying.push(zb); }
@@ -3584,7 +3586,7 @@ const MP = {
     this.pgT = (this.pgT || 0) - dt; if (this.pgT <= 0) { this.pgT = 3; if (this.peers.size) this.send({ t: 'pg', ts: Math.round(performance.now()) }); }
     this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, dd: this.dead ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name, sc: state.score | 0, kk: state.kills, dn: state.downs | 0, rv: state.revives | 0, hs: state.heads | 0, lk: lookStr(LOOK), cm: WALLET.sel[player.cur] || 0, hid: gasClouds.length && playerHidden() ? 1 : 0 }); }
     if (this.host) {
-      this.ts -= dt; if (this.ts <= 0) { this.ts = 0.1; this.send({ t: 's', w: state.wave, r: state.roundState === 'active' ? 1 : 0, hr: state.houndRound ? 1 : 0, z: zombies.map(z => [z.mid, +z.root.position.x.toFixed(2), +z.root.position.z.toFixed(2), (z.boss ? 1 : 0) | (z.warlord ? 2 : 0) | (z.hound ? 4 : 0) | (z.runner ? 8 : 0) | (z.kind === 'verity' ? 16 : 0) | (z.kind === 'tung' ? 32 : 0) | (z.kind === 'vboss' ? 64 : 0) | (z.kind === 'cat' ? 256 : 0) | (z.kind === 'mz' ? 512 : 0) | (z.para > 0 ? 128 : 0), +z.speed.toFixed(2)]) }); }
+      this.ts -= dt; if (this.ts <= 0) { this.ts = 0.1; this.send({ t: 's', w: state.wave, r: state.roundState === 'active' ? 1 : 0, hr: state.houndRound ? 1 : 0, z: zombies.map(z => [z.mid, +z.root.position.x.toFixed(2), +z.root.position.z.toFixed(2), (z.boss ? 1 : 0) | (z.warlord ? 2 : 0) | (z.hound ? 4 : 0) | (z.runner ? 8 : 0) | (z.kind === 'verity' ? 16 : 0) | (z.kind === 'tung' ? 32 : 0) | (z.kind === 'vboss' ? 64 : 0) | (z.kind === 'cat' ? 256 : 0) | (z.kind === 'mz' ? 512 : 0) | (z.kind === 'lit' ? 1024 : 0) | (z.para > 0 ? 128 : 0), +z.speed.toFixed(2)]) }); }
       this.tb -= dt; if (this.tb <= 0) { this.tb = 4; this.beat(); }
       if (!PVP.on && this.down && [...this.peers.values()].every(p => p.d)) this.over();
     } else if (!this.paused && now - this.lastS > 9000) { if (PVP.in) { notice('HOST LEFT THE ROOM'); pvpLeaveHome(); return; } notice('HOST LEFT THE GAME'); showMenu('mp'); return; }
@@ -4149,8 +4151,8 @@ window.addEventListener('keydown', e => {
 }, true);
 
 function createZombie(x, z, opt = {}) {
-  const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : kind === 'cat' ? catVariant : kind === 'mz' ? (opt.mzv != null ? mzVariants[opt.mzv] : pick(mzVariants)) : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
-  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.9, 0.98) : kind === 'cat' ? rnd(0.98, 1.04) : kind === 'mz' ? rnd(1.1, 1.2) : boss ? 1.75 : hound ? 1 : rnd(0.95, 1.03); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.92, 1.06), s * rnd(0.98, 1.04), s * rnd(0.92, 1.06));
+  const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : kind === 'cat' ? catVariant : kind === 'lit' ? litVariant : kind === 'mz' ? (opt.mzv != null ? mzVariants[opt.mzv] : pick(mzVariants)) : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
+  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.9, 0.98) : kind === 'cat' ? rnd(0.98, 1.04) : kind === 'lit' ? rnd(1.08, 1.14) : kind === 'mz' ? rnd(1.1, 1.2) : boss ? 1.75 : hound ? 1 : rnd(0.95, 1.03); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.92, 1.06), s * rnd(0.98, 1.04), s * rnd(0.92, 1.06));
   const G = (par, px, py, pz) => { const g = new THREE.Group(); g.position.set(px, py, pz); par.add(g); return g; };
   const M = (geo, par, part, cast = true) => { const m = new THREE.Mesh(geo, v.mat || zMat); m.castShadow = cast; par.add(m); m.userData.part = part; return m; };
   const upper = G(root, 0, hound ? 0.62 : 0.9, 0), torso = M(v.torso, upper, 'body'), headP = G(upper, 0, hound ? 0.14 : (v.hy || 0.74), hound ? 0.66 : 0), head = M(v.head, headP, 'head');
@@ -4177,6 +4179,7 @@ function createZombie(x, z, opt = {}) {
   if (kind === 'verity') hp = Math.round(hp * 1.1);
   if (kind === 'tung') { hp = Math.round(hp * 1.25); speed = Math.min(speed * 1.25 + 0.4, 5.6); }
   if (kind === 'cat') { hp = Math.round(hp * 1.15); speed = Math.min(speed * 1.2 + 0.3, 5.3); }
+  if (kind === 'lit') { hp = Math.round(hp * 1.3); speed = Math.min(speed * 0.9 + 0.2, 3.4); }
   if (kind === 'vboss') { hp = 2 * (2500 + 1500 * (wave / 10 - 1)); speed = 5.0; }
   if (hound) { hp = 60 + wave * 25; speed = Math.min(6.2 + wave * 0.05 + Math.random() * 0.6, 8); }
   const zb = {
@@ -4186,6 +4189,7 @@ function createZombie(x, z, opt = {}) {
     phase: Math.random() * 10, attackCd: 0, spawnT: 0, growlT: rnd(0.5, 3), stagger: 0, stuck: 0, side: Math.random() < 0.5 ? 1 : -1, dead: false, bar: null, deadT: 0, fd: 1,
   };
   zb.meshes.forEach(m => { m.userData.zombie = zb; });
+  if (kind === 'lit') for (const sg of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), litEyeMat); e.position.set(sg * 0.075, 0.02, 0.19); head.add(e); const gl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), litGlowMat); gl.position.copy(e.position); head.add(gl); }
   if (kind === 'vboss') { const [nc, nx] = mkCanvas(256, 64); nx.fillStyle = 'rgba(0,0,0,0.55)'; nx.fillRect(0, 0, 256, 64); nx.fillStyle = '#ff3b2f'; nx.font = 'bold 44px Arial'; nx.textAlign = 'center'; nx.textBaseline = 'middle'; nx.fillText('VERITY', 128, 34); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(nc), transparent: true, depthTest: false })); sp.scale.set(1.6, 0.4, 1); sp.position.y = 2.75; sp.renderOrder = 9; root.add(sp); }
   zb.mid = ++MP.zid; zombies.push(zb);
   if (opt.frozen) { zb.frozen = true; zb.spawnT = 1; root.position.y = 0; zb.hp = zb.maxHp = 1e9; root.rotation.y = Math.atan2(player.pos.x - x, player.pos.z - z); }
@@ -4240,7 +4244,7 @@ function spawnBoss(warlord = false, kind = null) {
 }
 function spawnZombie() {
   const ST = MP.pick();
-  const hopt = state.houndRound ? { hound: true } : curMap.zk ? { kind: pickZK(curMap.zk) } : curMap.id === 'verity' ? { kind: (() => { const r = Math.random(); return r < 0.38 ? 'verity' : r < 0.72 ? 'tung' : 'cat'; })() } : { kind: 'mz' };
+  const hopt = state.houndRound ? { hound: true } : curMap.zk ? { kind: pickZK(curMap.zk) } : curMap.id === 'verity' ? { kind: (() => { const r = Math.random(); return r < 0.3 ? 'verity' : r < 0.58 ? 'tung' : r < 0.82 ? 'cat' : 'lit'; })() } : { kind: 'mz' };
   if (curMap.spawnPts) {
     const L = curMap.spawnPts.filter(p => !NAV.on || navReachable(p.x, p.z)); if (!L.length) return false;
     const dd = p => Math.hypot(p.x - ST.x, p.z - ST.z), mid = L.filter(p => dd(p) > 10 && dd(p) < 55), P0 = pick(mid.length ? mid : L);
@@ -6042,7 +6046,7 @@ function updateZombies(dt) {
     if (z.crawl) { crawlPose(z, t, ph); gp.y = 0.28 + (z.gy || 0); }
     // scary noises when you get close
     z.growlT -= dt;
-    if (z.kind === 'verity' || z.kind === 'vboss' || z.kind === 'tung' || z.kind === 'cat') {
+    if (z.kind === 'verity' || z.kind === 'vboss' || z.kind === 'tung' || z.kind === 'cat' || z.kind === 'lit') {
       if (z.growlT <= 0) {
         const vb = z.kind === 'vboss', maxD = vb ? 48 : 24;
         if (dist < maxD) {
@@ -6295,7 +6299,26 @@ function fireBoxTick() {
   for (const f of FB.list) f.g.visible = Math.hypot(f.x - mbox.pos.x, f.z - mbox.pos.z) > 1.5 && mbox.state !== 'fly' && mbox.state !== 'gone';
   for (const h of curMap._hay || []) h.g.visible = false;
 }
+const litBeams = new Map();
+function litTick(dt) {
+  for (const [z, b] of litBeams) if (z.dead || !zombies.includes(z)) { scene.remove(b.g); litBeams.delete(z); }
+  if (state.phase !== 'playing' || PVP.on) { for (const b of litBeams.values()) b.g.visible = false; return; }
+  for (const z of zombies) {
+    if (z.kind !== 'lit' || z.dead || z.frozen) continue;
+    let b = litBeams.get(z);
+    if (!b) { const g = new THREE.Group(), ls = []; for (let k = 0; k < 4; k++) { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 12 }, () => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: k < 2 ? 0xffffff : 0x4ad8ff, transparent: true, opacity: k < 2 ? 1 : 0.7, fog: false })); l.frustumCulled = false; g.add(l); ls.push(l); } g.visible = false; scene.add(g); b = { g, ls, cd: 0, snd: 0 }; litBeams.set(z, b); }
+    const hy = z.root.position.y + 1.62 * z.root.scale.y, hx = z.root.position.x, hz = z.root.position.z, ty = 1.25, dx = player.pos.x - hx, dz = player.pos.z - hz, d = Math.hypot(dx, dz);
+    const active = z.root.position.y > -0.6 && d < 10 && !MP.down && state.health > 0 && !(GG.s.plain > 0) && z.spawnT >= 0;
+    b.g.visible = active; if (!active) continue;
+    const fx = dx / (d || 1), fz = dz / (d || 1), px = -fz, pz = fx;
+    b.ls.forEach((l, k) => { const a = l.geometry.attributes.position; for (let i = 0; i < 12; i++) { const t = i / 11, j = (i === 0 || i === 11) ? 0 : (Math.random() - 0.5) * 0.5 * (k < 2 ? 1 : 1.8); a.setXYZ(i, hx + dx * t + px * j + fx * 0.25 * (1 - t), hy + (ty - hy) * t + (Math.random() - 0.5) * (i === 0 || i === 11 ? 0 : 0.3), hz + dz * t + pz * j); } a.needsUpdate = true; });
+    b.cd -= dt; b.snd -= dt;
+    if (b.snd <= 0) { b.snd = 0.12; try { tone('sawtooth', 700 + Math.random() * 1200, 200, 0.07, 0.07); } catch (e) { } }
+    if (b.cd <= 0) { b.cd = 0.22; hurtPlayer(7); z.slowT = Math.max(z.slowT || 0, 0.3); }
+  }
+}
 function updateProjectiles(dt) {
+  litTick(dt);
   fireBoxTick();
   bowFxTick(dt); impTick(dt);
   for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -7974,9 +7997,9 @@ function buildWindowMap() {
   const oldObs = obstacles, oldOcc = obstacleMeshes, w0 = scene.children.length;
   const obs = [], occ = []; obstacles = obs; obstacleMeshes = occ;
   const slab = (x, z, w, d, mat, y = 0.01) => { const m = new THREE.Mesh(planeGeo(w, d, 6), mat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); };
-  slab(0, 0, 100, 100, MAT.grass, -0.03); slab(0, 1, 38, 38, MAT.gravel, 0.005); slab(0, -7, 28, 12, MAT.concreteDark, 0.02);
+  slab(0, 0, 100, 100, MAT.grass, -0.03); slab(0, 0, 52, 52, MAT.gravel, 0.005); slab(0, -8, 40, 16, MAT.concreteDark, 0.02);
   const wall = std(texConcrete('#4a4e50'), { roughness: 0.95 });
-  const cx = 0, cz = -7, w = 28, d = 12, h = 4.2, T = 0.5, ww = 3.2, fz = cz + d / 2 - T / 2;
+  const cx = 0, cz = -8, w = 40, d = 16, h = 4.2, T = 0.5, ww = 3.2, fz = cz + d / 2 - T / 2;
   const S = (x, z, a, b) => addSolid(x, z, a, h, b, wall, { den: 2.5 });
   S(cx, cz - d / 2 + T / 2, w, T); S(cx - w / 2 + T / 2, cz, T, d); S(cx + w / 2 - T / 2, cz, T, d);
   const lw = -ww / 2 - (cx - w / 2), rw = (cx + w / 2) - ww / 2;
@@ -7988,42 +8011,35 @@ function buildWindowMap() {
   const sl = new THREE.Mesh(new THREE.BoxGeometry(ww + 0.4, 0.08, 0.8), MAT.trim); sl.position.set(0, 0.04, fz); scene.add(sl);
   for (const [bx, by, rz] of [[-1.1, 1.9, 0.22], [1.0, 1.4, -0.25], [-0.9, 0.7, -0.15]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.05), MAT.fence); b.position.set(bx, by, fz + 0.32); b.rotation.z = rz; b.castShadow = true; scene.add(b); }
   addDecal(0, 3.45, fz + T / 2 + 0.03, 3.4, 0.8, new THREE.MeshStandardMaterial({ map: texSign(['WINDOW', 'ONE ROOM  ONE WINDOW']), roughness: 0.8 }));
-  for (const x of [-10, -5, 0, 5, 10]) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), MAT.windowLit); b.position.set(x, 3.7, -7); scene.add(b);
-    const l = new THREE.PointLight(0xffd29a, 16, 13, 2); l.position.set(x, 3.5, -7); scene.add(l);
+  for (const x of [-16, -8, 0, 8, 16]) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), MAT.windowLit); b.position.set(x, 3.7, -8); scene.add(b);
+    const l = new THREE.PointLight(0xffd29a, 16, 13, 2); l.position.set(x, 3.5, -8); scene.add(l);
   }
   const yl = new THREE.PointLight(0x9fb4ff, 14, 24, 2); yl.position.set(0, 5, 7); scene.add(yl);
   const ow = std(texConcrete('#3a3e40'), { roughness: 1 });
-  addSolid(0, -18.5, 39, 3.5, 1, ow); addSolid(0, 17.5, 39, 3.5, 1, ow); addSolid(-18.5, 0, 1, 3.5, 38, ow); addSolid(18.5, 0, 1, 3.5, 38, ow);
+  addSolid(0, -25.5, 53, 3.5, 1, ow); addSolid(0, 25.5, 53, 3.5, 1, ow); addSolid(-25.5, 0, 1, 3.5, 52, ow); addSolid(25.5, 0, 1, 3.5, 52, ow);
   for (const [x, z] of [[-9, 6], [10, 9], [-15.3, -15], [15.3, -15], [-5, 12]]) addSolid(x, z, 1.4, 1.4, 1.4, MAT.crate, { den: 1.4 });
   for (const [x, z] of [[8, 4], [-12, 2], [16, -6]]) addCylinder(x, z, 0.5, 1.0, MAT.steelDark);
   const pit = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24), new THREE.MeshBasicMaterial({ color: 0x120405 })); pit.rotation.x = -Math.PI / 2; pit.position.set(0, 0.04, 13.5); scene.add(pit);
   const ring = new THREE.Mesh(new THREE.RingGeometry(2.4, 2.7, 24), new THREE.MeshBasicMaterial({ color: 0x7a1218 })); ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.05, 13.5); scene.add(ring);
   const pl = new THREE.PointLight(0xff3020, 8, 9, 2); pl.position.set(0, 0.8, 13.5); scene.add(pl);
-  // all ten perks + pack-a-punch + mystery box + wall buy in the bigger room
-  addPerk(-9.6, -12, 0, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
-  const defs = [
-    { id: 'quick', x: -6.4, z: -12, rot: 0, title: 'QUICK REVIVE', fs: 24, body: '#176cbd', trim: '#f2f2f2', emb: 'Q', cost: 500 },
-    { id: 'speed', x: -3.2, z: -12, rot: 0, title: 'SPEED COLA', fs: 25, body: '#2d8d48', trim: '#e4f2d9', emb: 'S', cost: 3000 },
-    { id: 'double', x: 0, z: -12, rot: 0, title: 'DOUBLE TAP', fs: 23, body: '#c5a321', trim: '#171717', emb: '2', cost: 2000 },
-    { id: 'mule', x: 3.2, z: -12, rot: 0, title: 'MULE KICK', fs: 26, body: '#d4631f', trim: '#2a1608', emb: 'M', cost: 4000 },
-    { id: 'stamin', x: 6.4, z: -12, rot: 0, title: 'STAMIN-UP', fs: 25, body: '#6e8d35', trim: '#f2f2f2', emb: '↑', cost: 2000 },
-    { id: 'vulture', x: 9.6, z: -12, rot: 0, title: 'VULTURE AID', fs: 24, body: '#4a7a2a', trim: '#e8ffd0', emb: 'V', cost: 3000 },
-    { id: 'lunar', x: -13.05, z: -10, rot: Math.PI / 2, title: 'LUNAR LEGS', fs: 25, body: '#4a5cff', trim: '#ffffff', emb: 'L', cost: 2500 },
-    { id: 'head', x: -13.05, z: -7, rot: Math.PI / 2, title: 'HEADHUNTER', fs: 24, body: '#8a1a22', trim: '#ffd0d0', emb: 'H', cost: 4000 },
-    { id: 'cash', x: 13.05, z: -10.5, rot: -Math.PI / 2, title: 'CASHBACK COLA', fs: 21, body: '#b8921a', trim: '#1a1405', emb: '$', cost: 2500 },
-  ];
-  const perks = defs.map(q => { addPerk(q.x, q.z, q.rot, q); return { ...q, pos: new THREE.Vector3(q.x, 0, q.z) }; });
-  const papG = addPerk(-13.05, -4, Math.PI / 2, { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P' });
+  // every perk (old + new) along the walls of the bigger house, plus pack-a-punch, mystery box and wall buy
+  const PI2 = Math.PI / 2, OLD = { quick: ['QUICK REVIVE', 24, '#176cbd', '#f2f2f2', 'Q', 500], speed: ['SPEED COLA', 25, '#2d8d48', '#e4f2d9', 'S', 3000], double: ['DOUBLE TAP', 23, '#c5a321', '#171717', '2', 2000], mule: ['MULE KICK', 26, '#d4631f', '#2a1608', 'M', 4000], stamin: ['STAMIN-UP', 25, '#6e8d35', '#f2f2f2', '↑', 2000], vulture: ['VULTURE AID', 24, '#4a7a2a', '#e8ffd0', 'V', 3000], lunar: ['LUNAR LEGS', 25, '#4a5cff', '#ffffff', 'L', 2500], head: ['HEADHUNTER', 24, '#8a1a22', '#ffd0d0', 'H', 4000], cash: ['CASHBACK COLA', 21, '#b8921a', '#1a1405', '$', 2500] };
+  const pdef = id => OLD[id] ? { id, title: OLD[id][0], fs: OLD[id][1], body: OLD[id][2], trim: OLD[id][3], emb: OLD[id][4], cost: OLD[id][5] } : XPK.find(q => q.id === id);
+  addPerk(-17.6, -15.25, 0, { title: 'JUGGER-NOG', fs: 30, body: '#a3141a', trim: '#f2f2f2', emb: 'J' });
+  const layout = [['quick', -14.4, -15.25, 0], ['speed', -11.2, -15.25, 0], ['double', -8, -15.25, 0], ['mule', -4.8, -15.25, 0], ['stamin', -1.6, -15.25, 0], ['vulture', 1.6, -15.25, 0], ['imp', 4.8, -15.25, 0], ['fist', 8, -15.25, 0], ['cherry', 11.2, -15.25, 0], ['dead', 14.4, -15.25, 0], ['blood', 17.6, -15.25, 0],
+    ['lunar', -19.25, -13, PI2], ['head', -19.25, -10, PI2], ['scav', -19.25, -4, PI2], ['cash', 19.25, -13.5, -PI2], ['frost', 19.25, -10.5, -PI2], ['skin', -14, -0.9, Math.PI], ['rapid', -9.5, -0.9, Math.PI], ['adren', -5, -0.9, Math.PI]];
+  const perks = layout.map(([id, x, z, rot]) => { const q = { ...pdef(id), x, z, rot }; addPerk(x, z, rot, q); return { ...q, pos: new THREE.Vector3(x, 0, z) }; });
+  const papG = addPerk(-19.25, -7, PI2, { title: 'PACK-A-PUNCH', fs: 25, body: '#1c2a5e', trim: '#8a6bff', emb: 'P' });
   const gear = makePapGear(papG);
-  makeWallBuy(13.72, 1.55, -4, -Math.PI / 2, 'REMINGTON 870 MCS', SHOTGUN_WALL_COST);
+  makeWallBuy(19.72, 1.55, -3.5, -PI2, 'REMINGTON 870 MCS', SHOTGUN_WALL_COST);
   const root = new THREE.Group(); scene.add(root);
   for (const c of scene.children.slice(w0)) if (c !== root) root.add(c);
   obstacles = oldObs; obstacleMeshes = oldOcc;
   return {
-    id: 'window', ax: 19, az: 19, fog: 0.03, shadowX: 22, shadowZ: 22, spawn: { x: 0, z: -7.5, yaw: Math.PI }, menuCam: { cx: 0, cz: 0, r: 28, rv: 2, h: 15, look: 1 },
-    root, obs, occ, jugPos: new THREE.Vector3(-9.6, 0, -12), papPos: new THREE.Vector3(-13.05, 0, -4), papGear: gear, boxPos: new THREE.Vector3(13.05, 0, -7.5), boxRot: -Math.PI / 2,
-    perks, houses: [{ cx: 0, cz: -7, w: 28, d: 12, doorX: 0, doorZ: -1, open: true }], wallBuys: [{ pos: new THREE.Vector3(12.6, 0, -4), type: 'shotgun', cost: SHOTGUN_WALL_COST }], spawnAt: { x: 0, z: 13.5 }, nav: null,
+    id: 'window', ax: 26, az: 26, fog: 0.03, shadowX: 29, shadowZ: 29, _xp: true, spawn: { x: 0, z: -7.5, yaw: Math.PI }, menuCam: { cx: 0, cz: 0, r: 28, rv: 2, h: 15, look: 1 },
+    root, obs, occ, jugPos: new THREE.Vector3(-17.6, 0, -15.25), papPos: new THREE.Vector3(-19.25, 0, -7), papGear: gear, boxPos: new THREE.Vector3(19.05, 0, -7), boxRot: -Math.PI / 2,
+    perks, houses: [{ cx: 0, cz: -8, w: 40, d: 16, doorX: 0, doorZ: 0, open: true }], wallBuys: [{ pos: new THREE.Vector3(18.6, 0, -3.5), type: 'shotgun', cost: SHOTGUN_WALL_COST }], spawnAt: { x: 0, z: 13.5 }, nav: null,
   };
 }
 
@@ -8853,6 +8869,7 @@ MAPS.verity = { id: 'verity', name: 'MAP VERITY', sub: 'BRAINROT VILLAGE &middot
 MAPS.buried = { id: 'buried', name: 'BURIED', sub: 'OLD WEST TOWN &middot; DEEP UNDERGROUND', built: false, build: buildBuriedMap };
 MAPS.giant = { id: 'giant', name: 'THE GIANT: RESEARCH SITE', sub: 'SNOWBOUND INDUSTRIAL FACILITY', built: false, build: buildDerRieseInspired };
 const WH_DATA = {"id":"wh","name":"NZP WAREHOUSE","sub":"WAYPOINT-BUILT WAREHOUSE","desc":"Tight corridors and storerooms rebuilt from the NZP Warehouse waypoint graph.","ground":"concrete","tod":"dark","ax":74,"az":35,"walls":[{"x":-60.02,"z":-30.2,"w":12.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-13.02,"z":-30.2,"w":78.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-66.02,"z":-28.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-53.02,"z":-28.2,"w":6.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-31.02,"z":-28.2,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-22.02,"z":-28.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-15.02,"z":-28.2,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":4.98,"z":-28.2,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":25.98,"z":-28.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-67.02,"z":-18.2,"w":2.0,"d":18.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":26.98,"z":-25.2,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":31.98,"z":-24.2,"w":8.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":34.98,"z":-18.2,"w":2.0,"d":10.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":52.98,"z":-22.2,"w":10.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":47.98,"z":-20.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":56.98,"z":-16.2,"w":2.0,"d":10.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":46.98,"z":-14.2,"w":2.0,"d":10.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-45.02,"z":-16.2,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":18.98,"z":-15.2,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":14.98,"z":-14.2,"w":6.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":20.98,"z":-13.2,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":40.98,"z":-14.2,"w":10.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":61.98,"z":-14.2,"w":8.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":11.98,"z":-12.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":22.98,"z":-11.2,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":44.98,"z":-11.2,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":60.98,"z":-12.2,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":65.98,"z":-12.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-69.02,"z":-6.2,"w":2.0,"d":10.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":7.98,"z":-10.2,"w":8.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":24.98,"z":-2.2,"w":2.0,"d":18.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":67.98,"z":-10.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":13.98,"z":-8.2,"w":16.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":68.98,"z":8.8,"w":2.0,"d":36.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":7.98,"z":-6.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":16.98,"z":-6.2,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":21.98,"z":-6.2,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-67.02,"z":1.8,"w":2.0,"d":10.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":7.98,"z":3.8,"w":4.0,"d":6.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":12.98,"z":3.8,"w":2.0,"d":6.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":22.98,"z":1.8,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":4.98,"z":5.8,"w":2.0,"d":6.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":10.98,"z":5.8,"w":2.0,"d":6.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":14.98,"z":4.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-64.02,"z":5.8,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-45.02,"z":6.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-41.02,"z":7.8,"w":2.0,"d":6.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-31.02,"z":7.8,"w":2.0,"d":6.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-63.02,"z":8.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-51.02,"z":7.8,"w":10.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-43.02,"z":7.8,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-33.02,"z":8.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-15.02,"z":8.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-58.02,"z":9.8,"w":8.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-37.02,"z":9.8,"w":6.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":-23.02,"z":9.8,"w":14.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":-5.02,"z":9.8,"w":18.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":2.98,"z":17.8,"w":2.0,"d":14.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":53.98,"z":11.8,"w":12.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":48.98,"z":14.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":57.98,"z":13.8,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":14.98,"z":15.8,"w":6.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":22.98,"z":16.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":50.98,"z":19.8,"w":2.0,"d":10.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":55.98,"z":15.8,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":66.98,"z":15.8,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":4.98,"z":17.8,"w":2.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":12.98,"z":20.8,"w":2.0,"d":8.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":18.98,"z":17.8,"w":6.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":24.98,"z":18.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":54.98,"z":22.8,"w":2.0,"d":12.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":26.98,"z":20.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":30.98,"z":21.8,"w":6.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":4.98,"z":24.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":10.98,"z":24.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#7a7468"},{"x":32.98,"z":24.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":48.98,"z":24.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":7.98,"z":25.8,"w":4.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":40.98,"z":25.8,"w":14.0,"d":2.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":66.98,"z":27.8,"w":2.0,"d":6.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":56.98,"z":28.8,"w":2.0,"d":4.0,"h":4.6,"m":"concrete","c":"#6f7377"},{"x":61.98,"z":29.8,"w":8.0,"d":2.0,"h":4.6,"m":"concrete","c":"#7a7468"}],"gates":[{"x":-4.64,"z":-10.05,"w":9.0,"d":1.0,"cost":1000},{"x":4.52,"z":-18.17,"w":1.0,"d":9.0,"cost":1500}],"perks":[{"k":"jug","x":-19.02,"z":8.05,"ry":3.142},{"k":"quick","x":3.23,"z":5.8,"ry":-1.571},{"k":"double","x":-11.02,"z":-28.45,"ry":0.0},{"k":"speed","x":-3.02,"z":-28.45,"ry":0.0},{"k":"stamin","x":26.73,"z":-4.2,"ry":1.571},{"k":"mule","x":48.73,"z":-12.2,"ry":1.571},{"k":"pap","x":56.98,"z":10.05,"ry":3.142}],"wb":[{"type":"shotgun","x":-37.02,"z":8.75,"ry":3.142,"cost":1500},{"type":"ak","x":-61.02,"z":-29.15,"ry":0.0,"cost":1200},{"type":"shotgun","x":36.98,"z":-13.15,"ry":0.0,"cost":1500}],"boxes":[{"x":55.18,"z":-14.2,"rot":-1.571},{"x":-41.02,"z":-28.4,"rot":0.0},{"x":47.18,"z":13.8,"rot":-1.571},{"x":67.18,"z":-2.2,"rot":-1.571}],"spawn":{"x":-30.02,"z":-2.05,"yaw":0},"zs":[{"x":-47.8,"z":1.8},{"x":-11.77,"z":2.8},{"x":-47.55,"z":-12.23},{"x":-61.58,"z":-6.52},{"x":-25.48,"z":-8.33},{"x":4.83,"z":-2.02},{"x":-40.92,"z":-24.67},{"x":-62.23,"z":-24.08},{"x":-5.2,"z":-12.11},{"x":19.64,"z":-2.08},{"x":-26.3,"z":-23.83},{"x":0.17,"z":-25.17},{"x":25.14,"z":11.98},{"x":14.98,"z":-19.3},{"x":8.8,"z":11.48},{"x":40.61,"z":12.33},{"x":30.33,"z":-19.77},{"x":40.64,"z":-1.67},{"x":57.7,"z":6.92},{"x":52.05,"z":-14.2},{"x":63.27,"z":22.17}],"zk":{"n":3,"v":0,"t":0,"c":0,"m":2},"boss":1,"ts":0,"floors":[],"stairs":[],"tele":[],"windows":[],"switches":[],"traps":[{"k":"elec","n":"ELECTRIC TRAP","cost":1000,"x":-40.92,"z":-24.67,"w":5.0,"d":9.0,"sx":-35.02,"sz":-28.95,"sry":0.0},{"k":"fire","n":"FIRE TRAP","cost":1500,"x":38.17,"z":21.45,"w":5.0,"d":9.0,"sx":30.98,"sz":20.55,"sry":3.142}]};
+const WINDOW_DATA = {"id": "winx", "name": "WINDOW (EDITABLE COPY)", "sub": "ONE ROOM - ONE WINDOW", "desc": "An editable copy of the Window map.", "ground": "concrete", "tod": "dark", "ax": 19, "az": 19, "walls": [{"x": 0, "z": -12.75, "w": 28, "d": 0.5, "h": 4.2, "m": "concrete", "c": "#4a4e50"}, {"x": -13.75, "z": -7, "w": 0.5, "d": 12, "h": 4.2, "m": "concrete", "c": "#4a4e50"}, {"x": 13.75, "z": -7, "w": 0.5, "d": 12, "h": 4.2, "m": "concrete", "c": "#4a4e50"}, {"x": -7.8, "z": -1.25, "w": 12.4, "d": 0.5, "h": 4.2, "m": "concrete", "c": "#4a4e50"}, {"x": 7.8, "z": -1.25, "w": 12.4, "d": 0.5, "h": 4.2, "m": "concrete", "c": "#4a4e50"}, {"x": 0, "z": -18.5, "w": 39, "d": 1, "h": 3.5, "m": "concrete", "c": "#3a3e40"}, {"x": 0, "z": 17.5, "w": 39, "d": 1, "h": 3.5, "m": "concrete", "c": "#3a3e40"}, {"x": -18.5, "z": 0, "w": 1, "d": 38, "h": 3.5, "m": "concrete", "c": "#3a3e40"}, {"x": 18.5, "z": 0, "w": 1, "d": 38, "h": 3.5, "m": "concrete", "c": "#3a3e40"}, {"x": -9, "z": 6, "w": 1.4, "d": 1.4, "h": 1.4, "m": "planks", "c": "#8a6a3a"}, {"x": 10, "z": 9, "w": 1.4, "d": 1.4, "h": 1.4, "m": "planks", "c": "#8a6a3a"}, {"x": -15.3, "z": -15, "w": 1.4, "d": 1.4, "h": 1.4, "m": "planks", "c": "#8a6a3a"}, {"x": 15.3, "z": -15, "w": 1.4, "d": 1.4, "h": 1.4, "m": "planks", "c": "#8a6a3a"}, {"x": -5, "z": 12, "w": 1.4, "d": 1.4, "h": 1.4, "m": "planks", "c": "#8a6a3a"}, {"x": 8, "z": 4, "w": 1, "d": 1, "h": 1, "m": "metal", "c": "#55595c"}, {"x": -12, "z": 2, "w": 1, "d": 1, "h": 1, "m": "metal", "c": "#55595c"}, {"x": 16, "z": -6, "w": 1, "d": 1, "h": 1, "m": "metal", "c": "#55595c"}], "floors": [], "stairs": [], "gates": [], "perks": [{"k": "jug", "x": -9.6, "z": -12, "ry": 0}, {"k": "quick", "x": -6.4, "z": -12, "ry": 0}, {"k": "speed", "x": -3.2, "z": -12, "ry": 0}, {"k": "double", "x": 0, "z": -12, "ry": 0}, {"k": "mule", "x": 3.2, "z": -12, "ry": 0}, {"k": "stamin", "x": 6.4, "z": -12, "ry": 0}, {"k": "vulture", "x": 9.6, "z": -12, "ry": 0}, {"k": "lunar", "x": -13.05, "z": -10, "ry": 1.5708}, {"k": "head", "x": -13.05, "z": -7, "ry": 1.5708}, {"k": "cash", "x": 13.05, "z": -10.5, "ry": -1.5708}, {"k": "pap", "x": -13.05, "z": -4, "ry": 1.5708}], "wb": [{"x": 13.72, "z": -4, "ry": -1.5708, "type": "shotgun", "cost": 1500}], "boxes": [{"x": 13.05, "z": -7.5, "rot": -1.5708}], "spawn": {"x": 0, "z": -7.5, "yaw": 3.1416}, "zs": [{"x": 0, "z": 13.5}, {"x": -10, "z": 14}, {"x": 10, "z": 14}], "zk": {"n": 0, "v": 0, "t": 0, "c": 0, "m": 5}, "boss": 1, "ts": 0};
 MAPS.cm_wh = { id: 'cm_wh', name: 'NZP WAREHOUSE', sub: 'WAYPOINT-BUILT WAREHOUSE', built: false, build: () => buildCustomMap(WH_DATA) };
 MAP_ORDER.push('cm_wh'); MAP_DESC.cm_wh = WH_DATA.desc; cmRebuildPages();
 
@@ -9653,8 +9670,34 @@ const CM_TOD = {
 };
 const cmThumb = d => (typeof d.thumb === 'string' && d.thumb.length < 90000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(d.thumb)) ? d.thumb : '';
 function cmEnsure(d) { d.tele = d.tele || []; d.windows = d.windows || []; d.switches = d.switches || []; d.floors = d.floors || []; d.stairs = d.stairs || []; d.wb = d.wb || []; d.props = d.props || []; return d; }
-function cmNewData() { return { floors: [], stairs: [], id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], wb: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 0, v: 0, t: 0, c: 0, m: 5 }, boss: 1, ts: 0 }; }
-function pickZK(z) { const a = [[null, z.n], ['verity', z.v], ['tung', z.t], ['cat', z.c], ['mz', z.m]], tot = a.reduce((s, q) => s + q[1], 0); if (tot <= 0) return null; let r = Math.random() * tot; for (const [k, w] of a) { if ((r -= w) < 0) return k; } return null; }
+/* editable copy of a built-in (hand-coded) map: collision boxes become walls, plus perks / wall buys / box spots / spawns */
+function cmFromMap(id) {
+  const m = MAPS[id]; if (!m || m.custom || id.startsWith('cm_')) return null;
+  if (!m.built) { Object.assign(m, m.build()); m.built = true; if (m.root) m.root.visible = (curMap === m); }
+  const r2 = v => Math.round(v * 100) / 100, near = (x, z, L, r) => L.some(q => Math.hypot(q.x - x, q.z - z) < r);
+  const sp = [], put = (x, z) => sp.push({ x, z });
+  for (const q of m.perks || []) if (q.pos) put(q.pos.x, q.pos.z); if (m.jugPos) put(m.jugPos.x, m.jugPos.z); if (m.papPos) put(m.papPos.x, m.papPos.z); if (m.boxPos) put(m.boxPos.x, m.boxPos.z); for (const q of m.boxSpots || []) put(q.x, q.z);
+  const ax = Math.min(100, Math.max(10, m.ax || 40)), az = Math.min(100, Math.max(10, m.az || 40)), walls = [];
+  for (const o of m.obs || []) {
+    if (![o.minX, o.maxX, o.minZ, o.maxZ].every(Number.isFinite)) continue;
+    const w = o.maxX - o.minX, dd = o.maxZ - o.minZ, cx = (o.minX + o.maxX) / 2, cz = (o.minZ + o.maxZ) / 2;
+    if (w < 0.3 || dd < 0.3 || w > 200 || dd > 200 || Math.abs(cx) > ax || Math.abs(cz) > az || o.nonav || near(cx, cz, sp, 1.3) && w < 2.6 && dd < 2.6) continue;
+    walls.push({ x: r2(cx), z: r2(cz), w: r2(Math.max(0.5, w)), d: r2(Math.max(0.5, dd)), h: r2(Math.min(20, Math.max(1, o.top || 3.2))), y: 0, m: 'concrete', c: '#6f7377', a: 0 });
+  }
+  walls.sort((a, b) => b.w * b.d - a.w * a.d); walls.length = Math.min(walls.length, 400);
+  const perks = []; if (m.jugPos && Math.abs(m.jugPos.x) < 9000) perks.push({ k: 'jug', x: r2(m.jugPos.x), z: r2(m.jugPos.z), ry: 0 });
+  for (const q of m.perks || []) if (q.pos && CM_PD[q.id] && q.id !== 'jug' && q.id !== 'pap') perks.push({ k: q.id, x: r2(q.pos.x), z: r2(q.pos.z), ry: r2(q.rot || q.ry || 0) });
+  if (m.papPos && Math.abs(m.papPos.x) < 9000) perks.push({ k: 'pap', x: r2(m.papPos.x), z: r2(m.papPos.z), ry: 0 });
+  const wb = []; for (const q of m._wb0 || m.wallBuys || []) { if (!q.pos || !(WEAPONS[q.type] || q.type === 'bowie') || q.type === 'para') continue; const me = q._mesh; wb.push({ x: r2(me ? me.position.x : q.pos.x), z: r2(me ? me.position.z : q.pos.z), ry: r2(me ? me.rotation.y : 0), type: q.type, cost: Math.round(q.cost || 1000) }); }
+  const boxes = (m.boxSpots && m.boxSpots.length ? m.boxSpots : (m.boxPos ? [{ x: m.boxPos.x, z: m.boxPos.z, rot: m.boxRot || 0 }] : [])).map(b => ({ x: r2(b.x), z: r2(b.z), rot: r2(b.rot || 0) }));
+  let zs = (m.spawnPts || []).filter(q => Number.isFinite(q.x) && Math.abs(q.x) < ax && Math.abs(q.z) < az).map(q => ({ x: r2(q.x), z: r2(q.z) })).slice(0, 40);
+  if (!zs.length) zs = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => ({ x: r2(a * (ax - 4)), z: r2(b * (az - 4)) }));
+  const s0 = m.spawn || { x: 0, z: 0, yaw: 0 };
+  return { id: ('x' + id.replace(/[^a-z0-9]/g, '')).slice(0, 12), name: (String(m.name || id).replace(/&[a-z]+;/g, '') + ' (COPY)').slice(0, 30), sub: 'EDITABLE COPY', desc: 'Editable copy of a built-in map.', ground: 'concrete', tod: 'night', ax, az, walls, floors: [], stairs: [], gates: [], perks, wb, boxes, spawn: { x: r2(s0.x || 0), z: r2(s0.z || 0), yaw: r2(s0.yaw || 0) }, zs, zk: id === 'verity' ? { n: 0, v: 3, t: 3, c: 2, m: 0, l: 1 } : { n: 0, v: 0, t: 0, c: 0, m: 5, l: 0 }, boss: 1, ts: 0 };
+}
+const CM_BUILTIN = () => MAP_ORDER.filter(id => MAPS[id] && !MAPS[id].custom && !id.startsWith('cm_'));
+function cmNewData() { return { floors: [], stairs: [], id: Math.random().toString(36).slice(2, 8), name: 'MY MAP', ax: 40, az: 40, ground: 'grass', walls: [], gates: [], perks: [], wb: [], boxes: [], spawn: { x: 0, z: 32, yaw: 0 }, zs: [], zk: { n: 0, v: 0, t: 0, c: 0, m: 5, l: 0 }, boss: 1, ts: 0 }; }
+function pickZK(z) { const a = [[null, z.n], ['verity', z.v], ['tung', z.t], ['cat', z.c], ['lit', z.l], ['mz', z.m]], tot = a.reduce((s, q) => s + q[1], 0); if (tot <= 0) return null; let r = Math.random() * tot; for (const [k, w] of a) { if ((r -= w) < 0) return k; } return null; }
 function buildCustomMap(d) {
   const AXc = d.ax || 40, AZc = d.az || 40, PI = Math.PI, id = 'cm_' + d.id;
   const obs = [], occ = [], gates = [], sv = { o: obstacles, m: obstacleMeshes };
@@ -10036,7 +10079,7 @@ function rvRemote(id, s) {
     d.floors = (Array.isArray(d.floors) ? d.floors : []).filter(q => fin(q, ['x', 'z', 'w', 'd', 'y'])).slice(0, 200).map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 200), d: cl(q.d, 0.5, 200), y: cl(q.y, 0.5, 12), m: mk(q.m), c: col(q.c) }));
     d.stairs = (Array.isArray(d.stairs) ? d.stairs : []).filter(q => fin(q, ['x', 'z', 'w', 'd', 'y'])).slice(0, 100).map(q => ({ x: q.x, z: q.z, w: cl(q.w, 0.5, 40), d: cl(q.d, 0.5, 40), y: cl(q.y, 0.5, 12), r: (((q.r | 0) % 4) + 4) % 4, m: mk(q.m), c: col(q.c) }));
     d.props = (Array.isArray(d.props) ? d.props : []).filter(q => q && typeof q.n === 'string' && PROP_DATA[q.n] && fin(q, ['x', 'z'])).slice(0, 150).map(q => ({ n: q.n, x: q.x, z: q.z, ry: Number.isFinite(q.ry) ? q.ry : 0, s: cl(q.s || 1, 0.3, 6), y: Number.isFinite(q.y) ? cl(q.y, 0, 12) : 0, c: q.c ? 1 : 0 })); }
-  const z = d.zk || {}; d.zk = { n: 0, v: 0, t: 0, c: 0, m: 0 }; for (const k in d.zk) d.zk[k] = Math.max(0, Math.min(9, Math.round(+z[k] || 0)));
+  const z = d.zk || {}; d.zk = { n: 0, v: 0, t: 0, c: 0, m: 0, l: 0 }; for (const k in d.zk) d.zk[k] = Math.max(0, Math.min(9, Math.round(+z[k] || 0)));
   d.boss = [0, 1, 2].includes(d.boss) ? d.boss : 1; d.border = [0, 1.5, 3, 6].includes(d.border) ? d.border : 3; d.fogm = [0, 0.5, 1, 2, 3].includes(d.fogm) ? d.fogm : 1; d.grav = [0.4, 0.7, 1, 1.4].includes(d.grav) ? d.grav : 1; d.sp = [500, 1500, 3000, 10000, 50000].includes(d.sp) ? d.sp : 500; d.zsp = [0.6, 1, 1.4, 1.8].includes(d.zsp) ? d.zsp : 1; if (!CM_GND.includes(d.ground)) d.ground = 'grass';
   d.name = rvClean(d.name).toUpperCase().slice(0, 18) || 'UNNAMED'; d.creator = rvClean(d.creator).slice(0, 20) || 'UNKNOWN'; d.sub = rvClean(d.sub).slice(0, 40); d.desc = rvClean(d.desc).slice(0, 220);
   if ((SY.tomb['sub-' + id] || 0) >= (d.ts || 0)) return;
@@ -10214,7 +10257,7 @@ function edAct(a) {
   else if (a === 'tod') { const K = Object.keys(CM_TOD), i = K.indexOf(d.tod || 'night'); d.tod = K[(i + 1) % K.length]; }
   else if (ED.pub && a === 'save') { edSubmit(); return; }
   if (ED.pub && a === 'play') { ED.msg = 'PLAY IS NOT AVAILABLE YET - COMING SOON'; edUI(); return; }
-  if (ED.pub && (a === 'maps' || a.startsWith('load:') || a.startsWith('del:'))) return;
+  if (ED.pub && ((a.startsWith('load:') && !a.startsWith('load:cp:')) || a.startsWith('del:'))) return;
   if (a === 'v3') { edSetView(!ED.v3); return; }
   if (a === 'm3') { E3.mv = !E3.mv; ED.msg = E3.mv ? 'TAP WHERE THE SELECTED PIECE SHOULD GO' : ''; edUI(); return; }
   if (a === 'msel') { ED.msel = !ED.msel; if (!ED.msel && ED.multi.length < 2) ED.multi = []; edUI(); return; }
@@ -10245,7 +10288,7 @@ function edAct(a) {
   else if (a === 'zoomin') ED.sc = Math.min(40, ED.sc * 1.3); else if (a === 'zoomout') ED.sc = Math.max(2, ED.sc / 1.3);
   else if (a === 'maps' || a === 'zmb') ED.panel = ED.panel === a ? '' : a;
   else if (a === 'new') { ED.undo = []; ED.redo = []; ED.d = cmEnsure(cmNewData()); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; }
-  else if (a.startsWith('load:')) { const o = CM.maps[a.slice(5)] || (a.slice(5) === 'wh' ? WH_DATA : null); if (o) { ED.undo = []; ED.redo = []; ED.d = cmEnsure(JSON.parse(JSON.stringify(o))); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; } }
+  else if (a.startsWith('load:')) { const o = a.startsWith('load:cp:') ? cmFromMap(a.slice(8)) : (CM.maps[a.slice(5)] || (a.slice(5) === 'wh' ? WH_DATA : a.slice(5) === 'winx' ? WINDOW_DATA : null)); if (o) { ED.undo = []; ED.redo = []; ED.d = cmEnsure(JSON.parse(JSON.stringify(o))); ED.sel = null; ED.panel = ''; ED.cx = ED.cz = 0; } }
   else if (a === 'sync') { let n = 0; SY.cl.forEach((c, i) => { SY.seen[i] = {}; n += syHeal(i); }); ED.msg = syOK() ? 'RE-UPLOADED EVERYTHING TO BOTH SERVERS (' + n + ' ITEMS)' : 'NOT CONNECTED - TRY AGAIN'; }
   else if (a === 'bkp') edBackup();
   else if (a === 'rst') edRestore();
@@ -10311,7 +10354,7 @@ function edSubmit() {
 }
 function edUI() {
   const d = ED.d, B = (a, t, on, cls = '') => `<button class="edb ${on ? 'on' : ''} ${cls}" data-ea="${a}">${t}</button>`;
-  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('sub', 'SUBTITLE') + B('desc', 'DESCRIPTION') + B('v3', ED.v3 ? '2D VIEW' : '3D VIEW', ED.v3) + (ED.v3 && ED.sel ? B('m3', 'MOVE HERE', E3.mv) : '') + B('sizew', 'W ' + d.ax * 2 + 'M') + B('sized', 'D ' + d.az * 2 + 'M') + B('more', 'MORE', ED.panel === 'more') + B('ground', d.ground.toUpperCase()) + B('tod', 'TIME: ' + CM_TOD[d.tod || 'night'].n) + B('thumb', d.thumb ? 'THUMBNAIL OK' : 'THUMBNAIL', !!d.thumb) + (d.thumb ? B('thumbx', 'X', 0, 'red') : '') + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + (ED.pub ? '' : B('maps', 'MAPS', ED.panel === 'maps')) + B('save', ED.pub ? 'SUBMIT' : 'SAVE') + B('play', 'PLAY', 0, ED.pub ? 'dis' : '') + B('zoomin', '+') + B('zoomout', '-');
+  $('edTop').innerHTML = B('exit', '&lt; EXIT', 0, 'red') + B('name', d.name) + B('sub', 'SUBTITLE') + B('desc', 'DESCRIPTION') + B('v3', ED.v3 ? '2D VIEW' : '3D VIEW', ED.v3) + (ED.v3 && ED.sel ? B('m3', 'MOVE HERE', E3.mv) : '') + B('sizew', 'W ' + d.ax * 2 + 'M') + B('sized', 'D ' + d.az * 2 + 'M') + B('more', 'MORE', ED.panel === 'more') + B('ground', d.ground.toUpperCase()) + B('tod', 'TIME: ' + CM_TOD[d.tod || 'night'].n) + B('thumb', d.thumb ? 'THUMBNAIL OK' : 'THUMBNAIL', !!d.thumb) + (d.thumb ? B('thumbx', 'X', 0, 'red') : '') + B('zmb', 'ZOMBIES', ED.panel === 'zmb') + B('maps', 'MAPS', ED.panel === 'maps') + B('save', ED.pub ? 'SUBMIT' : 'SAVE') + B('play', 'PLAY', 0, ED.pub ? 'dis' : '') + B('zoomin', '+') + B('zoomout', '-');
   $('edTools').innerHTML = ED_TOOLS.map(([k, n]) => B('tool:' + k, n, ED.tool === k)).join('') + B('msel', 'MULTI', ED.msel) + B('undo', 'UNDO', 0, ED.undo.length ? '' : 'dis') + B('redo', 'REDO', 0, ED.redo.length ? '' : 'dis') + (ED.tool === 'perk' ? '<div style="width:100%"></div>' + Object.keys(CM_PD).map(k => B('perk:' + k, CM_PD[k].L + ' ' + (k === 'pap' ? 'PAP' : (CM_PD[k].nm || k.toUpperCase())), ED.perk === k)).join('') : '');
   const s = ED.sel, it = edItem(s); let h = '';
   if (it) {
@@ -10338,8 +10381,8 @@ function edUI() {
   const P = $('edPanel');
   if (ED.tool === 'prop' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A PROP</span>' + B('pnl', 'PROP: ' + (ED.propName && PROP_DATA[ED.propName] ? ED.propName : PROP_NAMES()[0]), ED.panel === 'props') + (ED.clip ? B('paste', 'PASTE') : '');
   if (ED.tool === 'wb' && !it) $('edSel').innerHTML = '<span>TAP TO PLACE A WALL BUY</span>' + B('guns', 'GUN: ' + ((ED.wbType || 'ak') === 'bowie' ? 'BOWIE KNIFE' : WEAPONS[ED.wbType || 'ak'].name));
-  if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div><div class="row"><span>SYNC</span>' + B('sync', 'PUSH ALL') + B('bkp', 'BACKUP') + B('rst', 'RESTORE') + '</div>' + (CM.maps.wh ? [] : [WH_DATA]).concat(Object.values(CM.maps)).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
-  else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'OLD NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'VANDRANDE PINNE', m: 'ZOMBIE (NEW MODEL)' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k] || 0}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
+  if (ED.panel === 'maps') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>SAVED MAPS</span>' + B('new', 'NEW MAP') + '</div>' + (ED.pub ? '' : '<div class="row"><span>SYNC</span>' + B('sync', 'PUSH ALL') + B('bkp', 'BACKUP') + B('rst', 'RESTORE') + '</div>') + CM_BUILTIN().map(id => `<div class="row"><span>${clEsc(String(MAPS[id].name).replace(/&[a-z]+;/g, ''))} - COPY OF BUILT-IN MAP</span>${B('load:cp:' + id, 'EDIT COPY')}</div>`).join('') + (ED.pub ? [] : [...(CM.maps.wh ? [] : [WH_DATA]), ...(CM.maps.winx ? [] : [WINDOW_DATA])].concat(Object.values(CM.maps))).map(m => `<div class="row"><span>${clEsc(m.name)}${m.creator ? ' - BY ' + clEsc(m.creator) : ''}</span>${B('load:' + m.id, 'EDIT')}${B('del:' + m.id, 'DELETE', 0, 'red')}</div>`).join('') || ''; if (!Object.keys(CM.maps).length) P.innerHTML += '<div class="row"><span>NONE YET</span></div>'; }
+  else if (ED.panel === 'zmb') { const z = d.zk, nm = { n: 'OLD NORMAL', v: 'VERITY', t: 'TUNG TUNG', c: 'VANDRANDE PINNE', l: 'LIGHTNING GUY', m: 'ZOMBIE (NEW MODEL)' }; P.style.display = 'block'; P.innerHTML = '<div class="row"><span>ZOMBIE MIX (WEIGHTS)</span></div>' + Object.keys(nm).map(k => `<div class="row"><span>${nm[k]}</span>${B('zk:' + k + ',-1', '-')}<span style="flex:0 0 20px;text-align:center">${z[k] || 0}</span>${B('zk:' + k + ',1', '+')}</div>`).join('') + `<div class="row"><span>BOSS EVERY 10 ROUNDS</span>${B('boss', ['NONE', 'FACTORY BOSS', 'VERITY'][d.boss])}</div>`; }
   else if (ED.panel === 'tpl' && ED.sel && ED.sel.t === 'gate') { P.style.display = 'block'; P.innerHTML = '<div class="row"><span>THIS DOOR OPENS WHEN THESE TELEPORTERS ARE LINKED (EACH ONE OPENS IT A BIT MORE, NO PURCHASE NEEDED)</span></div>' + ((d.tele || []).length ? d.tele.map(q => '<div class="row">' + B('tpt:' + q.id, ((it && it.tp && it.tp.includes(q.id)) ? '[X] ' : '[ ] ') + q.n) + '</div>').join('') : '<div class="row"><span>PLACE TELEPORTERS FIRST (+TELEPORT)</span></div>'); }
   else if (ED.panel === 'more') { P.style.display = 'block'; const bh = d.border === undefined ? 3 : d.border; P.innerHTML = '<div class="row">' + B('bord', 'BORDER WALL: ' + (bh ? bh + 'M' : 'NONE')) + B('fogm', 'FOG: ' + ({ 0: 'NONE', 0.5: 'LIGHT', 1: 'NORMAL', 2: 'THICK', 3: 'DENSE' }[d.fogm === undefined ? 1 : d.fogm])) + B('grav', 'GRAVITY: ' + (d.grav || 1) + 'X') + B('sp', 'START POINTS: ' + (d.sp || 500)) + B('zsp', 'ZOMBIE SPEED: ' + (d.zsp || 1) + 'X') + B('snap', 'SNAP: ' + ((ED.snap === undefined ? 0.5 : ED.snap) || 'OFF')) + B('allsel', 'SELECT ALL') + '</div>'; }
   else if (ED.panel === 'props') { const cur = it && s.t === 'prop' ? it.n : (ED.propName || PROP_NAMES()[0]); P.style.display = 'block'; P.innerHTML = '<div class="row"><span>PICK A PROP (' + PROP_NAMES().length + ')</span></div><div class="row">' + PROP_NAMES().map(k => B('pn:' + k, k, k === cur)).join('') + '</div>'; }
