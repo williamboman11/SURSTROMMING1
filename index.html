@@ -595,6 +595,7 @@
       <button id="btnResume">RESUME GAME</button>
       <button id="btnRestart">RESTART LEVEL</button>
       <button id="btnKick" style="display:none">KICK PLAYER</button>
+      <button id="btnMapEdit" style="display:none">DEV: EDIT MAP</button>
       <button id="btnPauseMenu">END GAME</button>
       <button id="btnGfx" style="display:none">GRAPHICS</button>
     </div>
@@ -1741,13 +1742,14 @@ for (let i = 0; i < 12; i++) {
   }
 }
 
+const WBMESH = [];
 function makeWallBuy(x, y, z, ry, name, cost) {
   const [c, k] = mkCanvas(256, 160);
   k.fillStyle = '#10151a'; k.fillRect(0, 0, 256, 160); k.strokeStyle = '#e8e4d0'; k.lineWidth = 5; k.strokeRect(4, 4, 248, 152);
   k.lineWidth = 4; k.strokeRect(34, 52, 150, 12); k.strokeRect(54, 70, 118, 10); k.strokeRect(100, 62, 44, 22);
   k.beginPath(); k.moveTo(184, 56); k.lineTo(214, 52); k.lineTo(222, 74); k.lineTo(196, 80); k.closePath(); k.stroke();
   k.fillStyle = '#e8e4d0'; k.textAlign = 'center'; k.font = 'bold 20px Arial'; k.fillText(name, 128, 120); k.fillStyle = '#ffd24a'; k.font = 'bold 22px Arial'; k.fillText(cost + ' POINTS', 128, 146);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.875), new THREE.MeshBasicMaterial({ map: toTex(c) })); m.position.set(x, y, z); m.rotation.y = ry; scene.add(m);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.875), new THREE.MeshBasicMaterial({ map: toTex(c) })); m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); WBMESH.push(m); return m;
 }
 makeWallBuy(-22.55, 1.55, -16.94, 0, 'REMINGTON 870 MCS', SHOTGUN_WALL_COST);
 const factoryWallBuys = [{ pos: new THREE.Vector3(-22.55, 0, -16.0), type: 'shotgun', cost: SHOTGUN_WALL_COST }];
@@ -5264,6 +5266,30 @@ function clPublish(text) {
   const o = { text, ts: Date.now() }; if (!syPub('changelog', JSON.stringify(o))) { CL.msg = 'SAVE FAILED'; return false; }
   CL.ts = 0; clSet(o); CL.msg = 'SAVED - EVERYONE SEES IT'; return true;
 }
+/* ---------- devmode map edits for built-in maps (wall buys), shared through the broker ---------- */
+const MOV = { ts: 0, wb: {} };
+try { const sv = JSON.parse(localStorage.getItem('zmov') || 'null'); if (sv && sv.wb) { MOV.ts = sv.ts || 0; MOV.wb = sv.wb; } } catch (e) { }
+function movSet(o) { if (!o || !o.wb || (o.ts || 0) < MOV.ts) return; MOV.ts = o.ts || 0; MOV.wb = o.wb; try { localStorage.setItem('zmov', JSON.stringify(MOV)); } catch (e) { } try { if (curMap) movApply(curMap); } catch (e) { } }
+function movApply(m) {
+  if (!m || m.custom || (!m.wallBuys && !m._wb0)) return;
+  if (!m._wb0) {
+    m._wb0 = m.wallBuys.slice(); const used = new Set();
+    for (const q of m._wb0) { let best = null, bd = 3; for (const k of WBMESH) { if (used.has(k)) continue; let a = k, ok = !m.root; while (a && !ok) { if (a === m.root) ok = true; a = a.parent; } if (!ok) continue; const d = Math.hypot(k.position.x - q.pos.x, k.position.z - q.pos.z); if (d < bd) { bd = d; best = k; } } if (best) { used.add(best); q._mesh = best; } }
+  }
+  const rem = MOV.wb[m.id] || []; m.wallBuys = m._wb0.filter((q, i) => !rem.includes(i)); m._wb0.forEach((q, i) => { if (q._mesh) q._mesh.visible = !rem.includes(i); });
+}
+function movToggle(i) {
+  const id = curMap.id, a = (MOV.wb[id] || []).slice(), k = a.indexOf(i); if (k >= 0) a.splice(k, 1); else a.push(i);
+  const o = { ts: Date.now(), wb: { ...MOV.wb, [id]: a } }; MOV.ts = 0; movSet(o); try { syPub('mapov', JSON.stringify(o)); } catch (e) { }
+}
+const movEl = document.createElement('div'); movEl.style.cssText = 'position:fixed;inset:0;z-index:910;display:none;background:rgba(0,0,0,.75);align-items:center;justify-content:center;font-family:var(--fm);color:#e6e9ef'; document.body.appendChild(movEl);
+function movDraw() {
+  movApply(curMap); const L = curMap._wb0 || [], rem = MOV.wb[curMap.id] || [];
+  const bt = (a, t, c) => `<button data-m="${a}" style="font:inherit;font-size:15px;letter-spacing:2px;padding:7px 14px;margin:3px;cursor:pointer;color:#fff;background:${c || 'rgba(255,255,255,.1)'};border:1px solid rgba(255,255,255,.3)">${t}</button>`;
+  const rows = L.map((q, i) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1)"><span style="flex:1;font-size:17px;letter-spacing:2px;${rem.includes(i) ? 'opacity:.4;text-decoration:line-through' : ''}">${q.type === 'bowie' ? 'BOWIE KNIFE' : ((WEAPONS[q.type] || {}).name || q.type)} - ${q.cost}</span>${bt('t:' + i, rem.includes(i) ? 'RESTORE' : 'REMOVE', rem.includes(i) ? '#2a7a3a' : '#a02a2a')}</div>`).join('') || '<div style="color:#8d99a3;padding:10px 0">THIS MAP HAS NO WALL BUYS</div>';
+  movEl.innerHTML = `<div style="width:min(520px,92vw);background:rgba(8,10,14,.97);border:1px solid rgba(255,255,255,.2);padding:22px 26px"><div style="font-size:26px;letter-spacing:4px;margin-bottom:4px">EDIT MAP: ${String(curMap.name || curMap.id).toUpperCase()}</div><div style="font-size:12px;letter-spacing:2px;color:#8d99a3;margin-bottom:10px">WALL BUYS - CHANGES ARE SHARED WITH EVERYONE</div>${rows}<div style="margin-top:14px;text-align:right">${bt('close', 'CLOSE')}</div></div>`;
+}
+movEl.addEventListener('click', e => { const t = e.target.closest('[data-m]'); if (!t) { if (e.target === movEl) movEl.style.display = 'none'; return; } const a = t.dataset.m; if (a === 'close') { movEl.style.display = 'none'; return; } if (a.startsWith('t:')) { movToggle(+a.slice(2)); movDraw(); } });
 /* NOAH MODE (type "noah" on the main menu). Hook for custom sound files: put data/URLs in NOAH.snd[key] and call noahSnd(key). */
 const NOAH = { on: false, snd: {}, buf: '' };
 try { NOAH.on = localStorage.getItem('znoah') === '1'; } catch (e) { }
@@ -5530,6 +5556,8 @@ kickEl.addEventListener('click', e => {
   }
 });
 $('btnKick').addEventListener('click', () => { kickDraw(); kickEl.style.display = 'flex'; });
+$('btnMapEdit').addEventListener('click', () => { movDraw(); movEl.style.display = 'flex'; });
+setInterval(() => { try { $('btnMapEdit').style.display = (CL.dev && curMap && !curMap.custom && !pauseEl.classList.contains('hidden')) ? '' : 'none'; } catch (e) { } }, 300);
 setInterval(() => { try { const on = !!(MP.on && MP.host) && !pauseEl.classList.contains('hidden'); $('btnKick').style.display = on ? '' : 'none'; if (!on && kickEl.style.display !== 'none' && pauseEl.classList.contains('hidden')) kickEl.style.display = 'none'; } catch (e) { } }, 400);
 $('btnPauseMenu').addEventListener('click', () => { initAudio(); sfx.click(); if (PVP.in) { pvpLeaveHome(); return; } showMenu('main'); });
 $('btnAgain').addEventListener('click', () => { initAudio(); startCountdown(); });
@@ -8730,6 +8758,7 @@ function activateMap(id) {
   if (!m.built) { Object.assign(m, m.build()); m.built = true; }
   for (const k in MAPS) if (MAPS[k].root) MAPS[k].root.visible = (k === id);
   curMap = m; obstacles = m.obs; obstacleMeshes = m.occ; AX = m.ax; AZ = m.az;
+  try { movApply(m); } catch (e) { console.warn('mov', e); }
   if (!m.propsDone) { m.propsDone = true; try { scatterProps(m, id); } catch (e) { console.warn('props', e); } }
   // Invisible player-only no-go footprints under elevated scenery prevent out-of-bounds camping; they don't obstruct zombie navigation.
   playerAntiCamp = id === 'factory' ? [
@@ -9715,6 +9744,7 @@ function syMsg(i, t, s) {
   try { ts = k.startsWith('tomb/') ? +s : (JSON.parse(s).ts || 0); } catch (e) {}
   SY.seen[i][k] = ts;
   if (k === 'changelog') { try { clSet(JSON.parse(s)); } catch (e) {} }
+  if (k === 'mapov') { try { movSet(JSON.parse(s)); } catch (e) {} }
   if (k === 'mapdesc') { try { descSet(JSON.parse(s)); } catch (e) {} }
   else if (k.startsWith('cmap/')) cmRemote(k.slice(5), s);
   else if (k.startsWith('sub/')) rvRemote(k.slice(4), s);
@@ -9733,6 +9763,7 @@ function syHeal(i) {   // devmode only: re-upload anything this server is missin
   const need = (k, ts) => seen[k] === undefined || seen[k] < ts;
   for (const id in CM.maps) { const d = CM.maps[id]; if ((SY.tomb['cm-' + id] || 0) >= (d.ts || 0)) continue; if (need('cmap/' + id, d.ts || 0)) pub('cmap/' + id, JSON.stringify(d)); }
   for (const id in RV.subs) { const d = RV.subs[id]; if ((SY.tomb['sub-' + id] || 0) >= (d.ts || 0)) continue; if (need('sub/' + id, d.ts || 0)) pub('sub/' + id, JSON.stringify(d)); }
+  if (MOV.ts && need('mapov', MOV.ts)) pub('mapov', JSON.stringify(MOV));
   if (CL.ts && need('changelog', CL.ts)) pub('changelog', JSON.stringify({ text: CL.text, ts: CL.ts }));
   if (DESC.ts && need('mapdesc', DESC.ts)) pub('mapdesc', JSON.stringify({ o: DESC.o, ts: DESC.ts }));
   for (const id in US.bans) { const b = US.bans[id]; if (b.until > Date.now() && need('ban/' + id, b.ts || 0)) pub('ban/' + id, JSON.stringify(b)); }
@@ -9748,7 +9779,7 @@ function syInit() {
     SY.cl[i] = c;
     c.on('connect', () => {
       SY.seen[i] = {};
-      for (const t of ['changelog', 'mapdesc', 'cmap/+', 'sub/+', 'tomb/+', 'like/+/+']) c.subscribe(MP.PRE + t);
+      for (const t of ['changelog', 'mapov', 'mapdesc', 'cmap/+', 'sub/+', 'tomb/+', 'like/+/+']) c.subscribe(MP.PRE + t);
       if (CL.dev) { c.subscribe(MP.PRE + 'user/+'); c.subscribe(MP.PRE + 'ban/+'); c.subscribe(MP.PRE + 'rep/+'); } else { try { c.subscribe(MP.PRE + 'ban/' + lkUid()); c.subscribe(MP.PRE + 'wipe/' + lkUid()); c.subscribe(MP.PRE + 'wipe/all'); c.subscribe(MP.PRE + 'wipeld/' + lkUid()); c.subscribe(MP.PRE + 'wipeld/all'); } catch (e) {} }
       clearTimeout(SY.tm[i]); SY.tm[i] = setTimeout(() => syHeal(i), 8000);
       try { usAnnounce(); } catch (e) {}
