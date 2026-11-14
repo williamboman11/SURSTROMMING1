@@ -4327,15 +4327,26 @@ function spawnBoss(warlord = false, kind = null) {
   while (tries < 60 && (Math.abs(x) > AX - 4 || z > AZ - 4 || z < (curMap.zmin !== undefined ? curMap.zmin : -AZ) + 4 || insideObstacle(x, z, 2.0) || (NAV.on && !navReachable(x, z))));
   createZombie(x, z, { boss: true, warlord, kind }); if (kind === 'vboss') banner('VERITY HAS ARRIVED...', 3200); else if (warlord) banner('THE IRON WARLORD CHARGES!', 3200);
 }
+function relocateZombie(z, T) {   // custom maps: a zombie wedged behind scenery for ages gets moved to open ground near you
+  for (let i = 0; i < 40; i++) {
+    const a = Math.random() * 6.283, r = 14 + Math.random() * 14, x = T.x + Math.cos(a) * r, zz = T.z + Math.sin(a) * r;
+    if (Math.abs(x) > AX - 2 || Math.abs(zz) > AZ - 2 || insideObstacle(x, zz, 1.0) || (NAV.on && !navReachable(x, zz))) continue;
+    z.root.position.x = x; z.root.position.z = zz; z.stuck = 0; return true;
+  }
+  return false;
+}
 function spawnZombie() {
   const ST = MP.pick();
   const hopt = state.houndRound ? { hound: true } : curMap.zk ? { kind: pickZK(curMap.zk) } : curMap.id === 'verity' ? { kind: (() => { const r = Math.random(); return r < 0.3 ? 'verity' : r < 0.58 ? 'tung' : r < 0.82 ? 'cat' : 'lit'; })() } : { kind: 'mz' };
   if (curMap.spawnPts) {
-    const L = curMap.spawnPts.filter(p => !NAV.on || navReachable(p.x, p.z)); if (!L.length) return false;
-    const dd = p => Math.hypot(p.x - ST.x, p.z - ST.z), mid = L.filter(p => dd(p) > 10 && dd(p) < 55), P0 = pick(mid.length ? mid : L);
-    createZombie(P0.x + rnd(-1.2, 1.2), P0.z + rnd(-1.2, 1.2), hopt); return true;
+    const L = curMap.spawnPts.filter(p => !NAV.on || navReachable(p.x, p.z));
+    if (L.length) {
+      const dd = p => Math.hypot(p.x - ST.x, p.z - ST.z), mid = L.filter(p => dd(p) > 10 && dd(p) < 55), P0 = pick(mid.length ? mid : L);
+      createZombie(P0.x + rnd(-1.2, 1.2), P0.z + rnd(-1.2, 1.2), hopt); return true;
+    }
+    if (!curMap.custom) return false;   // custom maps whose spawn points are walled off fall through to the ring spawn below, so zombies always appear
   }
-  if (curMap.spawnAt) { createZombie(curMap.spawnAt.x + rnd(-1.5, 1.5), curMap.spawnAt.z + rnd(-1, 1), hopt); return true; }
+  if (curMap.spawnAt && !curMap.custom) { createZombie(curMap.spawnAt.x + rnd(-1.5, 1.5), curMap.spawnAt.z + rnd(-1, 1), hopt); return true; }
   let x, z, tries = 0;
   do {
     const a = Math.random() * Math.PI * 2, r = 18 + Math.random() * 22;
@@ -6155,6 +6166,7 @@ function updateZombies(dt) {
       gp.x += mx * sp * dt; gp.z += mz * sp * dt;
       resolveCircle(gp, 0.45, z.gy || 0);
       const moved = Math.hypot(gp.x - px, gp.z - pz);
+      if (curMap.custom && !(curMap.windows && curMap.windows.length) && !z.boss && !z.hound && !MP.client && z.spawnT >= 0.9) { if (moved < sp * dt * 0.35 && sp > 0.2) { z.noProg = (z.noProg || 0) + dt; if (z.noProg > 8) { z.noProg = 0; relocateZombie(z, TP); } } else z.noProg = Math.max(0, (z.noProg || 0) - dt * 2); }
       if (moved < sp * dt * 0.35) { z.stuck += dt; if (z.stuck > 1.4) { z.side *= -1; z.stuck = 0.3; } } else z.stuck = Math.max(0, z.stuck - dt * 2);
       z.phase += dt * sp * (z.hound ? 0.7 : 2.6);
     } else {
@@ -10051,7 +10063,8 @@ function cmFromMap(id) {
   const wb = []; for (const q of m._wb0 || m.wallBuys || []) { if (!q.pos || !(WEAPONS[q.type] || q.type === 'bowie') || q.type === 'para') continue; const me = q._mesh; wb.push({ x: r2(me ? me.position.x : q.pos.x), z: r2(me ? me.position.z : q.pos.z), ry: r2(me ? me.rotation.y : 0), type: q.type, cost: Math.round(q.cost || 1000) }); }
   const boxes = (m.boxSpots && m.boxSpots.length ? m.boxSpots : (m.boxPos ? [{ x: m.boxPos.x, z: m.boxPos.z, rot: m.boxRot || 0 }] : [])).map(b => ({ x: r2(b.x), z: r2(b.z), rot: r2(b.rot || 0) }));
   let zs = (m.spawnPts || []).filter(q => Number.isFinite(q.x) && Math.abs(q.x) < ax && Math.abs(q.z) < az).map(q => ({ x: r2(q.x), z: r2(q.z) })).slice(0, 40);
-  if (!zs.length) zs = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => ({ x: r2(a * (ax - 4)), z: r2(b * (az - 4)) }));
+  if (!zs.length && m.spawnAt && Math.abs(m.spawnAt.x) < ax && Math.abs(m.spawnAt.z) < az) zs = [{ x: r2(m.spawnAt.x), z: r2(m.spawnAt.z) }];
+  // no spawn points in the original map: leave the list empty so the game uses the normal "ring around the player" spawning (reachable ground only)
   const s0 = m.spawn || { x: 0, z: 0, yaw: 0 };
   return { id: ('x' + id.replace(/[^a-z0-9]/g, '')).slice(0, 12), name: (String(m.name || id).replace(/&[a-z]+;/g, '') + ' (COPY)').slice(0, 30), sub: 'EDITABLE COPY', desc: 'Editable copy of a built-in map.', ground: 'concrete', tod: 'night', ax, az, walls, floors: [], stairs: [], gates: [], perks, wb, boxes, spawn: { x: r2(s0.x || 0), z: r2(s0.z || 0), yaw: r2(s0.yaw || 0) }, zs, zk: id === 'verity' ? { n: 0, v: 3, t: 3, c: 2, m: 0, l: 1 } : { n: 0, v: 0, t: 0, c: 0, m: 5, l: 0 }, boss: 1, ts: 0 };
 }
