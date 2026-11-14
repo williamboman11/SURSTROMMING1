@@ -2725,6 +2725,32 @@ function buildWarlordVariant() {   // armoured sprinter: stahlhelm, gas mask, pl
   return { torso: mergeGeometries(t), head: mergeGeometries(h), eyes, ua: mergeGeometries(ua), fa: mergeGeometries(fa), th: mergeGeometries(th), sh: mergeGeometries(sh) };
 }
 const warlordVariant = buildWarlordVariant();
+function buildGuardianVariant() {   // tall, lean-muscled spirit guardian: ash-blue skin, a few stone plates, horned skull, proportions balanced head to foot
+  const { C, add, Cy, Sp, Bx, Co } = mkB();
+  const skin = C('#5f7083'), skinD = C('#44525f'), stone = C('#3a3f48'), stone2 = C('#5a616b'), bone = C('#d9d3bd'), cloth = C('#2b2433'), crys = C('#46e8ff');
+  const t = [], h = [], ua = [], fa = [], th = [], sh = [];
+  add(t, Cy(0.27, 0.23, 0.26, 10), cloth, 0, -0.02, 0, 1.15, 1, 0.9);                 // hips
+  add(t, Cy(0.3, 0.27, 0.34, 10), skinD, 0, 0.22, 0, 1.15, 1, 0.9);                    // waist
+  add(t, Cy(0.37, 0.3, 0.52, 10), skin, 0, 0.55, 0, 1.15, 1, 0.9);                     // chest
+  add(t, Bx(0.46, 0.36, 0.08), stone, 0, 0.55, 0.3); add(t, Bx(0.5, 0.07, 0.1), stone2, 0, 0.76, 0.3); add(t, Bx(0.5, 0.07, 0.1), stone2, 0, 0.34, 0.3);   // small chest plate only
+  add(t, Sp(0.07, 7, 6), crys, 0, 0.55, 0.36);                                          // spirit crystal on the chest
+  add(t, Bx(0.62, 0.08, 0.3), stone, 0, 0.08, 0);                                      // belt
+  add(t, Bx(0.3, 0.42, 0.04), cloth, 0, -0.2, 0.26, 1, 1, 1, 0.08); add(t, Bx(0.3, 0.42, 0.04), cloth, 0, -0.2, -0.26, 1, 1, 1, -0.08);
+  for (const sx of [-1, 1]) add(t, Sp(0.17, 9, 7), skin, sx * 0.46, 0.7, 0, 1, 0.9, 1);   // shoulders (muscle, no pauldrons)
+  for (let i = 0; i < 5; i++) add(t, Co(0.04, 0.16 - i * 0.012, 5), bone, 0, 0.78 - i * 0.12, -0.34, 1, 1, 1, -0.9);   // spine spikes
+  add(t, Cy(0.11, 0.14, 0.18, 8), skin, 0, 0.88, 0);                                   // neck
+  add(h, Sp(0.2, 12, 10), bone, 0, 0.2, 0, 1, 1.1, 1.05); add(h, Bx(0.2, 0.12, 0.16), bone, 0, 0.05, 0.1); add(h, Bx(0.16, 0.05, 0.05), C('#14100e'), 0, 0.02, 0.19);
+  for (const sx of [-1, 1]) { add(h, Co(0.045, 0.36, 5), bone, sx * 0.17, 0.42, -0.02, 1, 1, 1, 0, 0, -sx * 0.55); add(h, Co(0.03, 0.2, 5), bone, sx * 0.27, 0.58, -0.02, 1, 1, 1, 0, 0, -sx * 0.2); }
+  add(h, Sp(0.045, 6, 5), C('#14100e'), -0.07, 0.19, 0.17); add(h, Sp(0.045, 6, 5), C('#14100e'), 0.07, 0.19, 0.17);
+  const eyes = mergeGeometries([Sp(0.034, 6, 5).translate(-0.07, 0.19, 0.2), Sp(0.034, 6, 5).translate(0.07, 0.19, 0.2)]);
+  add(ua, Cy(0.13, 0.105, 0.36, 9), skin, 0, -0.18, 0); add(ua, Cy(0.14, 0.14, 0.1, 9), stone, 0, -0.3, 0);
+  add(fa, Cy(0.105, 0.08, 0.32, 9), skinD, 0, -0.16, 0); add(fa, Cy(0.125, 0.115, 0.14, 9), stone, 0, -0.1, 0); add(fa, Sp(0.09, 8, 6), skin, 0, -0.35, 0.01, 1, 1.1, 0.9);
+  for (let k = -1; k <= 1; k++) add(fa, Co(0.02, 0.15, 4), bone, k * 0.045, -0.48, 0.02, 1, 1, 1, Math.PI, 0, k * 0.15);
+  add(th, Cy(0.18, 0.13, 0.46, 9), skin, 0, -0.23, 0); add(th, Cy(0.2, 0.19, 0.18, 9), cloth, 0, -0.08, 0); add(th, Sp(0.13, 8, 6), stone, 0, -0.46, 0.03);
+  add(sh, Cy(0.13, 0.095, 0.42, 9), skinD, 0, -0.21, 0); add(sh, Bx(0.16, 0.26, 0.05), stone, 0, -0.18, 0.1); add(sh, Bx(0.2, 0.1, 0.34), C('#14100e'), 0, -0.42, 0.08);
+  return { torso: mergeGeometries(t), head: mergeGeometries(h), eyes, ua: mergeGeometries(ua), fa: mergeGeometries(fa), th: mergeGeometries(th), sh: mergeGeometries(sh), aw: 0.44, lw: 0.17, hy: 0.76, shy: 0.6 };
+}
+const guardianVariant = buildGuardianVariant();
 /* ===================================================================
    MAP VERITY monsters: Verity (smiley), Tung Tung Tung Sahur, VERITY (boss)
 =================================================================== */
@@ -4005,6 +4031,10 @@ function loadAlarmAudio() {
   if (!audioCtx || alarmBuf || alarmDecoding) return; alarmDecoding = true;
   try { const bin = atob(ALARM_MP3), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); audioCtx.decodeAudioData(u.buffer, b => { alarmBuf = b; }, () => { alarmDecoding = false; }); } catch (e) { alarmDecoding = false; }
 }
+function playAlarm() {   // the panzer alarm that announces every 10th round
+  if (!audioCtx) return false; loadAlarmAudio(); if (!alarmBuf) return false;
+  const src = audioCtx.createBufferSource(); src.buffer = alarmBuf; const g = audioCtx.createGain(); g.gain.value = 0.9; src.connect(g); g.connect(audioCtx.destination); src.start(); return true;
+}
 function playRoundMp3() {
   if (!audioCtx) return false; loadRoundAudio(); loadAlarmAudio();
   const big = state.wave > 0 && state.wave % 10 === 0, buf = big && alarmBuf ? alarmBuf : roundBuf; if (!buf) return false;
@@ -4235,8 +4265,8 @@ window.addEventListener('keydown', e => {
 }, true);
 
 function createZombie(x, z, opt = {}) {
-  const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : kind === 'cat' ? catVariant : kind === 'lit' ? litVariant : kind === 'mz' ? (opt.mzv != null ? mzVariants[opt.mzv] : pick(mzVariants)) : boss ? (opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
-  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.9, 0.98) : kind === 'cat' ? rnd(0.98, 1.04) : kind === 'lit' ? rnd(1.08, 1.14) : kind === 'mz' ? rnd(1.1, 1.2) : boss ? 1.75 : hound ? 1 : rnd(0.95, 1.03); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.92, 1.06), s * rnd(0.98, 1.04), s * rnd(0.92, 1.06));
+  const kind = opt.kind || null, boss = !!opt.boss, hound = !!opt.hound, v = kind === 'vboss' ? verityBossVariant : kind === 'verity' ? verityVariant : kind === 'tung' ? tungVariant : kind === 'cat' ? catVariant : kind === 'lit' ? litVariant : kind === 'mz' ? (opt.mzv != null ? mzVariants[opt.mzv] : pick(mzVariants)) : boss ? (opt.guardian ? guardianVariant : opt.warlord ? warlordVariant : bossVariant) : hound ? houndVariant : pick(zVariants), root = new THREE.Group(); root.rotation.order = 'YXZ';
+  const s = kind === 'vboss' ? 1.5 : kind === 'tung' ? rnd(0.9, 0.98) : kind === 'cat' ? rnd(0.98, 1.04) : kind === 'lit' ? rnd(1.08, 1.14) : kind === 'mz' ? rnd(1.1, 1.2) : boss ? (opt.guardian ? 1.6 : 1.75) : hound ? 1 : rnd(0.95, 1.03); root.scale.setScalar(s); if (!boss && !hound && !kind) root.scale.set(s * rnd(0.92, 1.06), s * rnd(0.98, 1.04), s * rnd(0.92, 1.06));
   const G = (par, px, py, pz) => { const g = new THREE.Group(); g.position.set(px, py, pz); par.add(g); return g; };
   const M = (geo, par, part, cast = true) => { const m = new THREE.Mesh(geo, v.mat || zMat); m.castShadow = cast; par.add(m); m.userData.part = part; return m; };
   const upper = G(root, 0, hound ? 0.62 : 0.9, 0), torso = M(v.torso, upper, 'body'), headP = G(upper, 0, hound ? 0.14 : (v.hy || 0.74), hound ? 0.66 : 0), head = M(v.head, headP, 'head');
@@ -4253,7 +4283,7 @@ function createZombie(x, z, opt = {}) {
     for (const q of [lL, lR]) { cap(q.l, 0.1); cap(q.k, 0.082); }
     cap(headP, 0.085); cap(upper, 0.17, 0.5);
   }
-  if (boss && !opt.warlord && !kind) { const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.44), CAN_MAT); logo.position.set(0, 0.42, 0.372); torso.add(logo); }
+  if (boss && !opt.warlord && !opt.guardian && !kind) { const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.44), CAN_MAT); logo.position.set(0, 0.42, 0.372); torso.add(logo); }
   root.position.set(x, -2.4, z); scene.add(root);
   const wave = Math.max(1, state.wave);
   const runner = !boss && !hound && wave >= 3 && Math.random() < Math.min(0.7, 0.12 + (wave - 3) * 0.07);
@@ -4269,7 +4299,7 @@ function createZombie(x, z, opt = {}) {
   const zb = {
     root, upper, head: headP, torso, armL: aL.a, armR: aR.a, eL: aL.e, eR: aR.e, legL: lL.l, legR: lR.l, kL: lL.k, kR: lR.k,
     meshes: [torso, head, aL.u, aL.f, aR.u, aR.f, lL.t, lL.sh, lR.t, lR.sh], s, style: (Math.random() * 3) | 0, limp: Math.random() < 0.4,
-    limbs: LIMBS, hp, maxHp: hp, speed, kind, boss, warlord: !!opt.warlord, runner: runner || !!opt.warlord || boss, hound, reach: boss ? 2.3 : hound ? 1.5 : 1.2, dmg: boss ? (opt.warlord ? 55 : 60) : hound ? 25 : ZOMBIE_DAMAGE, throwT: 0, canCd: 3,
+    limbs: LIMBS, hp, maxHp: hp, speed, kind, boss, warlord: !!opt.warlord, guardian: !!opt.guardian, runner: runner || !!opt.warlord || boss, hound, reach: boss ? 2.3 : hound ? 1.5 : 1.2, dmg: boss ? (opt.warlord ? 55 : 60) : hound ? 25 : ZOMBIE_DAMAGE, throwT: 0, canCd: 3,
     phase: Math.random() * 10, attackCd: 0, spawnT: 0, growlT: rnd(0.5, 3), stagger: 0, stuck: 0, side: Math.random() < 0.5 ? 1 : -1, dead: false, bar: null, deadT: 0, fd: 1,
   };
   zb.meshes.forEach(m => { m.userData.zombie = zb; });
@@ -6181,7 +6211,7 @@ function updateZombies(dt) {
       if (d2 < 0.72 * 0.72 && d2 > 1e-6) { const d = Math.sqrt(d2), p = (0.72 - d) * 0.5; gp.x += ox / d * p; gp.z += oz / d * p; o.root.position.x -= ox / d * p; o.root.position.z -= oz / d * p; }
     }
     // animation: shamble / run, knees + elbows, hunched torso, lolling head
-    const ph = z.phase, sw = Math.sin(ph), attacking = dist <= (z.reach || 1.2), run = z.runner ? 1 : z.boss ? 0.5 : 0, hit = z.stagger > 0, st = z.style;
+    const ph = z.phase, sw = Math.sin(ph), attacking = dist <= (z.reach || 1.2), run = z.guardian ? Math.min(0.9, Math.max(0.15, sp / 4.6)) : z.runner ? 1 : z.boss ? 0.5 : 0, hit = z.stagger > 0, st = z.style;
     const A = 0.5 + run * 0.45, K = 0.9 + run * 0.5;
     z.legL.rotation.x = sw * A - 0.05; z.legR.rotation.x = -sw * A - 0.05;
     z.kL.rotation.x = Math.max(0, -Math.cos(ph)) * K + 0.14; z.kR.rotation.x = Math.max(0, Math.cos(ph)) * K + 0.14;
@@ -6203,7 +6233,7 @@ function updateZombies(dt) {
       gp.y = Math.abs(gc) * 0.12 + (att ? Math.abs(Math.sin(t * 9)) * 0.25 : 0);
     }
     if (curMap.decks) { const gt = groundAt(gp.x, gp.z, (z.gy || 0)); z.gy = (z.gy || 0) + (gt - (z.gy || 0)) * Math.min(1, dt * 10); gp.y += z.gy; }
-    if (z.boss && !z.warlord && !z.kind) {   // throws surströmming cans from range
+    if (z.boss && !z.warlord && !z.guardian && !z.kind) {   // throws surströmming cans from range
       z.canCd -= dt;
       if (z.throwT > 0) { z.throwT -= dt; z.armR.rotation.x = -3.0 + (0.55 - z.throwT) * 3.2; z.eR.rotation.x = -0.3; }
       if (z.canCd <= 0 && dist > 6 && dist < 34) { z.canCd = 3.2 + Math.random() * 2; z.throwT = 0.55; throwCan(gp, z.s); }
@@ -6407,7 +6437,7 @@ const QUEST = { step: 0, stones: [], got: 0, altar: null, kills: 0, boss: null, 
 function questOk() { return curMap.id === 'factory' && !MP.on && !PVP.on && !FREE.on; }
 function questHud(txt) {
   if (!QUEST.hudEl) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:16px;top:38%;z-index:30;pointer-events:none;font:700 14px/1.35 system-ui,Arial;color:#9ff;text-shadow:0 0 6px #08f,0 1px 2px #000;max-width:260px;letter-spacing:.04em'; document.body.appendChild(d); QUEST.hudEl = d; }
-  QUEST.hudEl.style.display = txt ? 'block' : 'none'; if (txt) QUEST.hudEl.innerHTML = txt;
+  QUEST.hudEl.style.display = 'none';   // no persistent quest text - hints appear briefly in the middle of the screen instead
 }
 function questReset() {
   for (const o of QUEST.objs) { try { scene.remove(o); } catch (e) { } } QUEST.objs = [];
@@ -6433,10 +6463,9 @@ function questStart() {
   QUEST.step = 1; const a0 = Math.random() * 6.283, cols = [0x40f0ff, 0xb060ff, 0xffb040];
   for (let i = 0; i < 3; i++) {
     const sp = questSpot(a0 + i * 2.094, 12, 26) || questSpot(a0 + i * 2.094 + 0.5, 6, 28) || { x: Math.cos(a0 + i * 2.094) * 12, z: Math.sin(a0 + i * 2.094) * 12 };
-    const g = questBeam(sp.x, sp.z, cols[i]), m = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshBasicMaterial({ color: cols[i] })); m.position.y = 1.3; g.add(m);
+    const g = new THREE.Group(); g.position.set(sp.x, 0, sp.z); scene.add(g); QUEST.objs.push(g); const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.42), new THREE.MeshBasicMaterial({ color: cols[i] })); m.position.y = 1.3; g.add(m);
     QUEST.stones.push({ x: sp.x, z: sp.z, g, m, taken: false, col: cols[i] });
   }
-  banner('A STRANGE ENERGY STIRS...', 3200); notice('EASTER EGG: FIND THE 3 SPIRIT STONES', 4200); try { tone('sine', 220, 440, 1.2, 0.14); } catch (e) { }
 }
 function questAltar() {
   const sp = questSpot(Math.random() * 6.283, 4, 12) || { x: 6, z: 6 }, g = new THREE.Group();
@@ -6445,7 +6474,6 @@ function questAltar() {
   const col = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 1.3, 10), stoneM); col.position.y = 1.0; g.add(col);
   g.userData.orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0x40f0ff })); g.userData.orb.position.y = 2.0; g.add(g.userData.orb);
   g.position.set(sp.x, 0, sp.z); scene.add(g); QUEST.objs.push(g); QUEST.altar = { x: sp.x, z: sp.z, g };
-  const bm = questBeam(sp.x, sp.z, 0x80ffff, 18); QUEST.altar.beam = bm;
 }
 function questUse(c) {
   if (!questOk()) return; const P = player.pos;
@@ -6456,13 +6484,13 @@ function questUse(c) {
 function questInteract(u) {
   if (u.k === 'qstone') {
     const q = QUEST.stones[u.i]; if (!q || q.taken) return; q.taken = true; q.g.visible = false; QUEST.got++;
-    burst(new THREE.Vector3(q.x, 1.3, q.z), 24, pMat.bowBlue, 8, 0.8, 1); sfx.chime(); notice(`SPIRIT STONE ${QUEST.got}/3`, 2000);
-    if (QUEST.got >= 3) { QUEST.step = 2; questAltar(); banner('THE ALTAR HAS APPEARED', 3000); notice('EASTER EGG: TAKE THE STONES TO THE ALTAR', 4200); }
+    burst(new THREE.Vector3(q.x, 1.3, q.z), 24, pMat.bowBlue, 8, 0.8, 1); sfx.chime(); banner(`SPIRIT STONE ${QUEST.got}/3`, 1800);
+    if (QUEST.got >= 3) { QUEST.step = 2; questAltar(); banner('SOMETHING AWAKENS NEARBY...', 3000); }
   } else if (u.k === 'qaltar') {
     QUEST.step = 3; QUEST.kills = 0; const A = QUEST.altar;
     const ring = new THREE.Mesh(new THREE.RingGeometry(13.6, 14, 64), new THREE.MeshBasicMaterial({ color: 0x40f0ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(A.x, 0.06, A.z); scene.add(ring); QUEST.objs.push(ring); QUEST.ring = ring;
-    banner('THE RITUAL BEGINS', 3000); notice('EASTER EGG: SLAY 30 ZOMBIES NEAR THE ALTAR', 4200); try { tone('sawtooth', 90, 200, 1.4, 0.16); } catch (e) { }
+    banner('KILL 30 ZOMBIES INSIDE THE ALTAR RING', 4200); try { tone('sawtooth', 90, 200, 1.4, 0.16); } catch (e) { }
   } else if (u.k === 'qchest') {
     const C = QUEST.chest; QUEST.step = 6; QUEST.doneT = 8; if (C.g) C.g.visible = false;
     burst(new THREE.Vector3(C.x, 1, C.z), 40, pMat.spark, 10, 1.0, 2); sfx.chime(); giveWeapon('aether');
@@ -6478,22 +6506,41 @@ function questKill(z) {
   if (z.quest) { QUEST.boss = null; QUEST.step = 5; const p = z.root.position; const g = new THREE.Group(), gold = new THREE.MeshStandardMaterial({ color: 0xc9a23c, metalness: 0.9, roughness: 0.3, emissive: 0x5a3a00, emissiveIntensity: 0.6 });
     const bx = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.6, 0.7), gold); bx.position.y = 0.3; g.add(bx); const lid = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.2, 0.74), gold); lid.position.y = 0.7; g.add(lid);
     g.position.set(p.x, 0, p.z); scene.add(g); QUEST.objs.push(g); QUEST.chest = { x: p.x, z: p.z, g }; const bm = questBeam(p.x, p.z, 0xffd060, 16); QUEST.chest.beam = bm;
-    banner('THE GUARDIAN HAS FALLEN', 3000); notice('EASTER EGG: OPEN THE CHEST', 4000); return; }
+    banner('THE GUARDIAN HAS FALLEN - OPEN THE CHEST', 3200); return; }
   if (QUEST.step === 3 && QUEST.altar && !z.boss && Math.hypot(z.root.position.x - QUEST.altar.x, z.root.position.z - QUEST.altar.z) < 14) QUEST.kills++;
 }
 function questBoss() {
   QUEST.step = 4; const A = QUEST.altar; if (QUEST.ring) { scene.remove(QUEST.ring); QUEST.ring = null; }
-  const zb = createZombie(A.x, A.z, { boss: true, warlord: true }); zb.hp = zb.maxHp = Math.round(14000 + state.wave * 600); zb.quest = true; zb.dmg = Math.max(zb.dmg, 60);
-  QUEST.boss = zb; banner('THE GUARDIAN AWAKENS!', 3500); try { tone('sawtooth', 70, 30, 1.8, 0.22); } catch (e) { }
+  const zb = createZombie(A.x, A.z, { boss: true, guardian: true });   // the Guardian: its own model
+  zb.hp = zb.maxHp = Math.round(14000 + state.wave * 600); zb.quest = true; zb.dmg = Math.max(zb.dmg, 60); zb.speed = 3.4; zb.spawnT = 1; QUEST.slamT = 6; QUEST.slamW = 0;
+  zb.drop = { y: 70, vy: 0 }; zb.stunT = 99; zb.root.position.y = 70; QUEST.boss = zb;
+  if (!playAlarm()) sfx.roundSynth();   // no text - just the panzer alarm, then he falls from the sky
+}
+function questSlam(dt) {   // spirit slam: a short warning, then a shockwave that hurts anything close
+  const zb = QUEST.boss; if (!zb || zb.drop || zb.dead) return; const p = zb.root.position, d = Math.hypot(player.pos.x - p.x, player.pos.z - p.z);
+  if (QUEST.slamW > 0) {
+    QUEST.slamW -= dt; if (QUEST.slamW <= 0) {
+      burst(new THREE.Vector3(p.x, 0.4, p.z), 36, pMat.bowBlue, 12, 0.8, 1); try { tone('sine', 80, 30, 0.5, 0.5); noiseBurst(0.35, 600, 80, 0.4); } catch (e) { } state.shake = Math.max(state.shake, 0.9);
+      if (Math.hypot(player.pos.x - p.x, player.pos.z - p.z) < 6.5 && player.jumpY < 1.2) hurtPlayer(35);
+    } else if (Math.random() < 0.5) burst(new THREE.Vector3(p.x + (Math.random() - 0.5) * 3, 0.2, p.z + (Math.random() - 0.5) * 3), 1, pMat.bowBlue, 2, 0.5, -0.5);
+    zb.stunT = Math.max(zb.stunT || 0, 0.15); return;
+  }
+  QUEST.slamT -= dt; if (QUEST.slamT <= 0 && d < 9) { QUEST.slamT = 7 + Math.random() * 3; QUEST.slamW = 0.7; try { tone('sawtooth', 120, 60, 0.7, 0.2); } catch (e) { } }
+}
+function questDrop(dt) {
+  const zb = QUEST.boss; if (!zb || !zb.drop) return;
+  const D = zb.drop; D.vy += 38 * dt; D.y -= D.vy * dt; zb.stunT = 99; zb.attackCd = 1.5; zb.root.position.y = Math.max(0, D.y);
+  if (D.y <= 0) { zb.drop = null; zb.stunT = 0.6; try { tone('sine', 70, 28, 0.6, 0.6); noiseBurst(0.5, 500, 60, 0.5); } catch (e) { } burst(new THREE.Vector3(zb.root.position.x, 0.4, zb.root.position.z), 40, pMat.dirt, 10, 1.2, 4); state.shake = Math.max(state.shake, 1.2); }
 }
 function questTick(dt) {
   if (!questOk() || state.phase !== 'playing') { if (!questOk()) questHud(''); return; }
   QUEST.t += dt;
-  if (QUEST.step === 0 && state.wave >= 3) questStart();
+  if (QUEST.step === 0 && state.wave >= 10) questStart();
   for (const q of QUEST.stones) if (!q.taken) { q.m.rotation.y += dt * 2; q.m.position.y = 1.3 + Math.sin(QUEST.t * 2 + q.x) * 0.15; }
   if (QUEST.altar && QUEST.altar.g.userData.orb) { const o = QUEST.altar.g.userData.orb; o.rotation.y += dt * 2; o.position.y = 2.0 + Math.sin(QUEST.t * 2) * 0.1; }
   if (QUEST.ring) QUEST.ring.material.opacity = 0.25 + Math.sin(QUEST.t * 4) * 0.1;
   if (QUEST.step === 3 && QUEST.kills >= 30) questBoss();
+  if (QUEST.step === 4) { questDrop(dt); questSlam(dt); }
   if (QUEST.step === 4 && QUEST.boss && (QUEST.boss.dead || !zombies.includes(QUEST.boss))) { if (!QUEST.chest) questKill(QUEST.boss); }
   if (QUEST.chest && QUEST.chest.g.visible) QUEST.chest.g.rotation.y += dt * 0.8;
   let t = '';
@@ -6574,15 +6621,41 @@ function placeExtraPerks(m) {
     return true;
   };
   const list = m.id === 'factory' ? factoryExtraPerks : (m.perks || (m.perks = []));
-  for (const q of XPK) {
-    if (list.some(x => x.id === q.id)) continue;
-    let spot = null;
-    for (let r = 4; r < 45 && !spot; r += 1.5) for (let a = 0; a < 24 && !spot; a++) { const an = a / 24 * Math.PI * 2 + r * 0.7, x = cx + Math.cos(an) * r, z = cz + Math.sin(an) * r; if (free(x, z)) spot = { x, z }; }
-    if (!spot) continue; taken.push(spot);
-    const w0 = scene.children.length, rot = Math.atan2(cx - spot.x, cz - spot.z);
-    try { addPerk(spot.x, spot.z, rot, q); } catch (e) { continue; }
+  const todo = XPK.filter(q => !list.some(x => x.id === q.id));
+  const put = (q, spot, rot) => {
+    taken.push(spot); const w0 = scene.children.length;
+    try { addPerk(spot.x, spot.z, rot, q); } catch (e) { return; }
     for (const c of scene.children.slice(w0)) m.root.add(c);
     list.push({ ...q, x: spot.x, z: spot.z, rot, pos: new THREE.Vector3(spot.x, 0, spot.z), cd: null });
+  };
+  // organised rows: a straight line of machines along a free stretch of wall / edge, facing inwards, away from the spawn point
+  const STEP = 3.2, rowFor = n => {
+    let best = null;
+    for (const horiz of [true, false]) {
+      const lim = horiz ? az : ax, lim2 = horiz ? ax : az;
+      for (let c = -lim; c <= lim + 0.01; c += 1.5) for (let st = -lim2; st + (n - 1) * STEP <= lim2 + 0.01; st += 1.6) {
+        const slots = []; let ok = true;
+        for (let i = 0; i < n && ok; i++) { const x = horiz ? st + i * STEP : c, z = horiz ? c : st + i * STEP; if (!free(x, z)) ok = false; else slots.push({ x, z }); }
+        if (!ok) continue;
+        const mx = slots.reduce((t, q) => t + q.x, 0) / n, mz = slots.reduce((t, q) => t + q.z, 0) / n, ds = Math.hypot(mx - cx, mz - cz), edge = Math.min(ax - Math.abs(mx), az - Math.abs(mz));
+        const sc = (ds < 12 ? 1000 : 0) + Math.abs(horiz ? (az - Math.abs(c)) : (ax - Math.abs(c))) * 2 + ds * 0.25 + edge * 0.5;
+        if (!best || sc < best.sc) best = { sc, slots, rot: horiz ? (c < 0 ? 0 : Math.PI) : (c < 0 ? Math.PI / 2 : -Math.PI / 2) };
+      }
+    }
+    return best;
+  };
+  let left = todo.slice();
+  for (const n of [left.length, Math.ceil(left.length / 2), 4, 3, 2]) {
+    while (left.length >= Math.min(n, 2) && left.length > 0) {
+      const k = Math.min(n, left.length), row = rowFor(k); if (!row) break;
+      row.slots.forEach((sp2, i) => put(left[i], sp2, row.rot)); left = left.slice(k);
+    }
+    if (!left.length) break;
+  }
+  for (const q of left) {   // whatever still has no place: nearest free spots outwards
+    let spot = null;
+    for (let r = 8; r < 60 && !spot; r += 1.5) for (let a2 = 0; a2 < 24 && !spot; a2++) { const an = a2 / 24 * Math.PI * 2 + r * 0.7, x = cx + Math.cos(an) * r, z = cz + Math.sin(an) * r; if (free(x, z)) spot = { x, z }; }
+    if (spot) put(q, spot, Math.atan2(cx - spot.x, cz - spot.z));
   }
 }
 const FB = { on: false, list: [], map: null };
