@@ -6136,6 +6136,117 @@ document.addEventListener('keydown', e => {
   else if (e.code === 'Digit3') switchWeapon(player.slot3);
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') { sbShow(false); e.preventDefault(); } });
+
+/* ===================== XBOX GAMEPAD SUPPORT (Microsoft Edge / Gamepad API) ===================== */
+const XBOX_PAD = { index: -1, prev: [], lookX: 0, lookY: 0, navAt: 0, menuIndex: 0, lastTime: 0 };
+function xboxTap(code, key) {
+  try {
+    document.dispatchEvent(new KeyboardEvent('keydown', { code, key: key || 'Unidentified', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keyup', { code, key: key || 'Unidentified', bubbles: true }));
+  } catch (e) {}
+}
+function xboxMenuMove(dir) {
+  const root = document.querySelector('#home:not([style*="display: none"])') || document.querySelector('#menu');
+  if (!root) return;
+  const candidates = [...root.querySelectorAll('button:not(:disabled), .hb, .btn, .lt, .lo, .sb, .stab, .pvmap, .pvg')]
+    .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
+  if (!candidates.length) return;
+  let i = candidates.indexOf(document.activeElement);
+  if (i < 0) i = XBOX_PAD.menuIndex % candidates.length;
+  i = (i + dir + candidates.length) % candidates.length;
+  XBOX_PAD.menuIndex = i;
+  candidates[i].focus({ preventScroll: true });
+  candidates[i].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function xboxPadFrame(now) {
+  requestAnimationFrame(xboxPadFrame);
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let pad = null;
+  if (XBOX_PAD.index >= 0 && pads[XBOX_PAD.index] && pads[XBOX_PAD.index].connected) pad = pads[XBOX_PAD.index];
+  if (!pad) {
+    for (let i = 0; i < pads.length; i++) if (pads[i] && pads[i].connected) { pad = pads[i]; XBOX_PAD.index = i; XBOX_PAD.prev = []; break; }
+  }
+  if (!pad) {
+    if (XBOX_PAD.index !== -1) {
+      keys['ShiftLeft'] = false; state.mouseDown = false; state.rmb = false;
+      XBOX_PAD.index = -1; XBOX_PAD.prev = [];
+    }
+    return;
+  }
+  const b = pad.buttons || [];
+  const down = i => !!(b[i] && (b[i].pressed || b[i].value > 0.55));
+  const edge = i => down(i) && !XBOX_PAD.prev[i];
+  const axis = (i, dz = 0.18) => {
+    const v = pad.axes[i] || 0;
+    return Math.abs(v) < dz ? 0 : (Math.abs(v) - dz) / (1 - dz) * Math.sign(v);
+  };
+  const playing = state.phase === 'playing' && !chat.open;
+  if (playing) {
+    // Left stick: movement. Right stick: camera / aim.
+    const lx = axis(0), ly = axis(1), rx = axis(2, 0.13), ry = axis(3, 0.13);
+    keys['KeyW'] = ly < -0.12; keys['KeyS'] = ly > 0.12;
+    keys['KeyA'] = lx < -0.12; keys['KeyD'] = lx > 0.12;
+    const sprint = down(10) || (Math.hypot(lx, ly) > 0.92 && ly < -0.35);
+    keys['ShiftLeft'] = sprint;
+    const dt = XBOX_PAD.lastTime ? Math.min(0.05, (now - XBOX_PAD.lastTime) / 1000) : 0.016;
+    player.yaw -= rx * 2.8 * dt;
+    player.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, player.pitch + ry * 2.4 * dt));
+    state.mouseDown = down(7);                 // RT: fire
+    state.rmb = down(6);                       // LT: ADS
+    if (edge(0)) xboxTap('KeyV', 'v');         // A: melee
+    if (edge(1)) xboxTap('KeyC', 'c');         // B: crouch/down (if supported by the active mode)
+    if (edge(2)) {                             // X: use nearby object, otherwise reload
+      if (typeof nearestUse === 'function' && nearestUse()) interact();
+      else startReload();
+    }
+    if (edge(3)) {                             // Y: cycle weapon
+      const slots = [player.slot1, player.slot2, player.slot3].filter(Boolean);
+      const at = slots.indexOf(player.cur);
+      if (slots.length > 1 && !isDowned()) switchWeapon(slots[(at + 1) % slots.length]);
+    }
+    if (edge(4)) xboxTap('KeyG', 'g');         // LB: tactical grenade
+    if (edge(5)) xboxTap('KeyX', 'x');         // RB: lethal / monkey
+    if (edge(11)) xboxTap('Space', ' ');       // RS click: jump
+    if (down(8)) sbShow(true); else sbShow(false); // View: hold for scoreboard
+    if (edge(9)) {                             // Menu: pause
+      if (!pauseEl.classList.contains('hidden')) $('btnResume').click();
+      else { state.mouseDown = false; state.rmb = false; pauseEl.classList.remove('hidden'); locked = false; }
+    }
+    if (edge(12)) xboxTap('KeyH', 'h');        // D-pad up: gobblegum
+    if (edge(13)) xboxTap('KeyG', 'g');        // D-pad down: tactical
+    if (edge(14)) xboxTap('Digit1', '1');      // D-pad left: weapon slot 1
+    if (edge(15)) xboxTap('Digit2', '2');      // D-pad right: weapon slot 2
+  } else {
+    // Menu navigation: D-pad / left stick, A to activate, B / Menu to go back.
+    const vertical = axis(1);
+    if (now - XBOX_PAD.navAt > 190) {
+      if (edge(12) || vertical < -0.55) { xboxMenuMove(-1); XBOX_PAD.navAt = now; }
+      else if (edge(13) || vertical > 0.55) { xboxMenuMove(1); XBOX_PAD.navAt = now; }
+      else if (edge(14)) { xboxMenuMove(-1); XBOX_PAD.navAt = now; }
+      else if (edge(15)) { xboxMenuMove(1); XBOX_PAD.navAt = now; }
+    }
+    if (edge(0)) {
+      const active = document.activeElement;
+      if (active && active !== document.body && typeof active.click === 'function') active.click();
+      else xboxMenuMove(1);
+    }
+    if (edge(1) || edge(9)) xboxTap('Escape', 'Escape');
+  }
+  XBOX_PAD.prev = b.map(x => !!(x && (x.pressed || x.value > 0.55)));
+  XBOX_PAD.lastTime = now;
+}
+if (navigator.getGamepads) {
+  window.addEventListener('gamepadconnected', e => { XBOX_PAD.index = e.gamepad.index; XBOX_PAD.prev = []; notice('XBOX CONTROLLER CONNECTED', 2200); });
+  window.addEventListener('gamepaddisconnected', e => {
+    if (XBOX_PAD.index === e.gamepad.index) {
+      XBOX_PAD.index = -1; XBOX_PAD.prev = [];
+      keys['KeyW'] = keys['KeyA'] = keys['KeyS'] = keys['KeyD'] = keys['ShiftLeft'] = false;
+      state.mouseDown = false; state.rmb = false;
+    }
+  });
+  requestAnimationFrame(xboxPadFrame);
+}
+
 /* ===================== TOUCH CONTROLS (on-screen joysticks + buttons; appear on the first touch, vanish if a mouse is used) ===================== */
 const TOUCH = { on: false, mx: 0, my: 0, sprint: false, paused: false, el: null, look: null, stick: null };
 function touchKey(code, key) { try { document.dispatchEvent(new KeyboardEvent('keydown', { code, key: key || 'Unidentified', bubbles: true })); document.dispatchEvent(new KeyboardEvent('keyup', { code, key: key || 'Unidentified', bubbles: true })); } catch (e) { } }
