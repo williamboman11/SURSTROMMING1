@@ -6178,6 +6178,7 @@ const CHEATS = {
   pap: () => { const t = player.cur, a = player.ammo[t]; if (!a || t === 'para') { notice('CANNOT PACK-A-PUNCH THIS', 2400); return; } const had = !!player.pap[t]; player.pap[t] = true; a.mag = magOf(t); a.res = resOf(t); state.reloading = false; setViewmodels(); notice(had ? 'CHEAT: ALREADY PACKED - MAX AMMO' : 'CHEAT: ' + WEAPONS[t].name + ' PACK-A-PUNCHED', 2800); sfx.chime(); },
   money: () => { state.score += 10000; notice('CHEAT: +10000 POINTS', 2600); sfx.chime(); },
 };
+CHEATS.ironmax = () => { if (!IM.on) { notice('TURN ON IRON MAN MODE FIRST', 2200); return; } IM.lv = IM_MAXLV; IM.xp = 0; imApply(true); IM.hudT = 0; imHud(); banner(`IRON MAN MAX  -  MK-${IM.lv}`, 2600); notice('ALL GADGETS + UPGRADES UNLOCKED', 3000); try { sfx.chime(); } catch (e) { } };
 for (const k of Object.keys(CHEATS)) { const f = CHEATS[k]; CHEATS[k] = () => { if (!MP.client) GG.tainted = true; if (MP.client) { notice('ONLY THE HOST CAN USE CHEATS', 2400); sfx.deny(); return; } if (!MP.on && !PVP.on) PVP.in = false; if (PVP.on || MP.mode === 'pvp') { notice('CHEATS ARE DISABLED IN PVP', 2400); sfx.deny(); return; } if (!state.cheated) { state.cheated = true; setTimeout(() => notice('CHEATS USED - NO COINS THIS RUN', 3000), 2700); } if (MP.host && MP.on) MP.send({ t: 'chf' }); f(); }; }
 document.addEventListener('keydown', e => {
   if (chat.open) {
