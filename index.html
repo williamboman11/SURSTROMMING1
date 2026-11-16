@@ -5376,7 +5376,7 @@ function imApply(up) {
 }
 function imReset() {
   IM.on = !!IM.mode && !PVP.on && !FREE.on && !(typeof TEST !== 'undefined' && TEST.on);
-  IM.lv = 1; IM.xp = 0; IM.fly = false; IM.glide = false; IM.wep = 1; IM.beam = false; IM.cd = 0; IM.bT = 0; IM.fuel = imFuelMax(1); IM.en = 100; IM.bolts.length = 0;
+  IM.lv = 1; IM.xp = 0; IM.fly = false; IM.glide = false; IM.wep = 1; IM.beam = false; IM.cd = 0; IM.bT = 0; IM.fuel = imFuelMax(1); IM.en = 100; imFxClear();
   for (const m of IM.mis) scene.remove(m.g); IM.gcd = [0, 0, 0, 0, 0, 0, 0, 0, 0]; IM.od = 0; IM.mis = []; IM.puffs = []; IM.sched = []; IM.pmd = false;
   imInit(); IM.root.visible = IM.on; IM.beamM.visible = false; IM.chest.visible = false; IM.light.intensity = 0;
   if (IM.on) { state.maxHealth = imArmor(1); state.health = state.maxHealth; }
@@ -5419,7 +5419,7 @@ function imPalm() { const a = IM.arms[IM.hand & 1]; return a.g.localToWorld(new 
 function imBolt(a, b, k, remote) {
   const dir = new THREE.Vector3().subVectors(b, a), len = Math.max(0.1, dir.length()), w = k === 2 ? 0.16 : 0.035;
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, w, len), k === 2 ? IM_MAT.uni : IM_MAT.rep); m.position.copy(a).addScaledVector(dir, 0.5); m.lookAt(b); scene.add(m);
-  IM.bolts.push({ m, life: k === 2 ? 0.26 : 0.07, l0: k === 2 ? 0.26 : 0.07 });
+  IM.bolts.push({ m, life: k === 2 ? 0.26 : 0.07, l0: k === 2 ? 0.26 : 0.07, t0: performance.now() });
   if (!remote && MP.on) { const f = v => +v.toFixed(1); MP.send({ t: 'imf', k, a: [f(a.x), f(a.y), f(a.z)], b: [f(b.x), f(b.y), f(b.z)] }); }
 }
 function imHit(z, h, dmg) {
@@ -5504,6 +5504,12 @@ function imUnibeam() {
   if (!end) end = raycaster.ray.at(70, new THREE.Vector3());
   camera.getWorldPosition(_imV); IM.beamLen = Math.min(90, _imV.distanceTo(end)); burst(end, 5, IM_MAT.spark, 6, 0.4, 6);
   const a = IM.chest.getWorldPosition(new THREE.Vector3()); imBolt(a, end, 2); IM.light.intensity = 16; try { sfx.raygun2(); } catch (e) { }
+}
+function imFxClear() { for (const b of IM.bolts) { scene.remove(b.m); try { b.m.geometry.dispose(); } catch (e) { } } IM.bolts.length = 0; for (const f of IM.puffs) { scene.remove(f.m); } IM.puffs.length = 0; }
+function imFxClean() {   // wall-clock safety net: runs every rendered frame in any phase, so no beam can outlive ~0.6 s
+  const n = performance.now();
+  for (let i = IM.bolts.length - 1; i >= 0; i--) { const b = IM.bolts[i]; if (n - (b.t0 || 0) > 600) { scene.remove(b.m); try { b.m.geometry.dispose(); } catch (e) { } IM.bolts.splice(i, 1); } }
+  for (let i = IM.puffs.length - 1; i >= 0; i--) { const f = IM.puffs[i]; if (!f.t0) f.t0 = n; if (n - f.t0 > 1500) { scene.remove(f.m); IM.puffs.splice(i, 1); } }
 }
 function imFxTick(dt) {   // expire remote players' bolts/explosions when we are not Iron Man ourselves
   for (let i = IM.bolts.length - 1; i >= 0; i--) { const b = IM.bolts[i]; b.life -= dt; if (b.life <= 0) { scene.remove(b.m); b.m.geometry.dispose(); IM.bolts.splice(i, 1); } }
@@ -8167,7 +8173,7 @@ setInterval(() => {
 }, 250);
 document.addEventListener('visibilitychange', () => { bgLast = performance.now(); if (!document.hidden && MP.on) { MP.lastS = performance.now(); MP.tp = 0; clock.getDelta(); for (const p of MP.peers.values()) p.seen = performance.now(); } });
 function animate() {
-  requestAnimationFrame(animate);
+  requestAnimationFrame(animate); imFxClean();
   const dt = Math.min(clock.getDelta(), 0.05);
 
   // adaptive quality
