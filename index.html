@@ -3597,7 +3597,10 @@ const MP = {
         if (this.host && !this.peers.has(m.i) && (m.i === undefined || this.peers.size >= MAX_PLAYERS - 1)) break;
         let p = this.peers.get(m.i); if (!p) { p = { n: '', x: m.x, y: 0, z: m.z, seen: now }; this.peers.set(m.i, p); }
         Object.assign(p, { n: this.esc(m.n || 'PLAYER'), tx: m.x, ty: m.y, tz: m.z, yaw: m.yaw, pt: m.pt, d: m.d, dd: m.dd, h: m.h, w: m.w, lk: m.im ? m.lk + '!IM' : m.lk, im: m.im | 0, fy: m.fy | 0, cm: m.cm | 0, hid: m.hid, sc: m.sc, kk: m.kk, dn: m.dn, rv: m.rv, hs: m.hs, seen: now }); break; }
-      case 'imx': if (m.i !== this.id && typeof m.x === 'number') imBoom(new THREE.Vector3(m.x, m.y, m.z), Math.min(12, m.r || 4), 0, null, -1); break;
+      case 'imx': if (m.i !== this.id && typeof m.x === 'number') imBoom(new THREE.Vector3(m.x, m.y, m.z), Math.min(72, m.r || 4), 0, null, (typeof m.c === 'number' ? m.c : 0xffa040), true); if ((m.r || 0) >= 30) imFlash(m.r >= 60 ? '#ffffff' : '#ffe9b8', 1.4); break;
+      case 'imu': if (m.i !== this.id) { if (m.u === 6) { imFreeze(8); imFlash('#aee8ff', 0.8); } else if (m.u === 2 && typeof m.x === 'number') imWellVis(new THREE.Vector3(m.x, m.y, m.z), 3.6); } break;
+      case 'imm': if (m.i !== this.id && Array.isArray(m.a) && Array.isArray(m.d)) imMissile(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.d[0], m.d[1], m.d[2]), { vis: true, spd: m.s, grav: m.g, col: m.c, life: Math.min(5, m.l || 3), bomb: !!m.b }); break;
+      case 'imo': if (m.i !== this.id && typeof m.x === 'number') imStrikeVis(new THREE.Vector3(m.x, m.y, m.z)); break;
       case 'imf': if (m.i !== this.id && Array.isArray(m.a) && Array.isArray(m.b) && m.a.length === 3 && m.b.length === 3) imBolt(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2]), m.k === 2 ? 2 : 1, true); break;
       case 'pg': if (m.i !== this.id) this.send({ t: 'po', to: m.i, ts: m.ts }); break;
       case 'po': if (m.to === this.id) { const p = this.peers.get(m.i); if (p) p.ping = Math.max(1, Math.round(performance.now() - m.ts)); } break;
@@ -4750,7 +4753,7 @@ function updateDownedView(dt) {
 
 function hurtPlayer(dmg) {
   if (state.phase !== 'playing' || MP.down || state.qr > 0 || (state.god && !PVP.on)) return;
-  if (IM.on) dmg *= imRes(IM.lv);
+  if (IM.on) { if (IM.god > 0) return; dmg *= imRes(IM.lv); }
   if (!PVP.on && boughtExtraPerks.has('skin')) dmg *= 0.7;
   if (PVP.on) {
     if (PVP.over || PVP.dead || PVP.prot > 0 || (PVP.inf && PVP.ph !== 'hunt')) return;
@@ -5378,6 +5381,7 @@ function imReset() {
   IM.on = !!IM.mode && !PVP.on && !FREE.on && !(typeof TEST !== 'undefined' && TEST.on);
   IM.lv = 1; IM.xp = 0; IM.fly = false; IM.glide = false; IM.wep = 1; IM.beam = false; IM.cd = 0; IM.bT = 0; IM.fuel = imFuelMax(1); IM.en = 100; imFxClear();
   for (const m of IM.mis) scene.remove(m.g); IM.gcd = [0, 0, 0, 0, 0, 0, 0, 0, 0]; IM.od = 0; IM.mis = []; IM.puffs = []; IM.sched = []; IM.pmd = false;
+  IM.ucd = IM_ULT.map(() => 0); IM.god = 0; IM.blos = 0; IM.well = null;
   imInit(); IM.root.visible = IM.on; IM.beamM.visible = false; IM.chest.visible = false; IM.light.intensity = 0;
   if (IM.on) { state.maxHealth = imArmor(1); state.health = state.maxHealth; }
   imHud();
@@ -5385,7 +5389,7 @@ function imReset() {
 function imXp(n) {
   if (IM.lv >= IM_MAXLV) return; IM.xp += n; let up = false;
   const lv0 = IM.lv; while (IM.lv < IM_MAXLV && IM.xp >= imNeed(IM.lv)) { IM.xp -= imNeed(IM.lv); IM.lv++; up = true; }
-  if (up) { imApply(true); banner(`SUIT UPGRADED  -  MK-${IM.lv}`, 2600); let nt = 'ARMOR  +  FLIGHT TIME  +  WEAPONS UPGRADED'; for (let l = lv0 + 1; l <= IM.lv; l++) { for (let i = 3; i <= 8; i++) if (IM_GAD[i].lv === l) nt = 'NEW GADGET: ' + IM_GAD[i].n + '  (KEY ' + i + ')'; if (IM_PASS[l]) nt = IM_PASS[l]; } notice(nt, 3200); try { sfx.chime(); } catch (e) { } }
+  if (up) { imApply(true); banner(`SUIT UPGRADED  -  MK-${IM.lv}`, 2600); let nt = 'ARMOR  +  FLIGHT TIME  +  WEAPONS UPGRADED'; for (let l = lv0 + 1; l <= IM.lv; l++) { for (let i = 3; i <= 8; i++) if (IM_GAD[i].lv === l) nt = 'NEW GADGET: ' + IM_GAD[i].n + '  (KEY ' + i + ')'; if (IM_PASS[l]) nt = IM_PASS[l]; for (const u of IM_ULT) if (u.lv === l) nt = 'NEW ULTIMATE: ' + u.n + '  (KEY ' + u.l + ')'; } notice(nt, 3200); try { sfx.chime(); } catch (e) { } }
   IM.hudT = 0;
 }
 function imToggleFly(force) {
@@ -5397,6 +5401,7 @@ function imKey(e) {   // returns true when the key belongs to the suit
   if (!IM.on) return false;
   if (/^Digit[1-8]$/.test(e.code)) { imSel(+e.code.slice(5)); return true; } if (e.code === 'Digit9' || e.code === 'Digit0' || e.code === 'KeyR') return true;
   if (e.code === 'KeyF') { imToggleFly(); return true; }
+  { const ui = IM_ULT.findIndex(x => x.k === e.code); if (ui >= 0) { imUlt(ui); return true; } }
   if (e.code === 'Space') { if (IM.fly) return true; const t = performance.now(); if (t - IM.sTap < 300 && !player.onGround) { IM.sTap = 0; imToggleFly(); return true; } IM.sTap = t; return false; }
   return false;
 }
@@ -5439,17 +5444,18 @@ function imSel(n) {
 function imCycle(dir) { let n = IM.wep; for (let i = 0; i < 9; i++) { n = ((n - 1 + dir + 8) % 8) + 1; if (imUnlocked(n)) { imSel(n); return; } } }
 function imWList() {
   let h = ''; for (let i = 1; i <= 8; i++) { const g = IM_GAD[i]; if (IM.lv >= g.lv) { const c = IM.gcd[i] > 0 ? ' ' + Math.ceil(IM.gcd[i]) + 's' : (i === 8 && 0 ? '' : ''); h += `<div style="color:${IM.wep === i ? '#ffd23a' : IM.gcd[i] > 0 ? '#5a6676' : '#9fb0c4'}">[${i}] ${g.n}${i === 7 && IM.od > 0 ? ' ACTIVE ' + Math.ceil(IM.od) + 's' : c}</div>`; } else if (g.lv === Math.min(...IM_GAD.filter((x, k) => k && IM.lv < x.lv).map(x => x.lv))) h += `<div style="color:#3e4756">[${i}] ??? MK-${g.lv}</div>`; }
-  return h;
+  return h + imUltList();
 }
-function imBoom(p, r, dmg, xp, fx) {   // area damage + visual (+ network visual)
+function imBoom(p, r, dmg, xp, fx, noNet) {   // area damage + visual (+ network visual)
   const col = 0xffa040; const m = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: fx || col, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
   m.position.copy(p); m.scale.setScalar(0.3); scene.add(m); IM.puffs.push({ m, t: 0, r }); try { noiseBurst(0.35, 500, 90, 0.5); } catch (e) { }
   burst(p, 10, IM_MAT.spark, 8, 0.6, 4); state.shake = Math.max(state.shake, Math.min(0.5, r * 0.06));
   if (!xp && xp !== 0) { } else for (const z of zombies) { if (z.dead || z.spawnT > 0) continue; const q = z.root.position, d = Math.hypot(q.x - p.x, q.z - p.z, (q.y + 1 - p.y) * 0.6); if (d > r + 0.6) continue; damageZombie(z, (z.boss ? Math.min(dmg, z.maxHp * 0.1) : dmg) * (1 - 0.5 * d / (r + 0.6)) * (IM.od > 0 ? 2 : 1), V3(q.x, q.y + 1, q.z), false); if (xp) imXp(xp); }
-  if (MP.on && fx !== -1) MP.send({ t: 'imx', x: +p.x.toFixed(1), y: +p.y.toFixed(1), z: +p.z.toFixed(1), r });
+  if (MP.on && !noNet) MP.send({ t: 'imx', x: +p.x.toFixed(1), y: +p.y.toFixed(1), z: +p.z.toFixed(1), r, c: fx || col });
 }
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
-function imMissile(from, dir, o) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6), new THREE.MeshBasicMaterial({ color: o.col || 0xfff0c0 })); m.rotation.x = Math.PI / 2; const g = new THREE.Group(); g.add(m); g.position.copy(from); scene.add(g); IM.mis.push({ g, v: dir.clone().multiplyScalar(o.spd || 42), life: o.life || 3, tgt: o.tgt || null, hom: o.hom || 0, dmg: o.dmg, r: o.r, grav: o.grav || 0, bomb: !!o.bomb, split: o.split || 0 }); }
+function imMissile(from, dir, o) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6), new THREE.MeshBasicMaterial({ color: o.col || 0xfff0c0 })); m.rotation.x = Math.PI / 2; const g = new THREE.Group(); g.add(m); g.position.copy(from); scene.add(g); if (!o.vis && MP.on) { const f = v => +v.toFixed(2); MP.send({ t: 'imm', a: [f(from.x), f(from.y), f(from.z)], d: [f(dir.x), f(dir.y), f(dir.z)], s: o.spd || 42, g: o.grav || 0, c: o.col || 0xfff0c0, l: o.life || 3, b: o.bomb ? 1 : 0 }); }
+  IM.mis.push({ vis: !!o.vis, g, v: dir.clone().multiplyScalar(o.spd || 42), life: o.life || 3, tgt: o.tgt || null, hom: o.hom || 0, dmg: o.dmg, r: o.r, grav: o.grav || 0, bomb: !!o.bomb, split: o.split || 0 }); }
 function imGadget(n) {
   const g = IM_GAD[n], lv = IM.lv; if (IM.gcd[n] > 0) { return; }
   camera.getWorldDirection(_imV2); const dir = _imV2.clone(), org = camera.getWorldPosition(new THREE.Vector3()), rt = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
@@ -5474,9 +5480,14 @@ function imGadget(n) {
     IM.gcd[7] = g.cd; IM.od = 10; banner('OVERDRIVE  -  DOUBLE DAMAGE, FASTER FIRE', 2200); try { sfx.chime(); } catch (e) { } IM.light.intensity = 25;
   } else if (n === 8) {
     const h = imCast(0), p = h.length ? h[0].point.clone() : org.clone().addScaledVector(dir, 40); if (!h.length) p.y = 0; IM.gcd[8] = g.cd; banner('ORBITAL STRIKE LOCKED', 1300);
+    if (MP.on) MP.send({ t: 'imo', x: +p.x.toFixed(1), y: +p.y.toFixed(1), z: +p.z.toFixed(1) });
     const ring = new THREE.Mesh(new THREE.RingGeometry(9, 10, 32), new THREE.MeshBasicMaterial({ color: 0xff3a2a, side: THREE.DoubleSide, transparent: true, opacity: 0.8, fog: false })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, Math.max(0.1, p.y + 0.1), p.z); scene.add(ring);
     setTimeout(() => { scene.remove(ring); if (!IM.on) return; const b = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, 70, 14, 1, true), new THREE.MeshBasicMaterial({ color: 0xe8fcff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); b.position.set(p.x, p.y + 35, p.z); scene.add(b); setTimeout(() => scene.remove(b), 450); imBoom(p, 10, 3500 * lvm, 10, 0xffffff); }, 1600);
   }
+}
+function imStrikeVis(p) {   // remote players' orbital strike: marker ring, then beam (damage is handled by the caster)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(9, 10, 32), new THREE.MeshBasicMaterial({ color: 0xff3a2a, side: THREE.DoubleSide, transparent: true, opacity: 0.8, fog: false })); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, Math.max(0.1, p.y + 0.1), p.z); scene.add(ring);
+  setTimeout(() => { scene.remove(ring); const b = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, 70, 14, 1, true), new THREE.MeshBasicMaterial({ color: 0xe8fcff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); b.position.set(p.x, p.y + 35, p.z); scene.add(b); setTimeout(() => scene.remove(b), 450); }, 1600);
 }
 function imMis(dt) {
   for (let i = IM.mis.length - 1; i >= 0; i--) {
@@ -5486,10 +5497,66 @@ function imMis(dt) {
     let hit = m.life <= 0 || m.g.position.y <= 0.1 || insideObstacle(m.g.position.x, m.g.position.z, 0.05) && m.g.position.y < 3.5;
     if (!hit) for (const z of zombies) { if (z.dead || z.spawnT > 0) continue; const q = z.root.position; if (Math.abs(q.x - m.g.position.x) < 0.9 && Math.abs(q.z - m.g.position.z) < 0.9 && m.g.position.y < q.y + 2.2 && m.g.position.y > q.y - 0.2) { hit = true; break; } }
     if (Math.random() < dt * 40) burst(m.g.position, 1, IM_MAT.spark, 1, 0.3, 0);
+    if (hit && m.vis) { scene.remove(m.g); IM.mis.splice(i, 1); continue; }
     if (hit) { const p = m.g.position.clone(); p.y = Math.max(0.2, p.y); scene.remove(m.g); IM.mis.splice(i, 1); imBoom(p, m.r, m.dmg, 10); if (m.split) for (let k = 0; k < m.split; k++) { const a = Math.random() * 6.28, d = 2.5 + Math.random() * 3.5, q = V3(p.x + Math.cos(a) * d, 0.3, p.z + Math.sin(a) * d); IM.sched.push({ t: 0.25 + k * 0.12, fn: () => imBoom(q, 3.4, m.dmg * 0.35, 10) }); } }
   }
   for (let i = IM.sched.length - 1; i >= 0; i--) { const s = IM.sched[i]; s.t -= dt; if (s.t <= 0) { IM.sched.splice(i, 1); try { s.fn(); } catch (e) { } } }
   for (let i = IM.puffs.length - 1; i >= 0; i--) { const f = IM.puffs[i]; f.t += dt; const k = f.t / 0.35; f.m.scale.setScalar(Math.max(0.3, f.r * Math.min(1, k))); f.m.material.opacity = 0.8 * (1 - k); if (k >= 1) { scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); IM.puffs.splice(i, 1); } }
+}
+/* ---- Iron Man ULTIMATES (suit level 13-30), each on its own key; everyone sees them ---- */
+const IM_ULT = [{ k: 'KeyZ', l: 'Z', n: 'NANO REPAIR', lv: 13, cd: 45 }, { k: 'KeyU', l: 'U', n: 'HEAT SEEKER STORM', lv: 14, cd: 30 }, { k: 'KeyI', l: 'I', n: 'GRAVITY WELL', lv: 16, cd: 35 }, { k: 'KeyJ', l: 'J', n: 'ARC STORM', lv: 18, cd: 20 }, { k: 'KeyL', l: 'L', n: 'DEATH BLOSSOM', lv: 20, cd: 50 }, { k: 'KeyN', l: 'N', n: 'NUKE', lv: 22, cd: 90 }, { k: 'KeyM', l: 'M', n: 'TIME FREEZE', lv: 25, cd: 60 }, { k: 'KeyO', l: 'O', n: 'INVINCIBLE MODE', lv: 28, cd: 80 }, { k: 'KeyY', l: 'Y', n: 'SUPERNOVA', lv: 30, cd: 150 }];
+IM.ucd = IM_ULT.map(() => 0); IM.god = 0; IM.blos = 0; IM.blosT = 0; IM.well = null;
+function imFlash(col, dur) {
+  try { const d = document.createElement('div'); d.style.cssText = `position:fixed;inset:0;z-index:30;pointer-events:none;background:${col};opacity:.85;transition:opacity ${dur}s ease-out`; document.body.appendChild(d); requestAnimationFrame(() => requestAnimationFrame(() => { d.style.opacity = '0'; })); setTimeout(() => d.remove(), dur * 1000 + 200); } catch (e) { }
+}
+function imUltList() {
+  let h = '', shownNext = false;
+  IM_ULT.forEach((u, i) => { if (IM.lv >= u.lv) { const c = IM.ucd[i] > 0 ? ' ' + Math.ceil(IM.ucd[i]) + 's' : ' READY'; h += `<div style="color:${IM.ucd[i] > 0 ? '#5a6676' : '#ff9a3a'}">[${u.l}] ${u.n}${c}</div>`; } else if (!shownNext) { shownNext = true; h += `<div style="color:#3e4756">[${u.l}] ??? MK-${u.lv}</div>`; } });
+  return h;
+}
+function imAlive(rng, from) { const o = []; for (const z of zombies) { if (z.dead || z.spawnT > 0) continue; const q = z.root.position, d = Math.hypot(q.x - from.x, q.z - from.z); if (d <= rng) o.push({ z, d }); } o.sort((a, b) => a.d - b.d); return o; }
+function imUlt(i) {
+  const u = IM_ULT[i]; if (!IM.on || state.phase !== 'playing' || isDowned()) return;
+  if (IM.lv < u.lv) { if (IM.lv >= 12) notice('LOCKED  -  REACH SUIT LEVEL ' + u.lv, 1400); return; }
+  if (IM.ucd[i] > 0) { notice(u.n + '  -  RECHARGING ' + Math.ceil(IM.ucd[i]) + 's', 900); return; }
+  const lvm = 1 + 0.15 * (IM.lv - 1), me = V3(player.pos.x, player.jumpY + 1.2, player.pos.z); IM.ucd[i] = u.cd; IM.hudT = 0;
+  camera.getWorldDirection(_imV2); const dir = _imV2.clone(), org = camera.getWorldPosition(new THREE.Vector3());
+  if (i === 0) {   // NANO REPAIR
+    state.health = state.maxHealth; IM.fuel = imFuelMax(IM.lv); IM.en = 100; IM.god = Math.max(IM.god, 3); banner('NANO REPAIR  -  FULL ARMOR', 1800); imBoom(me, 6, 0, null, 0x66ff99); try { sfx.chime(); } catch (e) { }
+  } else if (i === 1) {   // HEAT SEEKER STORM
+    const L = imAlive(65, me).slice(0, 24); banner('HEAT SEEKER STORM', 1400); if (!L.length) { for (let k = 0; k < 12; k++) setTimeout(() => IM.on && imMissile(org.clone(), V3(dir.x + (Math.random() - .5) * .8, .5 + Math.random(), dir.z + (Math.random() - .5) * .8).normalize(), { dmg: 700 * lvm, r: 3.4, spd: 32, life: 3, col: 0x7ae8ff, grav: 12 }), k * 60); }
+    L.forEach((t, k) => setTimeout(() => { if (IM.on && !t.z.dead) imMissile(org.clone().add(V3((Math.random() - .5) * 1.2, .2, (Math.random() - .5) * 1.2)), V3((Math.random() - .5), 1, (Math.random() - .5)).normalize(), { dmg: 1100 * lvm, r: 3.6, tgt: t.z, hom: 9, spd: 38, life: 4, col: 0x7ae8ff }); }, k * 50));
+    try { sfx.raygun2(); } catch (e) { }
+  } else if (i === 2) {   // GRAVITY WELL
+    const h = imCast(0), p = h.length ? h[0].point.clone() : org.clone().addScaledVector(dir, 22); p.y = Math.max(1.2, Math.min(p.y, 3)); IM.well = { p, t: 3.6, lvm }; banner('GRAVITY WELL', 1200); imWellVis(p, 3.6); if (MP.on) MP.send({ t: 'imu', u: 2, x: +p.x.toFixed(1), y: +p.y.toFixed(1), z: +p.z.toFixed(1) });
+  } else if (i === 3) {   // ARC STORM
+    const L = imAlive(48, me).slice(0, 25); if (!L.length) { IM.ucd[i] = 2; notice('NO TARGETS', 800); return; } banner('ARC STORM', 1000); let prev = imPalm();
+    L.forEach((t, k) => setTimeout(() => { if (!IM.on || t.z.dead) return; const q = t.z.root.position, pt = V3(q.x, q.y + 1.3, q.z); imBolt(prev.clone(), pt, 2); damageZombie(t.z, 1500 * lvm, pt, false); imXp(10); burst(pt, 4, IM_MAT.spark, 5, 0.4, 3); prev = pt; }, k * 45));
+  } else if (i === 4) {   // DEATH BLOSSOM
+    IM.blos = 5; IM.blosT = 0; banner('DEATH BLOSSOM', 1400); IM.light.intensity = 25;
+  } else if (i === 5) {   // NUKE
+    banner('NUKE INBOUND', 2000); try { sfx.alarm && sfx.alarm(); } catch (e) { }
+    const c = me.clone(); c.y = 1; IM.sched.push({ t: 2.2, fn: () => { imFlash('#fff2cc', 1.6); imBoom(c, 34, 16000 * lvm, 10, 0xffc060); } });
+  } else if (i === 6) {   // TIME FREEZE
+    imFreeze(8); banner('TIME FREEZE', 1600); imFlash('#aee8ff', 0.8); imBoom(me, 30, 0, null, 0x9ce8ff); if (MP.on) MP.send({ t: 'imu', u: 6 });
+  } else if (i === 7) {   // INVINCIBLE MODE
+    IM.god = 10; IM.od = Math.max(IM.od, 10); state.health = state.maxHealth; banner('INVINCIBLE  -  10s', 2200); imFlash('#ffe08a', 0.6); imBoom(me, 8, 0, null, 0xffd23a); try { sfx.chime(); } catch (e) { }
+  } else if (i === 8) {   // SUPERNOVA
+    banner('SUPERNOVA', 2600); const c = me.clone(); c.y = 1.5; IM.sched.push({ t: 2.6, fn: () => { imFlash('#ffffff', 2.2); imBoom(c, 70, 1e6, 10, 0xffffff); state.shake = 1.2; } });
+  }
+}
+function imFreeze(sec) { for (const z of zombies) if (!z.dead) z.stunT = Math.max(z.stunT || 0, sec); }
+function imWellVis(p, dur) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: 0xb06aff, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); m.position.copy(p); scene.add(m);
+  const t0 = performance.now(); const iv = setInterval(() => { const k = (performance.now() - t0) / 1000; if (k > dur) { clearInterval(iv); scene.remove(m); m.geometry.dispose(); m.material.dispose(); return; } m.scale.setScalar(1.4 + 0.5 * Math.sin(k * 12) + (k > dur - 0.4 ? -2 : 0)); if (m.scale.x < 0.1) m.scale.setScalar(0.1); }, 30);
+}
+function imUltTick(dt) {
+  for (let i = 0; i < IM.ucd.length; i++) IM.ucd[i] = Math.max(0, IM.ucd[i] - dt);
+  if (IM.god > 0) { IM.god -= dt; IM.fuel = imFuelMax(IM.lv); IM.en = 100; IM.light.intensity = Math.max(IM.light.intensity, 14); if (IM.god <= 0) notice('INVINCIBLE MODE ENDED', 1200); }
+  if (IM.blos > 0) { IM.blos -= dt; IM.blosT -= dt; IM.light.intensity = Math.max(IM.light.intensity, 20);
+    if (IM.blosT <= 0) { IM.blosT = 0.09; const me = V3(player.pos.x, player.jumpY + 1.2, player.pos.z), L = imAlive(38, me); for (let k = 0; k < 4 && L.length; k++) { const t = L.splice((Math.random() * L.length) | 0, 1)[0], q = t.z.root.position, pt = V3(q.x, q.y + 1.2, q.z); imBolt(me.clone().add(V3((Math.random() - .5) * 2, 0.3, (Math.random() - .5) * 2)), pt, 1); damageZombie(t.z, 420 * (1 + 0.15 * (IM.lv - 1)), pt, false); imXp(10); } } }
+  const w = IM.well; if (w) { w.t -= dt; for (const t of imAlive(18, w.p)) { const z = t.z, q = z.root.position, dx = w.p.x - q.x, dz = w.p.z - q.z, d = Math.hypot(dx, dz) || 1, st = Math.min(d, 11 * dt), nx = q.x + dx / d * st, nz = q.z + dz / d * st; if (!insideObstacle(nx, nz, 0.4)) { q.x = nx; q.z = nz; } z.stunT = Math.max(z.stunT || 0, 0.25); }
+    if (w.t <= 0) { IM.well = null; imBoom(w.p, 15, 4500 * w.lvm, 10, 0xb06aff); } }
 }
 function imRepulsor() {
   const lv = IM.lv, od = IM.od > 0 ? 1.6 : 1; IM.cd = imRepCd(lv) / od; IM.hand++; IM.fpT = 0.07;
@@ -5523,7 +5590,7 @@ function imTick(dt, downed) {
   else if (player.onGround) { IM.glide = false; IM.fuel = Math.min(fm, IM.fuel + dt * imRech(lv)); }
   IM.fuel = Math.min(IM.fuel, fm);
   const want = state.mouseDown && !downed && !MP.down && state.phase === 'playing' && locked;
-  for (let i = 3; i < 9; i++) IM.gcd[i] = Math.max(0, IM.gcd[i] - dt); IM.od = Math.max(0, IM.od - dt); const press = want && !IM.pmd; IM.pmd = want; imMis(dt);
+  for (let i = 3; i < 9; i++) IM.gcd[i] = Math.max(0, IM.gcd[i] - dt); IM.od = Math.max(0, IM.od - dt); const press = want && !IM.pmd; IM.pmd = want; imMis(dt); imUltTick(dt);
   if (IM.wep >= 3) { IM.beam = false; if (press) imGadget(IM.wep); }
   else if (IM.wep === 1) { IM.beam = false; if (want && IM.cd <= 0) imRepulsor(); }
   else if (want && IM.en > (IM.beam ? 0 : 20)) { IM.beam = true; IM.en = Math.max(0, IM.en - imUniDrain(lv) * dt); IM.enT = 0.7; IM.bT -= dt; if (IM.bT <= 0) { IM.bT = 0.22; imUnibeam(); } }
