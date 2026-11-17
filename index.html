@@ -7842,7 +7842,7 @@ function casingTick(dt) {
   }
 }
 /* ===== Graphics quality ===== */
-const GFX = { q: 'high', fog: true, mist: true, shadows: true, reverb: true, gore: true, shader: false, enh: false };
+const GFX = { q: 'high', fog: true, mist: true, shadows: true, reverb: true, gore: true, shader: false, enh: false, fps: false };
 try { const o = JSON.parse(localStorage.getItem('zgfx') || 'null'); if (o) for (const k in GFX) if (k in o) GFX[k] = o[k]; } catch (e) { }
 function gfxSave() { try { localStorage.setItem('zgfx', JSON.stringify(GFX)); } catch (e) { } }
 function gfxApply(resize) {
@@ -7892,7 +7892,7 @@ function gfxDraw() {
   gfxEl.innerHTML = `<div style="width:min(560px,92vw);background:rgba(8,10,14,.96);border:1px solid rgba(255,255,255,.2);padding:22px 26px"><div style="font-size:26px;letter-spacing:4px;margin-bottom:14px">SETTINGS</div>`
     + `<div style="font-size:12px;letter-spacing:2px;color:#8d99a3">YOUR NAME</div><div style="display:flex;gap:8px;margin:6px 4px 16px 4px"><input id="setName" class="mpin" maxlength="14" autocomplete="off" value="${MP.name || ''}" placeholder="PLAYER" style="flex:1;font:inherit;font-size:18px;letter-spacing:2px;padding:8px 12px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.3)">${b('name', 'SAVE', true)}</div><div style="font-size:26px;letter-spacing:4px;margin-bottom:8px">GRAPHICS</div>`
     + `<div style="font-size:12px;letter-spacing:2px;color:#8d99a3;margin-top:8px">QUALITY</div>${b('q:poor', 'POOR', GFX.q === 'poor')}${b('q:low', 'LOW', GFX.q === 'low')}${b('q:medium', 'MEDIUM', GFX.q === 'medium')}${b('q:high', 'HIGH', GFX.q === 'high')}${b('q:extreme', 'EXTREME', GFX.q === 'extreme')}${GFX.q === 'custom' ? '<span style="color:#ffb02e;font-size:12px;letter-spacing:2px"> CUSTOM</span>' : ''}`
-    + `<div style="font-size:12px;letter-spacing:2px;color:#8d99a3;margin-top:12px">OPTIONS</div>${b('t:fog', 'FOG: ' + (GFX.fog ? 'ON' : 'OFF'), GFX.fog)}${b('t:shader', 'SHADER LIGHTING: ' + (GFX.shader || GFX.q === 'extreme' ? 'ON' : 'OFF'), GFX.shader || GFX.q === 'extreme')}${b('t:enh', 'ENHANCED TEXTURES: ' + (GFX.enh || GFX.q === 'extreme' ? 'ON' : 'OFF'), GFX.enh || GFX.q === 'extreme')}${b('t:mist', 'MIST: ' + (GFX.mist ? 'ON' : 'OFF'), GFX.mist)}${b('t:shadows', 'SHADOWS: ' + (GFX.shadows ? 'ON' : 'OFF'), GFX.shadows)}${b('t:reverb', 'REVERB: ' + (GFX.reverb ? 'ON' : 'OFF'), GFX.reverb)}${b('t:gore', 'GORE: ' + (GFX.gore ? 'ON' : 'OFF'), GFX.gore)}`
+    + `<div style="font-size:12px;letter-spacing:2px;color:#8d99a3;margin-top:12px">OPTIONS</div>${b('t:fog', 'FOG: ' + (GFX.fog ? 'ON' : 'OFF'), GFX.fog)}${b('t:shader', 'SHADER LIGHTING: ' + (GFX.shader || GFX.q === 'extreme' ? 'ON' : 'OFF'), GFX.shader || GFX.q === 'extreme')}${b('t:enh', 'ENHANCED TEXTURES: ' + (GFX.enh || GFX.q === 'extreme' ? 'ON' : 'OFF'), GFX.enh || GFX.q === 'extreme')}${b('t:mist', 'MIST: ' + (GFX.mist ? 'ON' : 'OFF'), GFX.mist)}${b('t:shadows', 'SHADOWS: ' + (GFX.shadows ? 'ON' : 'OFF'), GFX.shadows)}${b('t:reverb', 'REVERB: ' + (GFX.reverb ? 'ON' : 'OFF'), GFX.reverb)}${b('t:gore', 'GORE: ' + (GFX.gore ? 'ON' : 'OFF'), GFX.gore)}${b('t:fps', 'FPS COUNTER: ' + (GFX.fps ? 'ON' : 'OFF'), GFX.fps)}`
     + `<div style="height:14px"></div>${b('close', 'CLOSE', false)}</div>`;
 }
 gfxEl.addEventListener('click', e => {
@@ -7900,8 +7900,15 @@ gfxEl.addEventListener('click', e => {
   if (a === 'close') { gfxClose(); return; }
   if (a === 'name') { const i = $('setName'); const v = MP.esc(((i && i.value) || '').trim()); if (!v) { notice('TYPE A NAME FIRST', 1500); return; } MP.name = v; try { localStorage.setItem('zmb_name', v); } catch (er) { } try { usAnnounce(); } catch (er) { } const h = $('hfName'); if (h) h.textContent = v; notice('NAME SAVED: ' + v, 2000); return; }
   if (a.startsWith('q:')) { gfxPreset(a.slice(2)); return; }
-  const k = a.slice(2); GFX[k] = !GFX[k]; GFX.q = 'custom'; gfxSave(); gfxApply(false); gfxDraw();
+  const k = a.slice(2); GFX[k] = !GFX[k]; if (k === 'fps') { gfxSave(); fpsShow(); gfxDraw(); return; } GFX.q = 'custom'; gfxSave(); gfxApply(false); gfxDraw();
 });
+const FPSC = { el: null, n: 0, t: 0 };
+function fpsShow() {
+  if (!FPSC.el) { const d = document.createElement('div'); d.id = 'fpsCounter'; d.style.cssText = 'position:fixed;left:8px;top:6px;z-index:2147483000;pointer-events:none;font:700 14px Arial,sans-serif;color:#7dff7a;text-shadow:0 1px 2px #000,0 0 3px #000;letter-spacing:1px;display:none'; document.body.appendChild(d); FPSC.el = d; }
+  FPSC.el.style.display = GFX.fps ? 'block' : 'none';
+}
+(function fpsLoop() { requestAnimationFrame(fpsLoop); if (!GFX.fps) return; const n = performance.now(); FPSC.n++; if (!FPSC.t) FPSC.t = n; if (n - FPSC.t >= 500) { const f = Math.round(FPSC.n * 1000 / (n - FPSC.t)); FPSC.n = 0; FPSC.t = n; fpsShow(); FPSC.el.textContent = f + ' FPS'; FPSC.el.style.color = f >= 50 ? '#7dff7a' : f >= 30 ? '#ffd23a' : '#ff5a4a'; } })();
+fpsShow();
 function gfxOpen() { gfxDraw(); gfxEl.style.display = 'flex'; }
 function gfxClose() { gfxEl.style.display = 'none'; }
 
