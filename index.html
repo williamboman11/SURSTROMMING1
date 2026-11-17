@@ -3600,7 +3600,7 @@ const MP = {
       case 'imx': if (m.i !== this.id && typeof m.x === 'number') imBoom(new THREE.Vector3(m.x, m.y, m.z), Math.min(72, m.r || 4), 0, null, (typeof m.c === 'number' ? m.c : 0xffa040), true); if ((m.r || 0) >= 30) imFlash(m.r >= 60 ? '#ffffff' : '#ffe9b8', 1.4); break;
       case 'imu': if (m.i !== this.id) { if (m.u === 6) { imFreeze(8); imFlash('#aee8ff', 0.8); } else if (m.u === 2 && typeof m.x === 'number') imWellVis(new THREE.Vector3(m.x, m.y, m.z), 3.6); } break;
       case 'imm': if (m.i !== this.id && Array.isArray(m.a) && Array.isArray(m.d)) imMissile(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.d[0], m.d[1], m.d[2]), { vis: true, spd: m.s, grav: m.g, col: m.c, life: Math.min(5, m.l || 3), bomb: !!m.b }); break;
-      case 'jsc': if (m.dv === 1 && m.i !== this.id && typeof m.to === 'string' && m.to === ((this.name || 'PLAYER') + '').trim().toLowerCase()) jeffScare(); break;
+      case 'jsc': { const nm = ((this.name || 'PLAYER') + '').trim().toLowerCase(); if (m.dv === 1 && typeof m.tn === 'string' && (m.tn === nm || this.esc(m.tn).toLowerCase() === nm)) jeffScare(); break; }
       case 'imo': if (m.i !== this.id && typeof m.x === 'number') imStrikeVis(new THREE.Vector3(m.x, m.y, m.z)); break;
       case 'imf': if (m.i !== this.id && Array.isArray(m.a) && Array.isArray(m.b) && m.a.length === 3 && m.b.length === 3) imBolt(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2]), m.k === 2 ? 2 : 1, true); break;
       case 'pg': if (m.i !== this.id) this.send({ t: 'po', to: m.i, ts: m.ts }); break;
@@ -6246,7 +6246,7 @@ function jscCmd(t) {
   const who = m[1].trim().toLowerCase(), me = ((MP.name || 'PLAYER') + '').trim().toLowerCase();
   if (who === me) { jeffScare(); return true; }
   if (!MP.on) { notice('NO SUCH PLAYER - YOU ARE NOT IN A MULTIPLAYER MATCH', 2200); return true; }
-  MP.send({ t: 'jsc', to: who, dv: 1 }); chatAdd('SYSTEM', 'JUMPSCARE SENT TO ' + m[1].trim().toUpperCase(), '#ff5a4a', 0); return true;
+  MP.send({ t: 'jsc', tn: who, dv: 1 }); chatAdd('SYSTEM', 'JUMPSCARE SENT TO ' + m[1].trim().toUpperCase(), '#ff5a4a', 0); return true;
 }
 function sendChat() {
   const t = chat.text.trim().slice(0, 80); if (!t) return;
