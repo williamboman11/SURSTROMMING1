@@ -6265,12 +6265,12 @@ function dvxApply(k) {
     DVX.el.style.display = 'flex'; DVX.el.textContent = 'FROZEN 5';
   } else if (k === 'fling') {
     const a = Math.random() * Math.PI * 2; if (IM.on) { IM.fly = false; IM.glide = false; }
-    DVX.fl = { vx: Math.cos(a) * 15, vz: Math.sin(a) * 15, t: 1.7 }; player.jumpVel = 24; player.onGround = false; player.jumpY += 0.3; state.shake = Math.max(state.shake, 0.8); try { sfx.chime(); } catch (e) { }
+    DVX.fl = { vx: Math.cos(a) * 55, vz: Math.sin(a) * 55, t: 4.5 }; player.jumpVel = 40; player.onGround = false; player.jumpY += 0.3; state.shake = Math.max(state.shake, 0.8); try { sfx.chime(); } catch (e) { }
   }
 }
 function dvxTick(dt) {
   if (DVX.frz > 0) { DVX.frz -= dt; if (DVX.el) { if (DVX.frz <= 0) DVX.el.style.display = 'none'; else DVX.el.textContent = 'FROZEN ' + Math.ceil(DVX.frz); } }
-  const f = DVX.fl; if (f) { f.t -= dt; player.pos.x += f.vx * dt; player.pos.z += f.vz * dt; const dk = Math.exp(-0.5 * dt); f.vx *= dk; f.vz *= dk; if (f.t <= 0) DVX.fl = null; }
+  const f = DVX.fl; if (f) { f.t -= dt; player.pos.x += f.vx * dt; player.pos.z += f.vz * dt; const dk = Math.exp(-0.25 * dt); f.vx *= dk; f.vz *= dk; if (f.t <= 0) DVX.fl = null; }
 }
 function dvxCmd(t) {
   const m = /^[\/!](freeze|fling)\s+(.+)$/i.exec(t); if (!m) return false;
