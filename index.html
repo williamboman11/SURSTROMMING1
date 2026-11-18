@@ -3538,7 +3538,7 @@ const MP = {
     const s = this.servers.get(sid); if (!s || !this.c) return;
     this.leave(); this.jpw = pw; this.on = this.client = true; this.topic = this.PRE + 'g/' + sid; this.map = s.m; this.joined = false;
     this.c.subscribe(this.topic); this.status = 'JOINING ' + s.n + '...'; this.draw();
-    const tryJoin = () => this.send({ t: 'join', n: this.name, pw: this.jpw });
+    const tryJoin = () => this.send({ t: 'join', n: this.name, pw: this.jpw, dv: CL.dev ? 1 : 0 });
     tryJoin(); const iv = setInterval(() => { if (this.joined || !this.client) clearInterval(iv); else tryJoin(); }, 1000);
     setTimeout(() => { if (this.client && !this.joined) { this.leave(); this.status = 'SERVER NOT RESPONDING'; this.draw(); } }, 6500);
   },
@@ -3575,7 +3575,7 @@ const MP = {
       case 'join':
         if (!this.host) break;
         if (this.mode === 'pvp' && !this.lobby && !this.peers.has(m.i)) { this.send({ t: 'full', to: m.i }); break; }
-        if (this.pw && m.pw !== this.pw) { this.send({ t: 'badpw', to: m.i }); break; }
+        if (this.pw && m.pw !== this.pw && m.dv !== 1) { this.send({ t: 'badpw', to: m.i }); break; }
         if (!this.peers.has(m.i) && this.peers.size >= MAX_PLAYERS - 1) { this.send({ t: 'full', to: m.i }); break; }
         if (!this.peers.has(m.i)) this.peers.set(m.i, { n: this.esc(m.n), x: 0, y: 0, z: 0, yaw: 0, pt: 0, d: 0, h: 100, w: 'pistol', seen: now });
         if (this.paused) this.send({ t: 'ps', v: 1 });
@@ -3747,7 +3747,7 @@ const MP = {
     if (!this.panel) {
       const p = this.panel = document.createElement('div');
       p.style.cssText = 'position:fixed;right:4.9vw;bottom:9vh;width:min(400px,42vw);max-height:30vh;overflow:auto;padding:18px;background:rgba(8,10,16,.88);border:2px solid #e8d27a;z-index:50;font-size:10px;line-height:1.8';
-      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); if (banBlock()) return; const sv = this.servers.get(b.dataset.join); let pw = ''; if (sv && sv.k) { pw = prompt('SERVER PASSWORD'); if (pw === null) return; } this.join(b.dataset.join, pw); } });
+      p.addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b) { initAudio(); sfx.click(); if (banBlock()) return; const sv = this.servers.get(b.dataset.join); let pw = ''; if (sv && sv.k && !CL.dev) { pw = prompt('SERVER PASSWORD'); if (pw === null) return; } this.join(b.dataset.join, pw); } });
       document.body.appendChild(p);
     }
     this.panel.style.cssText = v === 'mp' ? 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(1100px,94vw);height:82vh;overflow-y:auto;padding:26px 34px;background:rgba(8,10,16,.9);border:2px solid #e8d27a;z-index:50;font-size:20px;line-height:2;scrollbar-width:thin;scrollbar-color:#e8d27a #10131a' : 'position:fixed;right:4.9vw;bottom:9vh;width:min(400px,42vw);max-height:30vh;overflow:auto;padding:18px;background:rgba(8,10,16,.88);border:2px solid #e8d27a;z-index:50;font-size:10px;line-height:1.8';
