@@ -318,6 +318,10 @@
   .htitle h1 em { color: var(--acc); }
   .hmenu { left: 84px; top: calc(33vh + 130px); width: auto; }
   .hmenu .hb { display: block; width: auto; min-width: 150px; font-size: 25px; font-weight: 500; letter-spacing: 2px; padding: 5px 18px 4px 16px; margin: 0 0 8px; border: none; color: #8a8478; background: rgba(8,9,12,.72); clip-path: none; text-shadow: none; transform: rotate(-1.2deg); font-family: "Arial Narrow", "Bahnschrift Condensed", "Roboto Condensed", "Segoe UI", Arial, sans-serif; text-transform: uppercase; }
+
+  .hmenu .hb.na, .hmenu .hb.na:hover { background: #c0141c !important; color: #fff !important; border: none !important; box-shadow: 0 0 20px rgba(255,40,40,.6) !important; }
+  #naMsg { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 2147483000; pointer-events: none; padding: 22px 40px; background: rgba(10,0,0,.82); border: 3px solid #c0141c; color: #ff3a3a; font: 700 clamp(22px,4.4vw,54px) Arial,sans-serif; letter-spacing: 4px; text-align: center; text-shadow: 0 0 14px rgba(255,40,40,.7); opacity: 0; transition: opacity .25s; }
+  #naMsg.show { opacity: 1; }
   .hmenu .hb.on, .hmenu .hb:hover, #bonusWrap.open > .hb { background: #d4621a; color: #1a0c04; border: none; padding-left: 16px; font-weight: 700; box-shadow: 0 0 18px rgba(255,120,30,.45); }
   .hmenu .hb.on:after, .hmenu .hb:hover:after { content: ''; position: absolute; right: -9px; top: 50%; width: 3px; height: 3px; background: #ff8a30; box-shadow: 0 0 6px #ff8a30; }
   .hmenu:hover .hb.on:not(:hover) { background: rgba(8,9,12,.72); color: #8a8478; box-shadow: none; }
@@ -556,9 +560,10 @@
     <div class="hfeat" data-h="cl"><span class="tag">CHANGELOG</span><div class="box"><div class="shot"><i>NEW</i></div><b id="hfTitle">WHAT'S NEW</b></div></div>
     <div class="htitle"><div class="emb"></div><div class="bar"><h1>SURSTR&Ouml;MMING <em>ZOMBIES</em></h1></div></div>
     <div class="hmenu">
-      <button class="hb on" data-h="mp">MULTIPLAYER</button>
-      <button class="hb" data-h="zombies">ZOMBIES</button>
+      <button class="hb" data-h="mp">MULTIPLAYER</button>
+      <button class="hb on" data-h="zombies">ZOMBIES</button>
       <button class="hb" data-h="daily">DAILY CHALLENGES</button>
+      <button class="hb" data-h="acct">SIGN IN / SIGN UP</button>
       <button class="hb" data-h="gfx">SETTINGS</button>
       <div id="bonusWrap"><button class="hb" data-h="bonus">BONUS</button><div class="fly"><button class="hb" data-h="freerun">FREERUN</button><button class="hb" data-h="freerunmp">FREERUN RACE</button><button class="hb" data-h="infected">INFECTED</button></div></div>
     </div>
@@ -3590,7 +3595,7 @@ const MP = {
         if (m.ch) { state.cheated = true; GG.tainted = true; }
         if (this.joined) break; this.ff = !!m.ff; this.joined = true; this.status = ''; this.lastS = now; this.panelHide();
         this.pend = { dr: m.dr || [], pw: m.pw || [], bx: m.bx || null };
-        if (m.md) { PVP.inf = !!m.inf; PVP.fr = m.inf === 2; this.mode = 'pvp'; PVP.in = true; PVP.on = false; PVP.teams = {}; PVP.names = {}; this.lobby = true; this.lastRos = now; pvpShow('lobby'); PVP.view = 'lobby'; pvpRender(); break; }
+        if (m.md && SPLIT !== 'main') { PVP.inf = !!m.inf; PVP.fr = m.inf === 2; this.mode = 'pvp'; PVP.in = true; PVP.on = false; PVP.teams = {}; PVP.names = {}; this.lobby = true; this.lastRos = now; pvpShow('lobby'); PVP.view = 'lobby'; pvpRender(); break; }
         if (m.lb) { this.lobby = true; this.lastRos = now; showLobbyClient(); break; }
         if (MAPS[m.map]) { selectMap(m.map); startCountdown(); } break;
       case 'p': {
@@ -11925,6 +11930,7 @@ function pvpReset() { PVP.in = PVP.on = PVP.dead = PVP.over = false; PVP.teams =
 function pvpHide() { pvpEl.style.display = 'none'; $('pvbg').style.display = 'none'; try { lockerShow(false); } catch (e) {} document.body.classList.remove('pvpui'); }
 function pvpName() { MP.keepName(); }
 function pvpShow(view) {
+  if (SPLIT === 'main') return;   // multiplayer lives on 67sigma.store
   PVP.view = view; document.body.classList.add('pvpui'); document.body.classList.remove('home'); pvpEl.style.display = 'block'; $('pvbg').style.display = 'block'; MP.init(); pvpRender();
 }
 function pvpMapCard(id) { const m = MAPS[id]; if (!m) return ''; const src = m.thumb || drawMapArt(id); return `<button class="pvmap" data-p="host:${id}"><img src="${src}" alt=""><b>${clEsc(m.name)}</b><span>${m.custom ? 'CUSTOM' : 'ZOMBIES MAP'}</span></button>`; }
@@ -12253,6 +12259,113 @@ function pvpEnd(w) {
 }
 
 /* ---- the new main menu ---- */
+/* ---------- ACCOUNTS (surstromming.win): username + password, progress follows the account ----------
+   No game server exists, so accounts live in retained MQTT messages on the same public brokers the game already uses:
+   czmb1/acct/<user>    = { u, s: salt, h: PBKDF2 hash, i: iterations, ts }
+   czmb1/acct/<user>/d  = { ts, k: { localStorageKey: value } }   (the progress snapshot)                                  */
+const AC = { u: null, ts: 0, last: '', el: null, busy: false, tab: 'in', msg: '', ok: false };
+const AC_KEYS = ['zmb_xp', 'zmb_wallet', 'zmb_wipe', 'zmb_ggp', 'zmb_look', 'zmb_paint', 'zmb_att', 'zmb_daily', 'zmapunl', 'surstromming_best', 'frBest', 'zmb_name', 'znoah', 'zironman'];
+try { const a = JSON.parse(localStorage.getItem('zacct') || 'null'); if (a && a.u) { AC.u = a.u; AC.ts = +a.ts || 0; AC.last = a.last || ''; } } catch (e) { }
+function acStore() { try { if (AC.u) localStorage.setItem('zacct', JSON.stringify({ u: AC.u, ts: AC.ts, last: AC.last })); else localStorage.removeItem('zacct'); } catch (e) { } }
+function acSnap() { const k = {}; for (const key of AC_KEYS) { try { const v = localStorage.getItem(key); if (v !== null) k[key] = v; } catch (e) { } } return k; }
+function acApply(k) { for (const key of AC_KEYS) { try { if (k && key in k) localStorage.setItem(key, String(k[key])); else localStorage.removeItem(key); } catch (e) { } } }
+function acHasProgress() { const k = acSnap(); return !!(k.zmb_xp || k.zmb_wallet); }
+const acB64 = u8 => btoa(String.fromCharCode(...u8)), acUn = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function acHash(pw, salt, it) {
+  if (!(window.crypto && crypto.subtle)) throw new Error('THIS BROWSER CANNOT HASH PASSWORDS');
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  return acB64(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: it, hash: 'SHA-256' }, k, 256)));
+}
+function acGet(topic) {   // newest retained value of a topic on every connected broker (null = nothing stored)
+  return new Promise((res, rej) => {
+    const cl = SY.cl.filter(c => c && c.connected); if (!cl.length) { rej(new Error('NOT CONNECTED TO THE SERVER - TRY AGAIN IN A MOMENT')); return; }
+    const full = MP.PRE + topic, got = [], hs = [];
+    cl.forEach(c => { const h = (t, m) => { if (t === full) { const s = m.toString(); if (s) got.push(s); } }; hs.push([c, h]); c.on('message', h); try { c.subscribe(full); } catch (e) { } });
+    setTimeout(() => {
+      for (const [c, h] of hs) { try { c.removeListener('message', h); c.unsubscribe(full); } catch (e) { } }
+      let best = null, bt = -1; for (const s of got) { let ts = 0; try { ts = +JSON.parse(s).ts || 0; } catch (e) { } if (ts >= bt) { bt = ts; best = s; } }
+      res(best);
+    }, 2200);
+  });
+}
+const acName = v => (v || '').trim().toLowerCase();
+const acValid = u => /^[a-z0-9_]{3,16}$/.test(u);
+async function acSync(force) {
+  if (!AC.u || AC.busy || !syOK()) return false;
+  const snap = acSnap(), str = JSON.stringify(snap); if (!force && str === AC.last) return true;
+  const ts = Date.now(); if (!syPub('acct/' + AC.u + '/d', JSON.stringify({ ts, k: snap }))) return false;
+  AC.last = str; AC.ts = ts; acStore(); return true;
+}
+async function acRegister(u, pw) {
+  const ex = await acGet('acct/' + u); if (ex) throw new Error('USERNAME ALREADY TAKEN');
+  const salt = crypto.getRandomValues(new Uint8Array(16)), it = 120000, h = await acHash(pw, salt, it), ts = Date.now();
+  if (!syPub('acct/' + u, JSON.stringify({ u, s: acB64(salt), h, i: it, ts }))) throw new Error('COULD NOT REACH THE SERVER');
+  const snap = acSnap(); if (!snap.zmb_name) { snap.zmb_name = u.toUpperCase(); try { localStorage.setItem('zmb_name', snap.zmb_name); } catch (e) { } }
+  syPub('acct/' + u + '/d', JSON.stringify({ ts, k: snap }));   // current progress moves onto the new account
+  AC.u = u; AC.ts = ts; AC.last = JSON.stringify(snap); acStore();
+}
+async function acVerify(u, pw) {
+  const raw = await acGet('acct/' + u); if (!raw) throw new Error('NO ACCOUNT WITH THAT USERNAME');
+  let r; try { r = JSON.parse(raw); } catch (e) { throw new Error('ACCOUNT DATA IS CORRUPT'); }
+  const h = await acHash(pw, acUn(r.s), r.i || 120000); if (h !== r.h) throw new Error('WRONG PASSWORD'); return r;
+}
+async function acLogin(u, pw) {
+  await acVerify(u, pw); const raw = await acGet('acct/' + u + '/d'); let d = null; try { d = raw ? JSON.parse(raw) : null; } catch (e) { }
+  try { localStorage.setItem('zacct_bak', JSON.stringify({ t: Date.now(), k: acSnap() })); } catch (e) { }   // what this device had before, just in case
+  if (d && d.k) acApply(d.k);
+  AC.u = u; AC.ts = d ? +d.ts || 0 : 0; AC.last = d && d.k ? JSON.stringify(d.k) : ''; acStore();
+}
+async function acLogout() {
+  if (!syOK()) throw new Error('CANNOT LOG OUT WHILE OFFLINE (PROGRESS NOT SAVED YET)');
+  if (!(await acSync(true))) throw new Error('COULD NOT SAVE YOUR PROGRESS - NOT LOGGED OUT');
+  acApply({}); AC.u = null; acStore();   // this device goes back to a fresh guest; everything stays on the account
+}
+async function acDelete(pw) {
+  await acVerify(AC.u, pw); const u = AC.u; syPub('acct/' + u, ''); syPub('acct/' + u + '/d', ''); AC.u = null; acStore();   // progress stays on this device
+}
+function acLabel() { const b = document.querySelector('.hmenu [data-h="acct"]'); if (b) b.textContent = AC.u ? 'ACCOUNT: ' + AC.u.toUpperCase().slice(0, 12) : 'SIGN IN / SIGN UP'; }
+function acRender() {
+  if (!AC.el) {
+    const d = document.createElement('div'); d.id = 'acctEl'; d.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.84);display:none;align-items:center;justify-content:center;font-family:var(--fn),system-ui,sans-serif;color:#e6e9ef';
+    ['keydown', 'keyup', 'keypress'].forEach(n => d.addEventListener(n, e => { e.stopPropagation(); if (n === 'keydown' && e.key === 'Escape') acClose(); if (n === 'keydown' && e.key === 'Enter' && e.target.tagName === 'INPUT') { const g = d.querySelector('[data-ac="go"]'); if (g) g.click(); } }));
+    d.addEventListener('click', async e => {
+      if (e.target === d) { acClose(); return; } const t = e.target.closest('[data-ac]'); if (!t || AC.working) return; const a = t.dataset.ac, v = id => (d.querySelector('#' + id) || {}).value || '';
+      if (a === 'close') { acClose(); return; } if (a === 'tab') { AC.tab = t.dataset.t; AC.msg = ''; acRender(); return; }
+      const run = async fn => { AC.working = true; AC.msg = 'WORKING...'; AC.ok = true; acRender(); try { await fn(); } catch (er) { AC.msg = String(er && er.message || er).toUpperCase(); AC.ok = false; AC.working = false; acRender(); return false; } AC.working = false; return true; };
+      if (a === 'go') {
+        const u = acName(v('acU')), pw = v('acP');
+        if (!acValid(u)) { AC.msg = 'USERNAME: 3-16 LETTERS, NUMBERS OR _'; AC.ok = false; acRender(); return; } if (pw.length < 6) { AC.msg = 'PASSWORD MUST BE AT LEAST 6 CHARACTERS'; AC.ok = false; acRender(); return; }
+        if (AC.tab === 'up') { if (pw !== v('acP2')) { AC.msg = 'PASSWORDS DO NOT MATCH'; AC.ok = false; acRender(); return; } if (await run(() => acRegister(u, pw))) { AC.msg = 'ACCOUNT CREATED - YOUR PROGRESS IS NOW SAVED TO IT'; AC.ok = true; acLabel(); acRender(); } }
+        else if (await run(() => acLogin(u, pw))) { AC.msg = 'LOGGED IN - LOADING YOUR PROGRESS...'; AC.ok = true; acRender(); setTimeout(() => location.reload(), 700); }
+      } else if (a === 'out') { if (await run(acLogout)) { AC.msg = 'LOGGED OUT'; acRender(); setTimeout(() => location.reload(), 600); } }
+      else if (a === 'delask') { AC.tab = 'del'; AC.msg = ''; acRender(); }
+      else if (a === 'delgo') { if (await run(() => acDelete(v('acP')))) { AC.tab = 'in'; AC.msg = 'ACCOUNT DELETED (PROGRESS STAYS ON THIS DEVICE)'; AC.ok = true; acLabel(); acRender(); } }
+    });
+    document.body.appendChild(d); AC.el = d;
+  }
+  const inp = (id, ph, type) => `<input id="${id}" type="${type || 'text'}" placeholder="${ph}" autocomplete="off" spellcheck="false" maxlength="40" style="width:100%;box-sizing:border-box;margin:6px 0;padding:11px 12px;background:#05070b;border:1px solid rgba(255,255,255,.25);color:#fff;font:600 15px system-ui,sans-serif;letter-spacing:1px">`;
+  const btn = (a, t, red, extra) => `<button data-ac="${a}" ${extra || ''} style="margin:8px 8px 0 0;padding:11px 18px;background:${red ? '#9c1620' : '#d4621a'};color:${red ? '#fff' : '#1a0c04'};border:none;font:700 14px system-ui,sans-serif;letter-spacing:2px;cursor:pointer">${t}</button>`;
+  let body = '';
+  if (AC.u && AC.tab !== 'del') body = `<div style="font-size:13px;color:#8d99a3;letter-spacing:2px">SIGNED IN AS</div><div style="font-size:28px;letter-spacing:3px;margin:4px 0 10px">${AC.u.toUpperCase()}</div><div style="font-size:13px;color:#9aa5b1;line-height:1.5">Your level, coins, camos, gobblegums and other progress save to this account automatically.</div>${btn('out', 'LOG OUT')}${btn('delask', 'DELETE ACCOUNT', true)}`;
+  else if (AC.u && AC.tab === 'del') body = `<div style="font-size:15px;color:#ff7a7a;margin-bottom:8px;line-height:1.5">Delete the account <b>${AC.u.toUpperCase()}</b> for good? Your progress stays on this device, but the account and its saved copy are removed from the server. Enter your password to confirm.</div>${inp('acP', 'PASSWORD', 'password')}${btn('delgo', 'YES, DELETE IT', true, 'data-ac="delgo"')}${btn('tab', 'CANCEL', false, 'data-t="in"')}`;
+  else body = `<div style="display:flex;gap:6px;margin-bottom:8px"><button data-ac="tab" data-t="in" style="flex:1;padding:10px;border:none;background:${AC.tab === 'in' ? '#d4621a' : '#1b2029'};color:${AC.tab === 'in' ? '#1a0c04' : '#9aa5b1'};font:700 14px system-ui;letter-spacing:2px;cursor:pointer">SIGN IN</button><button data-ac="tab" data-t="up" style="flex:1;padding:10px;border:none;background:${AC.tab === 'up' ? '#d4621a' : '#1b2029'};color:${AC.tab === 'up' ? '#1a0c04' : '#9aa5b1'};font:700 14px system-ui;letter-spacing:2px;cursor:pointer">SIGN UP</button></div>`
+    + inp('acU', 'USERNAME') + inp('acP', 'PASSWORD', 'password') + (AC.tab === 'up' ? inp('acP2', 'REPEAT PASSWORD', 'password') + `<div style="font-size:12px;color:#9aa5b1;line-height:1.5;margin-top:4px">${acHasProgress() ? 'The progress on this device moves onto your new account.' : 'Pick a username nobody has taken.'} Do not reuse a password from anywhere else.</div>` : `<div style="font-size:12px;color:#9aa5b1;line-height:1.5;margin-top:4px">Signing in replaces the progress on this device with the account's.</div>`) + btn('go', AC.tab === 'up' ? 'CREATE ACCOUNT' : 'SIGN IN');
+  AC.el.innerHTML = `<div style="width:min(460px,92vw);background:#0c0f16;border:1px solid rgba(255,255,255,.2);padding:22px 26px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:24px;letter-spacing:4px">ACCOUNT</div><button data-ac="close" style="background:none;border:none;color:#9aa5b1;font-size:22px;cursor:pointer">&times;</button></div>${body}<div style="min-height:20px;margin-top:12px;font-size:13px;letter-spacing:1px;color:${AC.ok ? '#7dff7a' : '#ff6a6a'}">${AC.msg || ''}</div></div>`;
+  AC.el.style.display = 'flex';
+}
+function acctOpen() { AC.msg = ''; AC.ok = true; if (!AC.u && AC.tab === 'del') AC.tab = 'in'; if (AC.u) AC.tab = 'in'; acRender(); setTimeout(() => { const i = AC.el && AC.el.querySelector('#acU'); if (i) i.focus(); }, 30); }
+function acClose() { if (AC.el) AC.el.style.display = 'none'; }
+setInterval(() => { acSync(false).catch(() => { }); }, 20000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) acSync(false).catch(() => { }); });
+window.addEventListener('pagehide', () => { acSync(false).catch(() => { }); });
+(function acBoot() {   // logged-in device: pick up newer progress from another device once, then label the button
+  acLabel(); if (!AC.u) return; let tries = 0;
+  const iv = setInterval(async () => {
+    if (++tries > 20) { clearInterval(iv); return; } if (!syOK()) return; clearInterval(iv);
+    try { const raw = await acGet('acct/' + AC.u + '/d'); if (!raw) { acSync(true); return; } const d = JSON.parse(raw); if ((+d.ts || 0) > AC.ts && d.k) { acApply(d.k); AC.ts = +d.ts || 0; AC.last = JSON.stringify(d.k); acStore(); location.reload(); } else acSync(false); } catch (e) { }
+  }, 1000);
+})();
+
 const hbonus = $('bonusWrap'), homeCl = $('homeCl');
 function fadeTo(fn) {
   fadeEl.style.pointerEvents = 'auto'; fadeEl.style.opacity = '1';
@@ -12268,9 +12381,18 @@ function homeOpen() {
 }
 function homeUpdate() { const t = (CL.text || '').split('\n')[0].trim(); const f = $('hfTitle'); if (f) f.textContent = t ? t.slice(0, 40).toUpperCase() : 'WHAT\'S NEW'; const n = $('hfName'); if (n) { n.innerHTML = lvBadge(XP.lv) + (MP.esc ? MP.esc(MP.name || 'GUEST') : (MP.name || 'GUEST')); n.dataset.prof = 'me'; } const hp = $('hpName'); if (hp) { hp.innerHTML = lvBadge(XP.lv) + (MP.esc ? MP.esc(MP.name || 'GUEST') : (MP.name || 'GUEST')); hp.dataset.prof = 'me'; } }
 setInterval(() => { try { if (document.body.classList.contains('home')) homeUpdate(); } catch (e) {} }, 2500);
+
+const SPLIT = 'main';
+const HOME_NA = { mp: 'AVAILABLE AT 67SIGMA.STORE', infected: 'AVAILABLE AT 67SIGMA.STORE', freerunmp: 'AVAILABLE AT 67SIGMA.STORE' };
+function homeNA(btn, text) {
+  btn.classList.add('na'); let m = document.getElementById('naMsg'); if (!m) { m = document.createElement('div'); m.id = 'naMsg'; document.body.appendChild(m); }
+  m.textContent = text; m.classList.add('show'); clearTimeout(homeNA.t); homeNA.t = setTimeout(() => m.classList.remove('show'), 4000);
+}
 homeEl.addEventListener('click', e => {
   initAudio(); if (!e.target.closest('#bonusWrap')) hbonus.classList.remove('open');
   const b = e.target.closest('[data-h]'); if (!b) return; sfx.click(); const a = b.dataset.h;
+  if (HOME_NA[a]) { homeNA(b, HOME_NA[a]); return; }
+  if (a === 'acct') { acctOpen(); return; }
   if (a === 'gfx') { optOpen(); return; }
   if (a === 'daily') { dcOpen(); return; }
   if (a === 'zombies') fadeTo(() => { document.body.classList.remove('home'); showMenu('main'); });
