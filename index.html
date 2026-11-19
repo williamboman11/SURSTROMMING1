@@ -1060,9 +1060,9 @@ let factoryExtraPerks = [];
 const boxObs = {}; const cottageDoors = []; let wbHold = 0, swMax = 4, cdHold = 0, swHold = 0, instaT = 0, doubleT = 0, fireT = 0, noPts = false;
 function inBox(H, x, z, pad = 0) { return x > H.cx - H.w / 2 - pad && x < H.cx + H.w / 2 + pad && z > H.cz - H.d / 2 - pad && z < H.cz + H.d / 2 + pad; }
 function addScore(n) { state.score += n * (doubleT > 0 ? 2 : 1) * (boughtExtraPerks.has('cash') ? 1.25 : 1); }
-function groundAt(x, z, y = 0) {
+function groundAt(x, z, y = 0, reach = 0.75) {
   const D = curMap.decks; if (!D) return 0; let best = 0;
-  for (let i = 0; i < D.length; i++) { const d = D[i]; if (d.y > best && d.y <= y + 0.75 && x >= d.minX && x <= d.maxX && z >= d.minZ && z <= d.maxZ) best = d.y; }
+  for (let i = 0; i < D.length; i++) { const d = D[i]; if (d.y > best && d.y <= y + reach && x >= d.minX && x <= d.maxX && z >= d.minZ && z <= d.maxZ) best = d.y; }
   return best;
 }
 /* Vulture Aid: toxic gas clouds. While you stand inside one, zombies lose track of you. */
@@ -6280,9 +6280,24 @@ function dvxCmd(t) {
   if (!MP.on) { notice('NO SUCH PLAYER - YOU ARE NOT IN A MULTIPLAYER MATCH', 2200); return true; }
   MP.send({ t: 'dvx', k, tn: who, dv: 1 }); chatAdd('SYSTEM', k.toUpperCase() + ' SENT TO ' + m[2].trim().toUpperCase(), '#7ac8ff', 0); return true;
 }
+/* ---- /tp <player> : teleport to another player (devmode only) ---- */
+function tpCmd(t) {
+  const m = /^[\/!]tp\s+(.+)$/i.exec(t); if (!m) return false;
+  if (!CL.dev) { notice('DEVMODE ONLY', 1600); try { sfx.deny(); } catch (e) { } return true; }
+  const who = m[1].trim().toLowerCase();
+  if (!MP.on || state.phase !== 'playing') { notice('/TP ONLY WORKS IN A MATCH WITH OTHER PLAYERS', 2200); return true; }
+  let hit = null, part = [];
+  for (const p of MP.peers.values()) { const n = (p.n || '').toLowerCase(); if (n === who || n === MP.esc(who).toLowerCase()) { hit = p; break; } if (n.startsWith(who)) part.push(p); }
+  if (!hit && part.length === 1) hit = part[0];
+  if (!hit) { notice(part.length > 1 ? 'MORE THAN ONE PLAYER STARTS WITH THAT - TYPE THE FULL NAME' : 'NO PLAYER NAMED ' + m[1].trim().toUpperCase(), 2200); return true; }
+  const x = typeof hit.tx === 'number' ? hit.tx : hit.x, y = typeof hit.ty === 'number' ? hit.ty : (hit.y || 0), z = typeof hit.tz === 'number' ? hit.tz : hit.z;
+  if (typeof x !== 'number' || typeof z !== 'number') { notice('CAN NOT FIND THAT PLAYER YET', 2000); return true; }
+  player.pos.set(x, 0, z); player.vel.set(0, 0, 0); player.jumpY = Math.max(0, y || 0); player.jumpVel = 0; player.onGround = true; if (IM.on) { IM.fly = false; IM.glide = false; }
+  try { sfx.chime(); } catch (e) { } notice('TELEPORTED TO ' + hit.n, 1800); return true;
+}
 function sendChat() {
   const t = chat.text.trim().slice(0, 80); if (!t) return;
-  if (jscCmd(t) || dvxCmd(t)) return;
+  if (jscCmd(t) || dvxCmd(t) || tpCmd(t)) return;
   const ck = t.toLowerCase().replace(/^[\/!]/, ''); if (Object.prototype.hasOwnProperty.call(CHEATS, ck)) { CHEATS[ck](); return; }
   const nm = (MP.name && MP.esc(MP.name)) || 'PLAYER';
   chatAdd(nm, t, '#7fe05a', XP.lv); if (MP.on) MP.send({ t: 'chat', n: nm, m: t, lv: XP.lv });
@@ -6603,6 +6618,8 @@ function updatePlayer(dt) {
   if (DVX.frz > 0) { player.vel.x = 0; player.vel.z = 0; }
   player.pos.x += player.vel.x * dt; player.pos.z += player.vel.z * dt; dvxTick(dt);
   resolvePlayerCircle(player.pos, PLAYER_RADIUS, player.jumpY);
+  // floors / roofs are one-way: jump up from underneath and your head goes into the slab -> you come out on top of it (solid from above, not from below)
+  if (curMap.decks && !player.onGround && player.jumpVel > 0 && !(IM.on && IM.fly)) { const ct = groundAt(player.pos.x, player.pos.z, player.jumpY, 2.0); if (ct > player.jumpY + 0.1) { player.jumpY = ct; player.jumpVel = 0; player.onGround = true; try { landThud(1.5); } catch (e) { } } }
   const gY = groundAt(player.pos.x, player.pos.z, player.jumpY);
   if (IM.on && IM.fly) imFlyY(dt, gY);
   else {
