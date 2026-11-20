@@ -3528,7 +3528,7 @@ const MP = {
     else { this.send({ t: 'lb' }); if (this.lastRos && now - this.lastRos > 9000) { if (PVP.in) { notice('HOST LEFT THE ROOM'); pvpLeaveHome(); } else { this.leave(); this.status = 'HOST LEFT'; showMenu('mp'); } } }
   },
   send(o) { o.i = this.id; if (this.c && this.topic) this.c.publish(this.topic, JSON.stringify(o)); },
-  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: MAX_PLAYERS, k: this.pw ? 1 : 0, f: this.ff ? 1 : 0, l: this.lobby ? 1 : 0, md: this.mode === 'pvp' ? 1 : 0, inf: infCode(), a: PVP.limit, tm: PVP.mins }), { retain: true }); },
+  beat() { if (this.host && this.c) this.c.publish(this.PRE + 'list/' + this.id, JSON.stringify({ n: this.name, m: this.map, p: 1 + this.peers.size, x: MAX_PLAYERS, k: this.pw ? 1 : 0, pk: this.pw ? String(this.pw).slice(0, 30) : '', f: this.ff ? 1 : 0, l: this.lobby ? 1 : 0, md: this.mode === 'pvp' ? 1 : 0, inf: infCode(), a: PVP.limit, tm: PVP.mins }), { retain: true }); },
   startHost(map) {
     this.leave(); this.init(); this.on = this.host = true; this.map = map; this.topic = this.PRE + 'g/' + this.id;
     if (this.c) this.c.subscribe(this.topic); this.beat();
@@ -3769,7 +3769,7 @@ const MP = {
     let n = 0;
     for (const [id, s] of this.servers) {
       if (now - s.seen > 15000 || s.md || !mapOk(s.m)) continue; n++; const full = s.p >= s.x;
-      h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #333"><div>${this.esc(s.n)}<br><span style="color:#8e949b">${MAPS[s.m] ? MAPS[s.m].name : s.m} &middot; ${s.p}/${s.x}${s.k ? ' &middot; <span style="color:#e8d27a">PASSWORD</span>' : ''}${s.f ? ' &middot; <span style="color:#ff8a6a">FRIENDLY FIRE</span>' : ''}${s.l ? ' &middot; LOBBY' : ''}</span></div>${full ? '<span style="color:#e0453a">FULL</span>' : `<button class="btn" data-join="${id}" style="padding:8px 12px;font-size:9px">JOIN</button>`}</div>`;
+      h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #333"><div>${this.esc(s.n)}<br><span style="color:#8e949b">${MAPS[s.m] ? MAPS[s.m].name : s.m} &middot; ${s.p}/${s.x}${s.k ? ' &middot; <span style="color:#e8d27a">PASSWORD</span>' : ''}${s.f ? ' &middot; <span style="color:#ff8a6a">FRIENDLY FIRE</span>' : ''}${s.l ? ' &middot; LOBBY' : ''}</span></div>${full ? '<span style="color:#e0453a">FULL</span>' : `${CL.dev && s.k && s.pk ? `<span style="color:#7dff7a;font-size:10px;letter-spacing:1px;margin-left:auto">PASSWORD: ${this.esc(s.pk)}</span>` : ''}<button class="btn" data-join="${id}" style="padding:8px 12px;font-size:9px">JOIN</button>`}</div>`;
     }
     if (!n) h += '<div style="color:#8e949b">NO SERVERS RIGHT NOW.</div>';
     this.panel.innerHTML = h;
