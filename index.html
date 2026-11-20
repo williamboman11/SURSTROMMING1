@@ -1086,7 +1086,7 @@ function winLocal(W, x, z) { const dx = x - W.x, dz = z - W.z, c = Math.cos(W.ry
 function winSet(W, n, silent) {
   W.n = Math.max(0, Math.min(W.max, n)); W.planks.forEach((p, i) => { p.visible = i < W.n; });
   const i = W.obs.indexOf(W.ob); if (W.n > 0 && i < 0) W.obs.push(W.ob); else if (W.n === 0 && i >= 0) W.obs.splice(i, 1);
-  if (!silent && MP.on) MP.send({ t: 'wp', i: W.i, n: W.n });
+  if (!silent && MP.on) MP.send({ t: 'wp', k: W.i, n: W.n });
 }
 function winBreak(W) { if (W.n <= 0) return; winSet(W, W.n - 1); noiseBurst(0.14, 1400, 300, 0.32, 'lowpass'); tone('sawtooth', 150, 55, 0.12, 0.14); if (W.n === 0 && curMap.nav) NAV.last = -1; }
 function winRebuild(W) {
@@ -3628,12 +3628,13 @@ const MP = {
       case 'sp': { const p = this.peers.get(m.i); if (p) { p.fl = 0.07; remoteShot(p, m.w); } if (Array.isArray(m.a) && Array.isArray(m.d) && (m.w === 'servant' || m.w === 'thundergun')) fireSpecial(m.w, true, new THREE.Vector3(+m.a[0] || 0, +m.a[1] || 0, +m.a[2] || 0), new THREE.Vector3(+m.d[0] || 0, +m.d[1] || 0, +m.d[2] || 0), m.p); break; }
       case 'pz': { const p = this.peers.get(m.i); if (p) p.fl = 0.07; if (Array.isArray(m.a) && Array.isArray(m.d)) paraFog(new THREE.Vector3(+m.a[0] || 0, +m.a[1] || 0, +m.a[2] || 0), new THREE.Vector3(+m.d[0] || 0, +m.d[1] || 0, +m.d[2] || 0), 1, !!m.g); if (this.host && Array.isArray(m.z)) for (const id of m.z) { const z = zombies.find(q => q.mid === id); if (z) applyPara(z, m.i); } break; }
       case 'mk': if (m.a && m.v) spawnMonkey(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.v[0], m.v[1], m.v[2]), true); break;
-      case 'trap': { const T = (curMap.traps || [])[m.i]; if (T && T.active <= 0 && T.cd <= 0) trapBuy(T, true); break; }
+      case 'trap': { const T = (curMap.traps || [])[m.k]; if (T && T.active <= 0 && T.cd <= 0) trapBuy(T, true); break; }
       case 'gr': if (m.a && m.v) spawnGrenade(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.v[0], m.v[1], m.v[2]), true); break;
       case 'door': if (state.phase === 'playing') applyDoor(m.id, false); else (this.pend = this.pend || {}).dr = ((this.pend.dr) || []).concat([m.id]); break;
       case 'box': boxRx(m); break;
       case 'tl': { const p = tlById(m.id); if (p) { if (m.s === 1) tlStart(p, false); else if (TL.pad === p || m.s === 2) tlEnd(p, m.s === 2, false); } break; }
-      case 'wp': { const W = (curMap.windows || [])[m.i]; if (W && Number.isFinite(m.n)) winSet(W, m.n | 0, true); break; }
+      case 'wps': { if (!this.host && Array.isArray(m.a) && curMap.windows) m.a.forEach((n, k) => { const W = curMap.windows[k]; if (W && Number.isFinite(n) && W.n !== (n | 0)) winSet(W, n | 0, true); }); break; }
+      case 'wp': { const W = (curMap.windows || [])[m.k]; if (W && Number.isFinite(m.n)) winSet(W, m.n | 0, true); break; }
       case 'pw': if (state.phase === 'playing') applyPower(m.id); else (this.pend = this.pend || {}).pw = ((this.pend.pw) || []).concat([m.id]); break;
       case 'tr': { const p = this.peers.get(m.i); if (p) { p.fl = 0.07; remoteShot(p, p.w); } } this.rx = true; spawnTracer(new THREE.Vector3(m.a[0], m.a[1], m.a[2]), new THREE.Vector3(m.b[0], m.b[1], m.b[2]), m.k); this.rx = false; break;
     }
@@ -3710,6 +3711,7 @@ const MP = {
     if (!this.on) return; const now = performance.now();
     this.pfT = (this.pfT || 0) - dt; if (this.pfT <= 0) { this.pfT = 4; this.send(profPayload()); }
     this.pgT = (this.pgT || 0) - dt; if (this.pgT <= 0) { this.pgT = 3; if (this.peers.size) this.send({ t: 'pg', ts: Math.round(performance.now()) }); }
+    if (this.host && state.phase === 'playing' && curMap.windows && curMap.windows.length) { this.wt = (this.wt || 0) - dt; if (this.wt <= 0) { this.wt = 1.5; this.send({ t: 'wps', a: curMap.windows.map(W => W.n) }); } }
     this.tp -= dt; if (this.tp <= 0) { this.tp = 0.066; const f = v => +v.toFixed(2); this.send({ t: 'p', x: f(player.pos.x), y: f(player.jumpY || 0), z: f(player.pos.z), yaw: f(player.yaw), pt: f(player.pitch), d: this.down ? 1 : 0, dd: this.dead ? 1 : 0, h: Math.max(0, state.health | 0), w: player.cur, n: this.name, sc: state.score | 0, kk: state.kills, dn: state.downs | 0, rv: state.revives | 0, hs: state.heads | 0, lk: lookStr(LOOK), im: IM.on ? IM.lv : 0, fy: IM.fly ? 1 : 0, cm: WALLET.sel[player.cur] || 0, hid: gasClouds.length && playerHidden() ? 1 : 0 }); }
     if (this.host) {
       this.ts -= dt; if (this.ts <= 0) { this.ts = 0.1; this.send({ t: 's', w: state.wave, r: state.roundState === 'active' ? 1 : 0, hr: state.houndRound ? 1 : 0, z: zombies.map(z => [z.mid, +z.root.position.x.toFixed(2), +z.root.position.z.toFixed(2), (z.boss ? 1 : 0) | (z.warlord ? 2 : 0) | (z.hound ? 4 : 0) | (z.runner ? 8 : 0) | (z.kind === 'verity' ? 16 : 0) | (z.kind === 'tung' ? 32 : 0) | (z.kind === 'vboss' ? 64 : 0) | (z.kind === 'cat' ? 256 : 0) | (z.kind === 'mz' ? 512 : 0) | (z.kind === 'lit' ? 1024 : 0) | (z.para > 0 ? 128 : 0), +z.speed.toFixed(2)]) }); }
@@ -4642,7 +4644,7 @@ function trapBuy(T, remote) {
   if (!remote) {
     if (state.score < T.cost) { notice(`NEED ${T.cost} POINTS`); sfx.deny(); return; }
     state.score -= T.cost; sfx.buy(); notice(`${T.name} ACTIVATED`, 1800);
-    if (MP.on) MP.send({ t: 'trap', i: T.i });
+    if (MP.on) MP.send({ t: 'trap', k: T.i });
   }
   T.active = T.dur; T.tick = 0; T.pt = 0;
   tone('sawtooth', 120, 400, 0.4, 0.12);
